@@ -259,8 +259,8 @@ const Pomodoro: React.FC = () => {
           <iframe 
             width="100%" 
             height="200" 
-            src="https://www.youtube.com/embed/BMuknRb7woc?playlist=vCTRNKPJr40" 
-            title="Lofi Girl Study Playlist" 
+            src="https://www.youtube.com/embed/videoseries?list=PLxoZGx3mVZsxJgQlgxSOBn6zCONGfl6Tm" 
+            title="Study Playlist" 
             frameBorder="0" 
             style={{ borderRadius: '12px' }}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
