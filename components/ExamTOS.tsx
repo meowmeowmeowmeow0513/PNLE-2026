@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { ChevronDown, ChevronUp, Book, Info } from 'lucide-react';
-import { ExamTopic } from '../types';
+import React, { useState, useMemo } from 'react';
+import { ChevronDown, Book, Info, Search, X } from 'lucide-react';
+import { ExamTopic, ExamPart } from '../types';
 
 const ExamTOS: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>('NP1');
+  const [searchQuery, setSearchQuery] = useState('');
 
   const topics: ExamTopic[] = [
     {
@@ -417,102 +418,193 @@ const ExamTOS: React.FC = () => {
     }
   ];
 
+  // Filtering Logic
+  const filteredTopics = useMemo(() => {
+    if (!searchQuery.trim()) return topics;
+    
+    const lowerQuery = searchQuery.toLowerCase();
+
+    return topics.reduce<ExamTopic[]>((acc, topic) => {
+      // 1. Check if the Topic itself matches
+      const topicMatches = topic.title.toLowerCase().includes(lowerQuery) ||
+                           topic.description.toLowerCase().includes(lowerQuery);
+
+      if (topicMatches) {
+        // If parent topic matches, return it fully
+        acc.push(topic);
+        return acc;
+      }
+
+      // 2. Filter Parts
+      const filteredParts = topic.parts.reduce<ExamPart[]>((pAcc, part) => {
+        // Check if Part matches
+        const partMatches = part.title.toLowerCase().includes(lowerQuery) ||
+                            (part.description && part.description.toLowerCase().includes(lowerQuery));
+        
+        if (partMatches) {
+          pAcc.push(part);
+          return pAcc;
+        }
+
+        // 3. Filter Rows
+        const filteredRows = part.rows.filter(row => 
+          row.topic.toLowerCase().includes(lowerQuery) ||
+          row.content.some(c => c.toLowerCase().includes(lowerQuery))
+        );
+
+        if (filteredRows.length > 0) {
+          pAcc.push({ ...part, rows: filteredRows });
+        }
+
+        return pAcc;
+      }, []);
+
+      if (filteredParts.length > 0) {
+        acc.push({ ...topic, parts: filteredParts });
+      }
+
+      return acc;
+    }, []);
+  }, [searchQuery, topics]);
+
   const toggle = (id: string) => {
     setOpenId(openId === id ? null : id);
   };
 
+  const isSearching = searchQuery.trim().length > 0;
+
   return (
     <div className="max-w-5xl mx-auto pb-10">
-      <div className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold text-slate-800">Enhanced Table of Specifications</h2>
-          <p className="text-slate-500 mt-1">Comprehensive breakdown of key competencies for the August 2026 PNLE.</p>
+      <div className="mb-8 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <h2 className="text-2xl font-bold text-slate-800">Enhanced Table of Specifications</h2>
+            <p className="text-slate-500 mt-1">Comprehensive breakdown of key competencies for the August 2026 PNLE.</p>
+          </div>
+          <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-500 shadow-sm flex items-center gap-2">
+            <Info size={14} />
+            PQF Level: 6
+          </div>
         </div>
-        <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-500 shadow-sm flex items-center gap-2">
-          <Info size={14} />
-          PQF Level: 6
+
+        {/* Search Bar */}
+        <div className="relative">
+          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+            <Search size={20} className="text-slate-400" />
+          </div>
+          <input
+            type="text"
+            placeholder="Search topics, competencies, or keywords..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="block w-full pl-10 pr-10 py-3 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all shadow-sm"
+          />
+          {searchQuery && (
+            <button 
+              onClick={() => setSearchQuery('')}
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+            >
+              <X size={16} />
+            </button>
+          )}
         </div>
       </div>
 
       <div className="space-y-6">
-        {topics.map((topic) => (
-          <div 
-            key={topic.id} 
-            className={`bg-white rounded-xl border transition-all duration-300 overflow-hidden ${openId === topic.id ? 'border-pink-400 ring-1 ring-pink-100 shadow-md' : 'border-slate-200 shadow-sm hover:border-pink-200'}`}
-          >
-            <button
-              onClick={() => toggle(topic.id)}
-              className="w-full flex items-center justify-between p-5 text-left focus:outline-none bg-white hover:bg-slate-50/50 transition-colors"
-            >
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-lg transition-colors ${openId === topic.id ? 'bg-pink-50 text-pink-600' : 'bg-slate-100 text-slate-500'}`}>
-                  <Book size={24} />
-                </div>
-                <div>
-                  <h3 className="text-lg font-bold text-slate-800">{topic.title}</h3>
-                  <p className="text-sm text-slate-500">{topic.description}</p>
-                </div>
-              </div>
-              <div className={`transform transition-transform duration-300 ${openId === topic.id ? 'rotate-180 text-pink-500' : 'text-slate-400'}`}>
-                <ChevronDown />
-              </div>
-            </button>
-
-            <div 
-              className={`transition-all duration-300 ease-in-out ${
-                openId === topic.id ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'
-              }`}
-            >
-              <div className="p-6 pt-0 border-t border-slate-100">
-                {topic.parts.map((part, pIdx) => (
-                  <div key={pIdx} className="mt-6">
-                    <div className="flex items-center gap-3 mb-3 pl-2 border-l-4 border-pink-400">
-                      <h4 className="font-bold text-slate-800 text-lg">{part.title}</h4>
+        {filteredTopics.length === 0 ? (
+           <div className="text-center py-12 bg-white rounded-xl border border-slate-200 border-dashed">
+             <p className="text-slate-500">No results found for "{searchQuery}"</p>
+             <button 
+               onClick={() => setSearchQuery('')}
+               className="mt-2 text-pink-500 hover:text-pink-600 text-sm font-medium"
+             >
+               Clear Search
+             </button>
+           </div>
+        ) : (
+          filteredTopics.map((topic) => {
+            const isOpen = isSearching ? true : openId === topic.id;
+            
+            return (
+              <div 
+                key={topic.id} 
+                className={`bg-white rounded-xl border transition-all duration-300 overflow-hidden ${isOpen ? 'border-pink-400 ring-1 ring-pink-100 shadow-md' : 'border-slate-200 shadow-sm hover:border-pink-200'}`}
+              >
+                <button
+                  onClick={() => toggle(topic.id)}
+                  className="w-full flex items-center justify-between p-5 text-left focus:outline-none bg-white hover:bg-slate-50/50 transition-colors"
+                >
+                  <div className="flex items-center gap-4">
+                    <div className={`p-3 rounded-lg transition-colors ${isOpen ? 'bg-pink-50 text-pink-600' : 'bg-slate-100 text-slate-500'}`}>
+                      <Book size={24} />
                     </div>
-                    {part.description && (
-                       <p className="text-sm text-slate-500 italic mb-4 pl-3">{part.description}</p>
-                    )}
-
-                    <div className="overflow-x-auto rounded-lg border border-slate-200">
-                      <table className="w-full text-sm text-left">
-                        <thead className="bg-slate-50 text-slate-600 font-semibold uppercase text-xs">
-                          <tr>
-                            <th className="px-6 py-3 w-1/3">Topics & Competencies</th>
-                            <th className="px-6 py-3 w-1/3">Content</th>
-                            <th className="px-6 py-3 text-center whitespace-nowrap">Weight</th>
-                            <th className="px-6 py-3 text-center whitespace-nowrap">No. of Items</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100 bg-white">
-                          {part.rows.map((row, rIdx) => (
-                            <tr key={rIdx} className="hover:bg-slate-50/50 transition-colors">
-                              <td className="px-6 py-4 align-top font-semibold text-slate-700">
-                                {row.topic}
-                              </td>
-                              <td className="px-6 py-4 align-top text-slate-600">
-                                <ul className="list-disc list-outside ml-4 space-y-1">
-                                  {row.content.map((item, i) => (
-                                    <li key={i}>{item}</li>
-                                  ))}
-                                </ul>
-                              </td>
-                              <td className="px-6 py-4 align-top text-center font-medium text-slate-700">
-                                {row.weight}
-                              </td>
-                              <td className="px-6 py-4 align-top text-center font-bold text-pink-600">
-                                {row.itemCount}
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
+                    <div>
+                      <h3 className="text-lg font-bold text-slate-800">{topic.title}</h3>
+                      <p className="text-sm text-slate-500">{topic.description}</p>
                     </div>
                   </div>
-                ))}
+                  <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-400'}`}>
+                    <ChevronDown />
+                  </div>
+                </button>
+
+                <div 
+                  className={`transition-all duration-300 ease-in-out ${
+                    isOpen ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'
+                  }`}
+                >
+                  <div className="p-6 pt-0 border-t border-slate-100">
+                    {topic.parts.map((part, pIdx) => (
+                      <div key={pIdx} className="mt-6">
+                        <div className="flex items-center gap-3 mb-3 pl-2 border-l-4 border-pink-400">
+                          <h4 className="font-bold text-slate-800 text-lg">{part.title}</h4>
+                        </div>
+                        {part.description && (
+                          <p className="text-sm text-slate-500 italic mb-4 pl-3">{part.description}</p>
+                        )}
+
+                        <div className="overflow-x-auto rounded-lg border border-slate-200">
+                          <table className="w-full text-sm text-left">
+                            <thead className="bg-slate-50 text-slate-600 font-semibold uppercase text-xs">
+                              <tr>
+                                <th className="px-6 py-3 w-1/3">Topics & Competencies</th>
+                                <th className="px-6 py-3 w-1/3">Content</th>
+                                <th className="px-6 py-3 text-center whitespace-nowrap">Weight</th>
+                                <th className="px-6 py-3 text-center whitespace-nowrap">No. of Items</th>
+                              </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100 bg-white">
+                              {part.rows.map((row, rIdx) => (
+                                <tr key={rIdx} className="hover:bg-slate-50/50 transition-colors">
+                                  <td className="px-6 py-4 align-top font-semibold text-slate-700">
+                                    {row.topic}
+                                  </td>
+                                  <td className="px-6 py-4 align-top text-slate-600">
+                                    <ul className="list-disc list-outside ml-4 space-y-1">
+                                      {row.content.map((item, i) => (
+                                        <li key={i}>{item}</li>
+                                      ))}
+                                    </ul>
+                                  </td>
+                                  <td className="px-6 py-4 align-top text-center font-medium text-slate-700">
+                                    {row.weight}
+                                  </td>
+                                  <td className="px-6 py-4 align-top text-center font-bold text-pink-600">
+                                    {row.itemCount}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        ))}
+            );
+          })
+        )}
       </div>
     </div>
   );
