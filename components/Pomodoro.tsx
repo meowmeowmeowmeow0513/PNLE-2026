@@ -144,7 +144,7 @@ const Pomodoro: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)]">
+    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)] py-8">
       <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-lg border border-slate-100 relative overflow-hidden">
         {/* Decorative background blur */}
         <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-pink-400 to-navy-800"></div>
@@ -235,7 +235,7 @@ const Pomodoro: React.FC = () => {
         </div>
 
         {/* Controls */}
-        <div className="flex items-center justify-center gap-6">
+        <div className="flex items-center justify-center gap-6 mb-8">
           <button
             onClick={resetTimer}
             className="p-4 rounded-full text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors"
@@ -252,6 +252,21 @@ const Pomodoro: React.FC = () => {
           >
             {isActive ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}
           </button>
+        </div>
+
+        {/* YouTube Embed */}
+        <div className="w-full">
+          <iframe 
+            width="100%" 
+            height="200" 
+            src="https://www.youtube.com/embed/BMuknRb7woc?si=9_NjiibxFpWymIIM" 
+            title="Lofi Girl Radio" 
+            frameBorder="0" 
+            style={{ borderRadius: '12px' }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+            referrerPolicy="strict-origin-when-cross-origin" 
+            allowFullScreen
+          ></iframe>
         </div>
       </div>
     </div>
