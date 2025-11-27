@@ -147,7 +147,7 @@ const Pomodoro: React.FC = () => {
     <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)]">
       <div className="bg-white rounded-3xl shadow-xl p-8 w-full max-w-lg border border-slate-100 relative overflow-hidden">
         {/* Decorative background blur */}
-        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-teal-400 to-navy-800"></div>
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-pink-400 to-navy-800"></div>
         
         <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-slate-800">Pomodoro Timer</h2>
@@ -217,7 +217,7 @@ const Pomodoro: React.FC = () => {
               cx="50%"
               cy="50%"
               r={radius}
-              className="fill-none stroke-teal-accent transition-all duration-500 ease-in-out"
+              className="fill-none stroke-pink-accent transition-all duration-500 ease-in-out"
               strokeWidth="12"
               strokeLinecap="round"
               strokeDasharray={circumference}
@@ -247,7 +247,7 @@ const Pomodoro: React.FC = () => {
           <button
             onClick={toggleTimer}
             className={`p-6 rounded-full shadow-lg transform transition-all hover:scale-105 active:scale-95 ${
-              isActive ? 'bg-slate-200 text-slate-700' : 'bg-teal-accent text-white hover:bg-teal-500'
+              isActive ? 'bg-slate-200 text-slate-700' : 'bg-pink-accent text-white hover:bg-pink-500'
             }`}
           >
             {isActive ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1" />}

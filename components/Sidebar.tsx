@@ -32,7 +32,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onNavigate, isOpen, onClo
         <div>
           <div className="p-6 flex items-center justify-between">
             <div className="flex items-center gap-3 text-white">
-              <div className="p-2 bg-teal-accent rounded-lg">
+              <div className="p-2 bg-pink-accent rounded-lg">
                 <GraduationCap size={24} className="text-white" />
               </div>
               <div>
@@ -55,7 +55,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onNavigate, isOpen, onClo
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
                   activeItem === item.label
-                    ? 'bg-teal-accent/10 text-teal-accent shadow-sm'
+                    ? 'bg-pink-accent/10 text-pink-accent shadow-sm'
                     : 'hover:bg-navy-800 hover:text-white'
                 }`}
               >
@@ -72,8 +72,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onNavigate, isOpen, onClo
             <p className="text-xs text-slate-400 uppercase tracking-wider mb-1">Target Date</p>
             <p className="text-xl font-bold text-white mb-2">Aug 29, 2026</p>
             <div className="flex items-center gap-2">
-              <div className="h-1 w-1 rounded-full bg-teal-accent"></div>
-              <p className="text-xs text-teal-accent italic">"Trust the process."</p>
+              <div className="h-1 w-1 rounded-full bg-pink-accent"></div>
+              <p className="text-xs text-pink-accent italic">"Trust the process."</p>
             </div>
           </div>
         </div>

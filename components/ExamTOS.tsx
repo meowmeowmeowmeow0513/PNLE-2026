@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Book, Info } from 'lucide-react';
 import { ExamTopic } from '../types';
@@ -439,14 +438,14 @@ const ExamTOS: React.FC = () => {
         {topics.map((topic) => (
           <div 
             key={topic.id} 
-            className={`bg-white rounded-xl border transition-all duration-300 overflow-hidden ${openId === topic.id ? 'border-teal-400 ring-1 ring-teal-100 shadow-md' : 'border-slate-200 shadow-sm hover:border-teal-200'}`}
+            className={`bg-white rounded-xl border transition-all duration-300 overflow-hidden ${openId === topic.id ? 'border-pink-400 ring-1 ring-pink-100 shadow-md' : 'border-slate-200 shadow-sm hover:border-pink-200'}`}
           >
             <button
               onClick={() => toggle(topic.id)}
               className="w-full flex items-center justify-between p-5 text-left focus:outline-none bg-white hover:bg-slate-50/50 transition-colors"
             >
               <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-lg transition-colors ${openId === topic.id ? 'bg-teal-50 text-teal-600' : 'bg-slate-100 text-slate-500'}`}>
+                <div className={`p-3 rounded-lg transition-colors ${openId === topic.id ? 'bg-pink-50 text-pink-600' : 'bg-slate-100 text-slate-500'}`}>
                   <Book size={24} />
                 </div>
                 <div>
@@ -454,7 +453,7 @@ const ExamTOS: React.FC = () => {
                   <p className="text-sm text-slate-500">{topic.description}</p>
                 </div>
               </div>
-              <div className={`transform transition-transform duration-300 ${openId === topic.id ? 'rotate-180 text-teal-500' : 'text-slate-400'}`}>
+              <div className={`transform transition-transform duration-300 ${openId === topic.id ? 'rotate-180 text-pink-500' : 'text-slate-400'}`}>
                 <ChevronDown />
               </div>
             </button>
@@ -467,7 +466,7 @@ const ExamTOS: React.FC = () => {
               <div className="p-6 pt-0 border-t border-slate-100">
                 {topic.parts.map((part, pIdx) => (
                   <div key={pIdx} className="mt-6">
-                    <div className="flex items-center gap-3 mb-3 pl-2 border-l-4 border-teal-400">
+                    <div className="flex items-center gap-3 mb-3 pl-2 border-l-4 border-pink-400">
                       <h4 className="font-bold text-slate-800 text-lg">{part.title}</h4>
                     </div>
                     {part.description && (
@@ -500,7 +499,7 @@ const ExamTOS: React.FC = () => {
                               <td className="px-6 py-4 align-top text-center font-medium text-slate-700">
                                 {row.weight}
                               </td>
-                              <td className="px-6 py-4 align-top text-center font-bold text-teal-600">
+                              <td className="px-6 py-4 align-top text-center font-bold text-pink-600">
                                 {row.itemCount}
                               </td>
                             </tr>

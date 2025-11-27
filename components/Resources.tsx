@@ -45,7 +45,7 @@ const Resources: React.FC = () => {
     switch (name) {
       case 'drive': return <Folder size={32} className="text-blue-500" />;
       case 'video': return <Video size={32} className="text-red-500" />;
-      case 'file': return <FileText size={32} className="text-teal-500" />;
+      case 'file': return <FileText size={32} className="text-pink-500" />;
       case 'book': return <FileText size={32} className="text-orange-500" />; // Fallback icon
       case 'layers': return <Layers size={32} className="text-slate-700" />;
       default: return <ExternalLink size={32} className="text-slate-400" />;
@@ -66,15 +66,15 @@ const Resources: React.FC = () => {
             href={resource.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col items-start gap-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-teal-100 group"
+            className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col items-start gap-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-pink-100 group"
           >
-            <div className="p-3 bg-slate-50 rounded-lg group-hover:bg-teal-50 transition-colors">
+            <div className="p-3 bg-slate-50 rounded-lg group-hover:bg-pink-50 transition-colors">
               {getIcon(resource.iconName)}
             </div>
             <div>
               <h3 className="font-bold text-slate-800 text-lg mb-1 flex items-center gap-2">
                 {resource.title}
-                <ExternalLink size={14} className="text-slate-300 group-hover:text-teal-400" />
+                <ExternalLink size={14} className="text-slate-300 group-hover:text-pink-400" />
               </h3>
               <p className="text-slate-500 text-sm leading-relaxed">
                 {resource.description}
