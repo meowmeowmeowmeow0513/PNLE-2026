@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square } from 'lucide-react';
+import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Heart, Users } from 'lucide-react';
 import { NavigationItem } from '../types';
 
 interface DashboardProps {
@@ -104,6 +104,28 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 – Maam Chona
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Batch Spirit Image */}
+      <div className="relative w-full rounded-2xl overflow-hidden shadow-md group bg-navy-900 aspect-video">
+        <iframe
+          src="https://drive.google.com/file/d/1oRTIbUrfPiRkMK5VpBqjDHdbs_phOJcm/preview"
+          className="absolute inset-0 w-full h-full border-0"
+          allowFullScreen
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-navy-900/90 via-transparent to-transparent pointer-events-none" />
+        <div className="absolute bottom-0 w-full p-6 md:flex md:items-end md:justify-between gap-4 pointer-events-none">
+          <div className="flex items-center gap-2 text-pink-300 mb-2">
+            <Users size={18}/>
+            <span className="font-semibold tracking-wider text-xs">Batch Spirit</span>
+          </div>
+          <h3 className="text-white font-handwriting text-4xl md:text-6xl drop-shadow-xl transform -rotate-2 origin-left">
+            Crescere RN 2026!!
+          </h3>
+          <div className="p-3 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
+            <Heart className="text-pink-500 fill-pink-500 animate-pulse" size={24}/>
           </div>
         </div>
       </div>
