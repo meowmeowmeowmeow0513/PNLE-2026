@@ -259,7 +259,7 @@ const Pomodoro: React.FC = () => {
           <iframe 
             width="100%" 
             height="200" 
-            src="https://www.youtube.com/embed/BMuknRb7woc?playlist=5QXgSM95_jo,TURbeWK2wwg,_tV5LEBDs7w" 
+            src="https://www.youtube.com/embed/BMuknRb7woc?playlist=vCTRNKPJr40" 
             title="Lofi Girl Study Playlist" 
             frameBorder="0" 
             style={{ borderRadius: '12px' }}
