@@ -47,7 +47,7 @@ const Resources: React.FC = () => {
       case 'video': return <Video size={32} className="text-red-500" />;
       case 'file': return <FileText size={32} className="text-pink-500" />;
       case 'book': return <FileText size={32} className="text-orange-500" />; // Fallback icon
-      case 'layers': return <Layers size={32} className="text-slate-700" />;
+      case 'layers': return <Layers size={32} className="text-slate-700 dark:text-slate-200" />;
       default: return <ExternalLink size={32} className="text-slate-400" />;
     }
   };
@@ -55,8 +55,8 @@ const Resources: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto">
       <div className="mb-8">
-        <h2 className="text-2xl font-bold text-slate-800">Resource Hub</h2>
-        <p className="text-slate-500">Curated links and tools for your review.</p>
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-white transition-colors">Resource Hub</h2>
+        <p className="text-slate-500 dark:text-slate-400 transition-colors">Curated links and tools for your review.</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -66,17 +66,17 @@ const Resources: React.FC = () => {
             href={resource.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="bg-white rounded-xl p-6 shadow-sm border border-slate-100 flex flex-col items-start gap-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-pink-100 group"
+            className="bg-white dark:bg-slate-800 rounded-xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col items-start gap-4 transition-all duration-300 hover:shadow-md hover:-translate-y-1 hover:border-pink-100 dark:hover:border-pink-800/50 group"
           >
-            <div className="p-3 bg-slate-50 rounded-lg group-hover:bg-pink-50 transition-colors">
+            <div className="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg group-hover:bg-pink-50 dark:group-hover:bg-pink-500/10 transition-colors">
               {getIcon(resource.iconName)}
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-lg mb-1 flex items-center gap-2">
+              <h3 className="font-bold text-slate-800 dark:text-white text-lg mb-1 flex items-center gap-2 transition-colors">
                 {resource.title}
-                <ExternalLink size={14} className="text-slate-300 group-hover:text-pink-400" />
+                <ExternalLink size={14} className="text-slate-300 group-hover:text-pink-400 transition-colors" />
               </h3>
-              <p className="text-slate-500 text-sm leading-relaxed">
+              <p className="text-slate-500 dark:text-slate-400 text-sm leading-relaxed transition-colors">
                 {resource.description}
               </p>
             </div>
@@ -84,13 +84,13 @@ const Resources: React.FC = () => {
         ))}
 
         {/* Add New Placeholder */}
-        <div className="bg-slate-50 rounded-xl p-6 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center text-center gap-3 min-h-[200px] opacity-70 cursor-not-allowed">
-          <div className="p-3 bg-white rounded-full shadow-sm">
-            <Plus size={24} className="text-slate-400" />
+        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-6 border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center text-center gap-3 min-h-[200px] opacity-70 cursor-not-allowed transition-colors">
+          <div className="p-3 bg-white dark:bg-slate-800 rounded-full shadow-sm transition-colors">
+            <Plus size={24} className="text-slate-400 dark:text-slate-500" />
           </div>
           <div>
-            <h3 className="font-bold text-slate-500 text-lg">Add Custom Resource</h3>
-            <p className="text-slate-400 text-xs mt-1">Feature coming soon</p>
+            <h3 className="font-bold text-slate-500 dark:text-slate-400 text-lg transition-colors">Add Custom Resource</h3>
+            <p className="text-slate-400 dark:text-slate-500 text-xs mt-1 transition-colors">Feature coming soon</p>
           </div>
         </div>
       </div>
