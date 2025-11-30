@@ -478,10 +478,10 @@ const ExamTOS: React.FC = () => {
       <div className="mb-8 space-y-4">
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div>
-            <h2 className="text-2xl font-bold text-slate-800">Enhanced Table of Specifications</h2>
-            <p className="text-slate-500 mt-1">Comprehensive breakdown of key competencies for the August 2026 PNLE.</p>
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white transition-colors">Enhanced Table of Specifications</h2>
+            <p className="text-slate-500 dark:text-slate-400 mt-1 transition-colors">Comprehensive breakdown of key competencies for the August 2026 PNLE.</p>
           </div>
-          <div className="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-500 shadow-sm flex items-center gap-2">
+          <div className="bg-white dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-500 dark:text-slate-400 shadow-sm flex items-center gap-2 transition-colors">
             <Info size={14} />
             PQF Level: 6
           </div>
@@ -490,19 +490,19 @@ const ExamTOS: React.FC = () => {
         {/* Search Bar */}
         <div className="relative">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search size={20} className="text-slate-400" />
+            <Search size={20} className="text-slate-400 dark:text-slate-500" />
           </div>
           <input
             type="text"
             placeholder="Search topics, competencies, or keywords..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="block w-full pl-10 pr-10 py-3 border border-slate-200 rounded-xl leading-5 bg-white placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all shadow-sm"
+            className="block w-full pl-10 pr-10 py-3 border border-slate-200 dark:border-slate-700 rounded-xl leading-5 bg-white dark:bg-slate-800 placeholder-slate-400 dark:placeholder-slate-500 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all shadow-sm"
           />
           {searchQuery && (
             <button 
               onClick={() => setSearchQuery('')}
-              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600"
+              className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 transition-colors"
             >
               <X size={16} />
             </button>
@@ -512,8 +512,8 @@ const ExamTOS: React.FC = () => {
 
       <div className="space-y-6">
         {filteredTopics.length === 0 ? (
-           <div className="text-center py-12 bg-white rounded-xl border border-slate-200 border-dashed">
-             <p className="text-slate-500">No results found for "{searchQuery}"</p>
+           <div className="text-center py-12 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 border-dashed transition-colors">
+             <p className="text-slate-500 dark:text-slate-400">No results found for "{searchQuery}"</p>
              <button 
                onClick={() => setSearchQuery('')}
                className="mt-2 text-pink-500 hover:text-pink-600 text-sm font-medium"
@@ -528,22 +528,22 @@ const ExamTOS: React.FC = () => {
             return (
               <div 
                 key={topic.id} 
-                className={`bg-white rounded-xl border transition-all duration-300 overflow-hidden ${isOpen ? 'border-pink-400 ring-1 ring-pink-100 shadow-md' : 'border-slate-200 shadow-sm hover:border-pink-200'}`}
+                className={`bg-white dark:bg-slate-800 rounded-xl border transition-all duration-300 overflow-hidden ${isOpen ? 'border-pink-400 ring-1 ring-pink-100 dark:ring-pink-900/30 shadow-md' : 'border-slate-200 dark:border-slate-700 shadow-sm hover:border-pink-200 dark:hover:border-pink-800/50'}`}
               >
                 <button
                   onClick={() => toggle(topic.id)}
-                  className="w-full flex items-center justify-between p-5 text-left focus:outline-none bg-white hover:bg-slate-50/50 transition-colors"
+                  className="w-full flex items-center justify-between p-5 text-left focus:outline-none bg-white dark:bg-slate-800 hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors"
                 >
                   <div className="flex items-center gap-4">
-                    <div className={`p-3 rounded-lg transition-colors ${isOpen ? 'bg-pink-50 text-pink-600' : 'bg-slate-100 text-slate-500'}`}>
+                    <div className={`p-3 rounded-lg transition-colors ${isOpen ? 'bg-pink-50 dark:bg-pink-500/10 text-pink-600 dark:text-pink-400' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400'}`}>
                       <Book size={24} />
                     </div>
                     <div>
-                      <h3 className="text-lg font-bold text-slate-800">{topic.title}</h3>
-                      <p className="text-sm text-slate-500">{topic.description}</p>
+                      <h3 className="text-lg font-bold text-slate-800 dark:text-white transition-colors">{topic.title}</h3>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors">{topic.description}</p>
                     </div>
                   </div>
-                  <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-400'}`}>
+                  <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-400 dark:text-slate-500'}`}>
                     <ChevronDown />
                   </div>
                 </button>
@@ -553,19 +553,19 @@ const ExamTOS: React.FC = () => {
                     isOpen ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="p-6 pt-0 border-t border-slate-100">
+                  <div className="p-6 pt-0 border-t border-slate-100 dark:border-slate-700 transition-colors">
                     {topic.parts.map((part, pIdx) => (
                       <div key={pIdx} className="mt-6">
                         <div className="flex items-center gap-3 mb-3 pl-2 border-l-4 border-pink-400">
-                          <h4 className="font-bold text-slate-800 text-lg">{part.title}</h4>
+                          <h4 className="font-bold text-slate-800 dark:text-white text-lg transition-colors">{part.title}</h4>
                         </div>
                         {part.description && (
-                          <p className="text-sm text-slate-500 italic mb-4 pl-3">{part.description}</p>
+                          <p className="text-sm text-slate-500 dark:text-slate-400 italic mb-4 pl-3 transition-colors">{part.description}</p>
                         )}
 
-                        <div className="overflow-x-auto rounded-lg border border-slate-200">
+                        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
                           <table className="w-full text-sm text-left">
-                            <thead className="bg-slate-50 text-slate-600 font-semibold uppercase text-xs">
+                            <thead className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs transition-colors">
                               <tr>
                                 <th className="px-6 py-3 w-1/3">Topics & Competencies</th>
                                 <th className="px-6 py-3 w-1/3">Content</th>
@@ -573,23 +573,23 @@ const ExamTOS: React.FC = () => {
                                 <th className="px-6 py-3 text-center whitespace-nowrap">No. of Items</th>
                               </tr>
                             </thead>
-                            <tbody className="divide-y divide-slate-100 bg-white">
+                            <tbody className="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800 transition-colors">
                               {part.rows.map((row, rIdx) => (
-                                <tr key={rIdx} className="hover:bg-slate-50/50 transition-colors">
-                                  <td className="px-6 py-4 align-top font-semibold text-slate-700">
+                                <tr key={rIdx} className="hover:bg-slate-50/50 dark:hover:bg-slate-700/50 transition-colors">
+                                  <td className="px-6 py-4 align-top font-semibold text-slate-700 dark:text-slate-200 transition-colors">
                                     {row.topic}
                                   </td>
-                                  <td className="px-6 py-4 align-top text-slate-600">
+                                  <td className="px-6 py-4 align-top text-slate-600 dark:text-slate-400 transition-colors">
                                     <ul className="list-disc list-outside ml-4 space-y-1">
                                       {row.content.map((item, i) => (
                                         <li key={i}>{item}</li>
                                       ))}
                                     </ul>
                                   </td>
-                                  <td className="px-6 py-4 align-top text-center font-medium text-slate-700">
+                                  <td className="px-6 py-4 align-top text-center font-medium text-slate-700 dark:text-slate-300 transition-colors">
                                     {row.weight}
                                   </td>
-                                  <td className="px-6 py-4 align-top text-center font-bold text-pink-600">
+                                  <td className="px-6 py-4 align-top text-center font-bold text-pink-600 dark:text-pink-400 transition-colors">
                                     {row.itemCount}
                                   </td>
                                 </tr>
