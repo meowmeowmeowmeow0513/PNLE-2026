@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Flame, Users, Share2, Award } from 'lucide-react';
+import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Flame, Users, Award } from 'lucide-react';
 import { NavigationItem } from '../types';
 
 interface DashboardProps {
@@ -273,10 +273,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                          <span className="text-[10px] uppercase text-orange-100 font-bold tracking-wider">Next Milestone</span>
                          <span className="text-xs font-bold">{getNextMilestone(streak)} Days</span>
                      </div>
-                     <button className="flex items-center gap-2 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-bold backdrop-blur-md transition-colors hover:bg-white/30 shadow-sm">
-                         <Share2 size={14} />
-                         Share
-                     </button>
                  </div>
              </div>
         </div>
