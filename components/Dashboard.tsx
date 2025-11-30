@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Heart, Users } from 'lucide-react';
+import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Flame, Users, Share2, Award } from 'lucide-react';
 import { NavigationItem } from '../types';
 
 interface DashboardProps {
@@ -29,6 +29,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   };
 
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+  
+  // Streak State
+  const [streak, setStreak] = useState(0);
 
   // Task Management State
   const [tasks, setTasks] = useState<Task[]>(() => {
@@ -47,6 +50,51 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
     return () => clearInterval(timer);
+  }, []);
+
+  // Streak Logic (Local Time Midnight Reset)
+  useEffect(() => {
+    // Helper to get YYYY-MM-DD in local time
+    const getLocalISODate = (date: Date) => {
+      const offset = date.getTimezoneOffset() * 60000; // offset in milliseconds
+      const localDate = new Date(date.getTime() - offset);
+      return localDate.toISOString().split('T')[0];
+    };
+
+    const today = getLocalISODate(new Date());
+    const lastVisit = localStorage.getItem('pnle_last_visit');
+    const currentStreak = parseInt(localStorage.getItem('pnle_streak') || '0');
+
+    if (lastVisit !== today) {
+        const yesterdayDate = new Date();
+        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+        const yesterday = getLocalISODate(yesterdayDate);
+
+        if (lastVisit === yesterday) {
+            // Consecutive day
+            const newStreak = currentStreak + 1;
+            setStreak(newStreak);
+            localStorage.setItem('pnle_streak', newStreak.toString());
+        } else {
+            // Missed a day or first visit
+            // Note: If they visit, break streak, then visit again same day, we don't reset to 1
+            // We only reset if lastVisit was BEFORE yesterday.
+            
+            // Logic: 
+            // If lastVisit is empty -> streak 1
+            // If lastVisit < yesterday -> streak 1
+            // If lastVisit == yesterday -> streak + 1
+            // If lastVisit == today -> keep streak (handled by outer if)
+            
+            const newStreak = 1;
+            setStreak(newStreak);
+            localStorage.setItem('pnle_streak', newStreak.toString());
+        }
+        localStorage.setItem('pnle_last_visit', today);
+    } else {
+        // Same day visit, just load existing
+        setStreak(currentStreak);
+    }
   }, []);
 
   // Persist tasks to localStorage
@@ -82,6 +130,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     { label: 'Minutes', value: timeLeft.minutes },
     { label: 'Seconds', value: timeLeft.seconds },
   ];
+
+  // Helper for gamified text
+  const getStreakMessage = (days: number) => {
+    if (days >= 30) return "You are LEGENDARY! 🏆";
+    if (days >= 7) return "You're on FIRE! 🔥";
+    if (days >= 3) return "Heating up! ⚡";
+    return "Start your streak!";
+  };
+
+  const getNextMilestone = (days: number) => {
+    if (days < 3) return 3;
+    if (days < 7) return 7;
+    if (days < 30) return 30;
+    return 100;
+  };
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10">
@@ -124,9 +187,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           <h3 className="text-white font-handwriting text-4xl md:text-6xl drop-shadow-xl transform -rotate-2 origin-left">
             Crescere RN 2026!!
           </h3>
-          <div className="p-3 bg-white/10 backdrop-blur-md rounded-full border border-white/20">
-            <Heart className="text-pink-500 fill-pink-500 animate-pulse" size={24}/>
-          </div>
         </div>
       </div>
 
@@ -178,8 +238,51 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       {/* Widgets Area */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
+        {/* Gamified Streak Widget (TikTok Style) */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#FF4D4D] to-[#F9CB28] p-6 text-white shadow-lg transition-transform hover:scale-[1.02] flex flex-col justify-between h-full min-h-[220px]">
+             {/* Background Effects */}
+             <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/20 blur-2xl"></div>
+             <div className="absolute -left-6 -bottom-6 h-32 w-32 rounded-full bg-orange-600/20 blur-2xl"></div>
+             
+             <div className="relative flex items-start justify-between">
+                 <div>
+                     <div className="flex items-center gap-2 font-medium text-orange-100">
+                         <Flame className={`h-5 w-5 ${streak > 0 ? 'animate-bounce' : ''}`} fill="currentColor" />
+                         <span className="uppercase tracking-wider text-xs font-bold">Daily Streak</span>
+                     </div>
+                     <div className="mt-2 flex items-baseline gap-1">
+                         <span className="text-6xl font-black tracking-tight drop-shadow-sm">{streak}</span>
+                         <span className="text-xl font-bold text-orange-100">days</span>
+                     </div>
+                 </div>
+                 
+                 {/* Badge Icon */}
+                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-4 ring-white/30 shadow-inner">
+                    <Award size={24} className="text-white" fill="currentColor" />
+                 </div>
+             </div>
+
+             <div className="relative mt-4">
+                 <p className="text-sm font-bold text-white/95 tracking-wide">
+                     {getStreakMessage(streak)}
+                 </p>
+                 
+                 {/* Progress to next milestone */}
+                 <div className="mt-4 flex items-center justify-between border-t border-white/20 pt-3">
+                     <div className="flex flex-col">
+                         <span className="text-[10px] uppercase text-orange-100 font-bold tracking-wider">Next Milestone</span>
+                         <span className="text-xs font-bold">{getNextMilestone(streak)} Days</span>
+                     </div>
+                     <button className="flex items-center gap-2 rounded-lg bg-white/20 px-3 py-1.5 text-xs font-bold backdrop-blur-md transition-colors hover:bg-white/30 shadow-sm">
+                         <Share2 size={14} />
+                         Share
+                     </button>
+                 </div>
+             </div>
+        </div>
+
         {/* Task Widget */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col h-full min-h-[300px]">
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 flex flex-col h-full min-h-[300px] md:col-span-2 lg:col-span-1">
           <div className="flex items-center justify-between mb-4">
              <div className="flex items-center gap-2">
                 <div className="h-8 w-8 bg-pink-50 rounded-lg flex items-center justify-center text-pink-600">
@@ -252,16 +355,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* Progress Placeholder */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 min-h-[200px] flex flex-col justify-center items-center text-center">
-            <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
-                <span className="text-2xl">📊</span>
-            </div>
-            <h3 className="text-slate-800 font-bold">Progress Tracker</h3>
-            <p className="text-slate-500 text-sm mt-1">Completion stats coming soon.</p>
-        </div>
-
-        {/* Wellness Placeholder */}
+        {/* Wellness Placeholder (Remaining slot) */}
         <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100 min-h-[200px] flex flex-col justify-center items-center text-center">
             <div className="h-12 w-12 bg-slate-100 rounded-full flex items-center justify-center mb-3">
                 <span className="text-2xl">🌱</span>
