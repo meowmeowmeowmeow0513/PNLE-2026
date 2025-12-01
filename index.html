@@ -10,7 +10,13 @@
       body {
         font-family: 'Inter', sans-serif;
         background-color: #F3F4F6; /* very light gray */
+        transition: background-color 0.3s ease;
       }
+      /* Ensure body background is dark when dark mode is active */
+      html.dark body {
+        background-color: #0f172a; /* slate-900 */
+      }
+      
       /* Custom scrollbar for notes */
       .custom-scrollbar::-webkit-scrollbar {
         width: 8px;
