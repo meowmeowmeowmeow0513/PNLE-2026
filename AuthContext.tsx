@@ -6,6 +6,7 @@ import {
   signInWithPopup,
   signOut,
   onAuthStateChanged,
+  sendEmailVerification,
   User,
   UserCredential
 } from "firebase/auth";
@@ -16,6 +17,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<UserCredential>;
   googleLogin: () => Promise<UserCredential>;
   logout: () => Promise<void>;
+  verifyEmail: (user: User) => Promise<void>;
   loading: boolean;
 }
 
@@ -53,6 +55,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return signOut(auth);
   }
 
+  function verifyEmail(user: User) {
+    return sendEmailVerification(user);
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -68,6 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     googleLogin,
     logout,
+    verifyEmail,
     loading
   };
 
