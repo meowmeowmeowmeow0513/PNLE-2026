@@ -6,12 +6,13 @@ import Pomodoro from './components/Pomodoro';
 import Resources from './components/Resources';
 import ExamTOS from './components/ExamTOS';
 import SignUp from './components/SignUp';
+import VerifyEmail from './components/VerifyEmail';
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
-import { Loader, Send } from 'lucide-react';
+import { Loader } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { currentUser, loading, logout } = useAuth(); // Added logout
+  const { currentUser, loading } = useAuth();
   const [activeItem, setActiveItem] = useState<NavigationItem>('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -80,42 +81,7 @@ const App: React.FC = () => {
   // 3. Verification Wall - Intercept Unverified Users
   // Note: Google Auth users are automatically verified, so this mostly impacts Email/Password users
   if (!currentUser.emailVerified) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] dark:bg-slate-900 transition-colors p-4">
-        <div className="w-full max-w-md bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-700 text-center animate-fade-in">
-          <div className="w-20 h-20 bg-green-50 dark:bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-green-500">
-            <Send size={40} />
-          </div>
-          
-          <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">
-            Verify your email
-          </h2>
-          
-          <p className="text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-            We have sent a verification email to <br/>
-            <span className="font-bold text-slate-900 dark:text-white">{currentUser.email}</span>.
-            <br/><br/>
-            Please check your inbox (and spam folder), click the link, and then come back here.
-          </p>
-          
-          <div className="space-y-3">
-            <button
-              onClick={() => window.location.reload()}
-              className="w-full py-3.5 px-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl shadow-lg shadow-pink-500/25 transition-all"
-            >
-              I have verified my email
-            </button>
-            
-            <button
-              onClick={() => logout()}
-              className="w-full py-3.5 px-4 bg-transparent hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 font-medium rounded-xl transition-all"
-            >
-              Go back to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
+    return <VerifyEmail />;
   }
 
   // 4. Authenticated App Layout
