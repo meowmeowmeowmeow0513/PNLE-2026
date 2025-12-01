@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, ReactNode } from "react";
-import { auth, googleProvider } from "./firebase";
+import { auth, googleProvider, db } from "./firebase";
 import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
@@ -8,9 +8,12 @@ import {
   onAuthStateChanged,
   sendEmailVerification,
   sendPasswordResetEmail,
+  updateProfile,
+  deleteUser,
   User,
   UserCredential
 } from "firebase/auth";
+import { doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
 interface AuthContextType {
   currentUser: User | null;
@@ -21,6 +24,8 @@ interface AuthContextType {
   resendVerificationEmail: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   reloadUser: () => Promise<void>;
+  updateUserProfile: (name: string, photoURL: string | null) => Promise<void>;
+  deleteUserAccount: () => Promise<void>;
   loading: boolean;
 }
 
@@ -42,19 +47,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Helper to sync Auth user to Firestore
+  async function syncUserToFirestore(user: User) {
+    const userRef = doc(db, "users", user.uid);
+    const userSnap = await getDoc(userRef);
+
+    if (!userSnap.exists()) {
+      await setDoc(userRef, {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || "",
+        photoURL: user.photoURL || null,
+        createdAt: new Date().toISOString(),
+      });
+    }
+  }
+
   async function signup(email: string, password: string) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    await sendEmailVerification(userCredential.user);
-    // User is automatically logged in by Firebase after creation.
-    // We don't need to return anything, the onAuthStateChanged will trigger.
+    const user = userCredential.user;
+    
+    // Create Firestore document immediately upon registration
+    await setDoc(doc(db, "users", user.uid), {
+      uid: user.uid,
+      email: user.email,
+      displayName: "", // Initial name empty
+      photoURL: null,
+      createdAt: new Date().toISOString()
+    });
+
+    await sendEmailVerification(user);
   }
 
-  function login(email: string, password: string) {
-    return signInWithEmailAndPassword(auth, email, password);
+  async function login(email: string, password: string) {
+    const result = await signInWithEmailAndPassword(auth, email, password);
+    // Ensure Firestore doc exists (syncs if missing)
+    await syncUserToFirestore(result.user);
+    return result;
   }
 
-  function googleLogin() {
-    return signInWithPopup(auth, googleProvider);
+  async function googleLogin() {
+    const result = await signInWithPopup(auth, googleProvider);
+    // Ensure Firestore doc exists (syncs if missing)
+    await syncUserToFirestore(result.user);
+    return result;
   }
 
   function logout() {
@@ -79,6 +115,41 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  async function updateUserProfile(name: string, photoURL: string | null) {
+    if (currentUser) {
+      // 1. Update Firebase Auth Profile
+      await updateProfile(currentUser, {
+        displayName: name,
+        photoURL: photoURL
+      });
+
+      // 2. Update Firestore Document
+      const userRef = doc(db, "users", currentUser.uid);
+      await updateDoc(userRef, {
+        displayName: name,
+        photoURL: photoURL
+      });
+
+      // 3. Reload local state
+      await reloadUser();
+    }
+  }
+
+  async function deleteUserAccount() {
+    if (currentUser) {
+      try {
+        // 1. Delete Firestore Document
+        await deleteDoc(doc(db, "users", currentUser.uid));
+        
+        // 2. Delete Auth User
+        await deleteUser(currentUser);
+      } catch (error) {
+        console.error("Error deleting account:", error);
+        throw error;
+      }
+    }
+  }
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUser(user);
@@ -97,6 +168,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     resetPassword,
     resendVerificationEmail,
     reloadUser,
+    updateUserProfile,
+    deleteUserAccount,
     loading
   };
 
