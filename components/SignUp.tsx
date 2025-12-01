@@ -3,7 +3,7 @@ import { useAuth } from '../AuthContext';
 import { UserPlus, LogIn, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 const SignUp: React.FC = () => {
-  const { signup, login, googleLogin, verifyEmail } = useAuth();
+  const { signup, login, googleLogin } = useAuth();
   
   const [isLogin, setIsLogin] = useState(false); // Toggle between Login and Signup
   const [email, setEmail] = useState('');
@@ -27,15 +27,14 @@ const SignUp: React.FC = () => {
     try {
       if (isLogin) {
         // --- LOGIN FLOW ---
-        // We just log them in. App.tsx checks for emailVerified and blocks dashboard if false.
         await login(cleanEmail, password);
       } else {
         // --- SIGN UP FLOW ---
-        const userCredential = await signup(cleanEmail, password);
-        // Send Verification Email
-        await verifyEmail(userCredential.user);
-        // We do NOT logout here. We let the user stay logged in, 
-        // which triggers App.tsx to show the "Verify your email" wall.
+        // signup() in AuthContext now handles creating user AND sending the email.
+        await signup(cleanEmail, password);
+        // We do NOT navigate manually. 
+        // Once signup completes, currentUser is set in Context.
+        // App.tsx detects (!currentUser.emailVerified) and switches screen to VerifyEmail.
       }
     } catch (err: any) {
       console.error(err);
@@ -52,7 +51,7 @@ const SignUp: React.FC = () => {
       } else {
         setError(`Failed to ${isLogin ? 'log in' : 'sign up'}: ${err.message}`);
       }
-      setLoading(false); // Only stop loading on error, otherwise let component unmount/redirect
+      setLoading(false); 
     } 
   };
 
@@ -73,7 +72,6 @@ const SignUp: React.FC = () => {
     }
   };
 
-  // --- STANDARD AUTH FORM ---
   return (
     <div className="flex items-center justify-center">
       <div className="w-full max-w-md">
