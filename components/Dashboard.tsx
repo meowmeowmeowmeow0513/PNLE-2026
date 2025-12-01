@@ -206,19 +206,19 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         </div>
 
         {/* Quick Focus Card */}
-        <div className="bg-navy-900 text-white rounded-2xl p-6 shadow-lg flex flex-col justify-between relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500 rounded-full blur-3xl opacity-20 -mr-10 -mt-10 group-hover:opacity-30 transition-opacity"></div>
+        <div className="bg-white dark:bg-navy-900 text-slate-800 dark:text-white rounded-2xl p-6 shadow-lg border border-slate-100 dark:border-navy-800 flex flex-col justify-between relative overflow-hidden group transition-colors">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500 rounded-full blur-3xl opacity-10 dark:opacity-20 -mr-10 -mt-10 group-hover:opacity-20 dark:group-hover:opacity-30 transition-opacity"></div>
           
           <div>
             <h3 className="text-xl font-bold mb-2">Ready to Focus?</h3>
-            <p className="text-slate-300 text-sm leading-relaxed">
+            <p className="text-slate-500 dark:text-slate-300 text-sm leading-relaxed transition-colors">
               Consistency beats intensity. Start a 25-minute study block now and build your momentum.
             </p>
           </div>
           
           <button 
             onClick={() => onNavigate('Pomodoro Timer')}
-            className="mt-6 w-full py-3 px-4 bg-pink-accent hover:bg-pink-400 text-navy-900 font-bold rounded-xl transition-all shadow-lg hover:shadow-pink-500/25 flex items-center justify-center gap-2"
+            className="mt-6 w-full py-3 px-4 bg-pink-500 hover:bg-pink-600 dark:bg-pink-accent dark:hover:bg-pink-400 text-white dark:text-navy-900 font-bold rounded-xl transition-all shadow-lg hover:shadow-pink-500/25 flex items-center justify-center gap-2"
           >
             Start Review Session
             <ArrowRight size={18} />
