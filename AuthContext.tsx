@@ -13,11 +13,12 @@ import {
 
 interface AuthContextType {
   currentUser: User | null;
-  signup: (email: string, password: string) => Promise<UserCredential>;
+  signup: (email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<UserCredential>;
   googleLogin: () => Promise<UserCredential>;
   logout: () => Promise<void>;
-  verifyEmail: (user: User) => Promise<void>;
+  resendVerificationEmail: () => Promise<void>;
+  reloadUser: () => Promise<void>;
   loading: boolean;
 }
 
@@ -39,8 +40,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
-  function signup(email: string, password: string) {
-    return createUserWithEmailAndPassword(auth, email, password);
+  async function signup(email: string, password: string) {
+    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    await sendEmailVerification(userCredential.user);
+    // User is automatically logged in by Firebase after creation.
+    // We don't need to return anything, the onAuthStateChanged will trigger.
   }
 
   function login(email: string, password: string) {
@@ -55,8 +59,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return signOut(auth);
   }
 
-  function verifyEmail(user: User) {
-    return sendEmailVerification(user);
+  async function resendVerificationEmail() {
+    if (currentUser) {
+      await sendEmailVerification(currentUser);
+    }
+  }
+
+  async function reloadUser() {
+    if (currentUser) {
+      await currentUser.reload();
+      // Force update state by creating a new object ref
+      setCurrentUser({ ...currentUser });
+    }
   }
 
   useEffect(() => {
@@ -74,7 +88,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     googleLogin,
     logout,
-    verifyEmail,
+    resendVerificationEmail,
+    reloadUser,
     loading
   };
 
