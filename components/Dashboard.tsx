@@ -4,6 +4,7 @@ import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users } from 
 import { NavigationItem } from '../types';
 import StreakWidget from './StreakWidget'; // Import Widget
 import StreakRecoveryModal from './StreakRecoveryModal'; // Import Modal
+import MnemonicWidget from './MnemonicWidget'; // Import Mnemonic Widget
 import { useStreakSystem } from '../hooks/useStreakSystem'; // Import Hook
 
 interface DashboardProps {
@@ -200,7 +201,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       {/* Widgets Area */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* New Streak Widget */}
+        {/* Streak Widget */}
         <StreakWidget stats={stats} loading={streakLoading} />
 
         {/* Task Widget */}
@@ -277,14 +278,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* Wellness Placeholder (Remaining slot) */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 min-h-[200px] flex flex-col justify-center items-center text-center transition-colors">
-            <div className="h-12 w-12 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-3 transition-colors">
-                <span className="text-2xl">🌱</span>
-            </div>
-             <h3 className="text-slate-800 dark:text-white font-bold transition-colors">Wellness Check</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1 transition-colors">Sleep & hydration logs coming soon.</p>
-        </div>
+        {/* Mnemonic Widget (Replaces Wellness Placeholder) */}
+        <MnemonicWidget />
+
       </div>
     </div>
   );
