@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -9,8 +10,10 @@ import PersonalFolder from './components/PersonalFolder';
 import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
+import FloatingTimer from './components/FloatingTimer'; // Import FloatingTimer
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
+import { PomodoroProvider } from './components/PomodoroContext'; // Import Provider
 import { Loader } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -89,37 +92,41 @@ const App: React.FC = () => {
   }
 
   // 3. Verification Wall - Intercept Unverified Users
-  // Note: Google Auth users are automatically verified, so this mostly impacts Email/Password users
   if (!currentUser.emailVerified) {
     return <VerifyEmail />;
   }
 
-  // 4. Authenticated App Layout
+  // 4. Authenticated App Layout (Wrapped in PomodoroProvider)
   return (
-    <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
-      {/* Sidebar */}
-      <Sidebar 
-        activeItem={activeItem} 
-        onNavigate={setActiveItem}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300">
-        <TopBar 
-          onMenuClick={() => setSidebarOpen(true)} 
-          isDark={isDark}
-          toggleTheme={toggleTheme}
+    <PomodoroProvider>
+      <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
+        {/* Sidebar */}
+        <Sidebar 
+          activeItem={activeItem} 
+          onNavigate={setActiveItem}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
-        
-        <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
-          <div className="max-w-7xl mx-auto h-full">
-            {renderContent()}
-          </div>
-        </main>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300 relative">
+          <TopBar 
+            onMenuClick={() => setSidebarOpen(true)} 
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+          />
+          
+          <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+            <div className="max-w-7xl mx-auto h-full">
+              {renderContent()}
+            </div>
+          </main>
+
+          {/* Floating Timer - Only shows if running and NOT on Pomodoro page */}
+          <FloatingTimer activeItem={activeItem} />
+        </div>
       </div>
-    </div>
+    </PomodoroProvider>
   );
 };
 
