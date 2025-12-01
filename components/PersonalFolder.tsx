@@ -9,12 +9,13 @@ import {
   Loader, Plus, X, Eye, Film, Music, ChevronRight, Home, Grid, FolderPlus, ArrowUp
 } from 'lucide-react';
 import { format } from 'date-fns';
+import { UserFile } from '../types';
 
 const PersonalFolder: React.FC = () => {
   const { currentUser } = useAuth();
   const { 
     sortedFolders, sortedFiles, breadcrumbs, 
-    navigateToFolder, navigateUp, createFolder, uploadFile, deleteFile, deleteFolder,
+    navigateToFolder, navigateUp, createFolder, uploadFile, moveFile, deleteFile, deleteFolder,
     uploading, loading, sortBy, setSortBy 
   } = useFileManager(currentUser?.uid);
   
@@ -24,6 +25,10 @@ const PersonalFolder: React.FC = () => {
   const [userNote, setUserNote] = useState('');
   const [previewFile, setPreviewFile] = useState<{url: string, type: string, name: string} | null>(null);
   
+  // Drag and Drop State
+  const [draggedFile, setDraggedFile] = useState<UserFile | null>(null);
+  const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -72,6 +77,41 @@ const PersonalFolder: React.FC = () => {
     return <FileIcon size={48} className="text-slate-400" strokeWidth={1.5} />;
   };
 
+  // --- Drag & Drop Handlers ---
+  const handleDragStart = (e: React.DragEvent, file: UserFile) => {
+    setDraggedFile(file);
+    e.dataTransfer.effectAllowed = 'move';
+    // Transparent ghost image or simple styling
+    e.dataTransfer.setData('text/plain', file.id); 
+  };
+
+  const handleDragOver = (e: React.DragEvent, folderId: string | null) => {
+    e.preventDefault(); // Necessary to allow dropping
+    e.dataTransfer.dropEffect = 'move';
+    if (folderId !== dragOverFolderId) {
+        setDragOverFolderId(folderId);
+    }
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    setDragOverFolderId(null);
+  };
+
+  const handleDrop = async (e: React.DragEvent, targetFolderId: string | null) => {
+    e.preventDefault();
+    setDragOverFolderId(null);
+
+    if (draggedFile && draggedFile.folderId !== targetFolderId) {
+        try {
+            await moveFile(draggedFile.id, targetFolderId);
+        } catch (error) {
+            console.error("Failed to move file", error);
+        }
+    }
+    setDraggedFile(null);
+  };
+
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-10">
       
@@ -102,24 +142,32 @@ const PersonalFolder: React.FC = () => {
       {/* 2. Navigation Bar (Breadcrumbs & Sort) */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-2 flex items-center justify-between shadow-sm">
         
-        {/* Breadcrumbs */}
+        {/* Breadcrumbs (Droppable targets for moving up) */}
         <div className="flex items-center overflow-x-auto px-2 py-1 scrollbar-hide">
-             {breadcrumbs.map((crumb, index) => (
-                 <div key={index} className="flex items-center text-sm">
-                     {index > 0 && <ChevronRight size={14} className="text-slate-400 mx-1" />}
-                     <button 
-                        onClick={() => navigateUp(crumb.id)}
-                        className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-colors whitespace-nowrap ${
-                            index === breadcrumbs.length - 1 
-                            ? 'font-bold text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-700' 
-                            : 'text-slate-500 hover:text-pink-500 hover:bg-pink-50 dark:text-slate-400 dark:hover:bg-slate-700'
-                        }`}
-                     >
-                         {index === 0 && <Home size={14} />}
-                         {crumb.name}
-                     </button>
-                 </div>
-             ))}
+             {breadcrumbs.map((crumb, index) => {
+                 const isTarget = dragOverFolderId === crumb.id && draggedFile?.folderId !== crumb.id;
+                 return (
+                    <div key={index} className="flex items-center text-sm">
+                        {index > 0 && <ChevronRight size={14} className="text-slate-400 mx-1" />}
+                        <button 
+                            onClick={() => navigateUp(crumb.id)}
+                            onDragOver={(e) => handleDragOver(e, crumb.id)}
+                            onDragLeave={handleDragLeave}
+                            onDrop={(e) => handleDrop(e, crumb.id)}
+                            className={`flex items-center gap-1.5 px-2 py-1 rounded-md transition-all whitespace-nowrap ${
+                                isTarget ? 'bg-pink-100 dark:bg-pink-900/40 ring-2 ring-pink-500' : ''
+                            } ${
+                                index === breadcrumbs.length - 1 
+                                ? 'font-bold text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-700' 
+                                : 'text-slate-500 hover:text-pink-500 hover:bg-pink-50 dark:text-slate-400 dark:hover:bg-slate-700'
+                            }`}
+                        >
+                            {index === 0 && <Home size={14} />}
+                            {crumb.name}
+                        </button>
+                    </div>
+                 );
+             })}
         </div>
 
         {/* Sort Controls */}
@@ -159,29 +207,39 @@ const PersonalFolder: React.FC = () => {
                 <div>
                     <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 pl-1">Folders</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {sortedFolders.map(folder => (
-                            <div 
-                                key={folder.id}
-                                onDoubleClick={() => navigateToFolder(folder.id, folder.name)}
-                                className="group bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-pink-300 dark:hover:border-pink-500 hover:shadow-md transition-all cursor-pointer relative"
-                            >
-                                <div className="flex justify-between items-start mb-2">
-                                    <div style={{ color: folder.color }}>
-                                        <Folder size={32} fill="currentColor" fillOpacity={0.2} />
+                        {sortedFolders.map(folder => {
+                            const isTarget = dragOverFolderId === folder.id;
+                            return (
+                                <div 
+                                    key={folder.id}
+                                    onDoubleClick={() => navigateToFolder(folder.id, folder.name)}
+                                    onDragOver={(e) => handleDragOver(e, folder.id)}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={(e) => handleDrop(e, folder.id)}
+                                    className={`group bg-white dark:bg-slate-800 p-4 rounded-xl border transition-all cursor-pointer relative ${
+                                        isTarget 
+                                        ? 'border-pink-500 ring-2 ring-pink-500 bg-pink-50 dark:bg-pink-900/20 scale-105 shadow-xl' 
+                                        : 'border-slate-200 dark:border-slate-700 hover:border-pink-300 dark:hover:border-pink-500 hover:shadow-md'
+                                    }`}
+                                >
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div style={{ color: folder.color }}>
+                                            <Folder size={32} fill="currentColor" fillOpacity={isTarget ? 0.4 : 0.2} />
+                                        </div>
+                                        <button 
+                                            onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
+                                            className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-1"
+                                        >
+                                            <X size={14} />
+                                        </button>
                                     </div>
-                                    <button 
-                                        onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
-                                        className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-1"
-                                    >
-                                        <X size={14} />
-                                    </button>
+                                    <h4 className="font-semibold text-slate-800 dark:text-white truncate text-sm mb-1">{folder.name}</h4>
+                                    <p className="text-[10px] text-slate-400">
+                                        Created {formatDate(folder.createdAt)}
+                                    </p>
                                 </div>
-                                <h4 className="font-semibold text-slate-800 dark:text-white truncate text-sm mb-1">{folder.name}</h4>
-                                <p className="text-[10px] text-slate-400">
-                                    Created {formatDate(folder.createdAt)}
-                                </p>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             )}
@@ -193,11 +251,16 @@ const PersonalFolder: React.FC = () => {
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
                     {sortedFiles.map((file) => {
                         const isImage = file.fileType.startsWith('image/');
+                        const isDragging = draggedFile?.id === file.id;
 
                         return (
                         <div 
                             key={file.id}
-                            className="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-pink-300 dark:hover:border-pink-700 transition-all duration-300 overflow-hidden flex flex-col h-[240px]"
+                            draggable
+                            onDragStart={(e) => handleDragStart(e, file)}
+                            className={`group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-pink-300 dark:hover:border-pink-700 transition-all duration-300 overflow-hidden flex flex-col h-[240px] ${
+                                isDragging ? 'opacity-50 scale-95 border-dashed border-pink-400' : ''
+                            }`}
                         >
                             {/* Thumbnail */}
                             <div 
@@ -223,9 +286,11 @@ const PersonalFolder: React.FC = () => {
                                     <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate" title={file.fileName}>
                                         {file.fileName}
                                     </h3>
-                                    <p className="text-[10px] text-slate-400 font-medium">
-                                        {formatDate(file.createdAt)}
-                                    </p>
+                                    <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
+                                        <span>{formatDate(file.createdAt)}</span>
+                                        <span>•</span>
+                                        <span>{formatFileSize(file.fileSize)}</span>
+                                    </div>
                                 </div>
 
                                 {/* Actions */}
