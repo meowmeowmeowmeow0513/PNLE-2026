@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Menu, Moon, Sun, User as UserIcon, LogOut, Camera, ChevronDown } from 'lucide-react';
+import { Menu, Moon, Sun, User as UserIcon, LogOut, Settings, ChevronDown } from 'lucide-react';
 import { format } from 'date-fns';
 import { useAuth } from '../AuthContext';
-import ProfileUploader from './ProfileUploader';
+import ProfileSettings from './ProfileSettings';
 
 interface TopBarProps {
   onMenuClick: () => void;
@@ -13,7 +13,7 @@ interface TopBarProps {
 const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isDark, toggleTheme }) => {
   const { currentUser, logout } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
-  const [showUploader, setShowUploader] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const today = format(new Date(), 'EEEE, MMMM do, yyyy');
 
   const handleLogout = async () => {
@@ -84,20 +84,22 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isDark, toggleTheme }) => 
                 <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 py-2 z-20 transform origin-top-right transition-all">
                   <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-700 mb-1">
                     <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                      {currentUser?.displayName || 'Aspiring Nurse'}
+                    </p>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
                       {currentUser?.email}
                     </p>
-                    <p className="text-xs text-slate-500 dark:text-slate-400">Aspiring Nurse</p>
                   </div>
                   
                   <button 
                     onClick={() => {
                       setShowDropdown(false);
-                      setShowUploader(true);
+                      setShowSettings(true);
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50 flex items-center gap-2"
                   >
-                    <Camera size={16} />
-                    Update Photo
+                    <Settings size={16} />
+                    Profile Settings
                   </button>
                   
                   <div className="border-t border-slate-100 dark:border-slate-700 my-1"></div>
@@ -116,13 +118,9 @@ const TopBar: React.FC<TopBarProps> = ({ onMenuClick, isDark, toggleTheme }) => 
         </div>
       </header>
       
-      {showUploader && (
-        <ProfileUploader 
-          onClose={() => setShowUploader(false)} 
-          onUploadSuccess={() => {
-            // Trigger a re-render or toast
-            console.log("Profile updated!");
-          }} 
+      {showSettings && (
+        <ProfileSettings 
+          onClose={() => setShowSettings(false)} 
         />
       )}
     </>
