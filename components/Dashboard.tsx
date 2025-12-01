@@ -2,10 +2,10 @@
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users } from 'lucide-react';
 import { NavigationItem } from '../types';
-import StreakWidget from './StreakWidget'; // Import Widget
-import StreakRecoveryModal from './StreakRecoveryModal'; // Import Modal
-import MnemonicWidget from './MnemonicWidget'; // Import Mnemonic Widget
-import { useStreakSystem } from '../hooks/useStreakSystem'; // Import Hook
+import StreakWidget from './StreakWidget';
+import StreakRecoveryModal from './StreakRecoveryModal';
+import MnemonicWidget from './MnemonicWidget';
+import { useStreakSystem } from '../hooks/useStreakSystem';
 
 interface DashboardProps {
   onNavigate: (item: NavigationItem) => void;
@@ -287,3 +287,4 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 };
 
 export default Dashboard;
+    
