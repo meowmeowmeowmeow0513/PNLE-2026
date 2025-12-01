@@ -563,7 +563,7 @@ const ExamTOS: React.FC = () => {
                           <p className="text-sm text-slate-500 dark:text-slate-400 italic mb-4 pl-3 transition-colors">{part.description}</p>
                         )}
 
-                        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+                        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800">
                           <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs transition-colors">
                               <tr>
