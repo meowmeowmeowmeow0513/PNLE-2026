@@ -2,13 +2,13 @@
 import { useState, useEffect, useMemo } from 'react';
 import { storage, db } from '../firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where, FirestoreError, getDoc, updateDoc, orderBy } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where, FirestoreError, getDoc, updateDoc, orderBy, getDocs } from 'firebase/firestore';
 import { UserFile, UserFolder } from '../types';
 
 export const useFileManager = (userId: string | undefined) => {
   const [files, setFiles] = useState<UserFile[]>([]);
   const [folders, setFolders] = useState<UserFolder[]>([]);
-  const [allFolders, setAllFolders] = useState<UserFolder[]>([]); // For Move Modal (Directory Tree)
+  const [rawFolders, setRawFolders] = useState<UserFolder[]>([]); // All folders raw from DB
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<{id: string | null, name: string}[]>([{id: null, name: 'Home'}]);
   
@@ -18,19 +18,59 @@ export const useFileManager = (userId: string | undefined) => {
   // Sorting
   const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
 
-  // Fetch All Folders (for directory tree / move operations)
+  // Fetch All Folders (Realtime)
   useEffect(() => {
     if (!userId) {
-        setAllFolders([]);
+        setRawFolders([]);
         return;
     }
     const q = query(collection(db, 'users', userId, 'folders'), orderBy('name'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
         const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as UserFolder[];
-        setAllFolders(fetched);
+        setRawFolders(fetched);
     });
     return () => unsubscribe();
   }, [userId]);
+
+  // Compute Valid Folder Tree (Filter Orphans & Build Paths)
+  const allFolders = useMemo(() => {
+    if (!rawFolders.length) return [];
+
+    const folderMap = new Map<string, UserFolder>();
+    rawFolders.forEach(f => folderMap.set(f.id, f));
+
+    // 1. Identify Valid (Reachable) Nodes
+    // Start with root folders and traverse down.
+    const validIds = new Set<string>();
+    const queue = rawFolders.filter(f => !f.parentId); // Roots
+    queue.forEach(f => validIds.add(f.id));
+
+    let head = 0;
+    while(head < queue.length){
+        const curr = queue[head++];
+        const children = rawFolders.filter(f => f.parentId === curr.id);
+        children.forEach(c => {
+            validIds.add(c.id);
+            queue.push(c);
+        });
+    }
+
+    // 2. Build Paths & Filter Orphans
+    return rawFolders
+        .filter(f => validIds.has(f.id)) // Only return reachable folders
+        .map(f => {
+            let path = f.name;
+            let curr = f;
+            // Traverse up to build full string path "Parent / Child"
+            while(curr.parentId && folderMap.has(curr.parentId)) {
+                const parent = folderMap.get(curr.parentId)!;
+                path = parent.name + " / " + path;
+                curr = parent;
+            }
+            return { ...f, path };
+        })
+        .sort((a, b) => a.path.localeCompare(b.path));
+  }, [rawFolders]);
 
   // Fetch Current View Folders & Files
   useEffect(() => {
@@ -171,10 +211,7 @@ export const useFileManager = (userId: string | undefined) => {
       const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
       const storageRef = ref(storage, `user_uploads/${userId}/${safeFileName}`);
       
-      await deleteObject(storageRef).catch(async () => {
-         // Fallback logic handled silently
-      });
-
+      await deleteObject(storageRef).catch(() => {}); // Ignore storage not found
       await deleteDoc(doc(db, 'users', userId, 'files', fileId));
     } catch (error) {
       console.error("Delete failed:", error);
@@ -182,10 +219,35 @@ export const useFileManager = (userId: string | undefined) => {
     }
   };
 
+  // RECURSIVE DELETE
   const deleteFolder = async (folderId: string) => {
       if (!userId) return;
-      // Note: This does not delete sub-items. In a real app, you'd want a cloud function for recursive delete.
-      await deleteDoc(doc(db, 'users', userId, 'folders', folderId));
+
+      const performDelete = async (fid: string) => {
+          // 1. Delete Files in this folder
+          const filesQ = query(collection(db, 'users', userId, 'files'), where('folderId', '==', fid));
+          const filesSnap = await getDocs(filesQ);
+          const fileDeletes = filesSnap.docs.map(docSnap => deleteFile(docSnap.id, docSnap.data().fileName));
+          await Promise.all(fileDeletes);
+
+          // 2. Find subfolders
+          const subFoldersQ = query(collection(db, 'users', userId, 'folders'), where('parentId', '==', fid));
+          const subFoldersSnap = await getDocs(subFoldersQ);
+
+          // 3. Recursively delete subfolders
+          for (const sub of subFoldersSnap.docs) {
+              await performDelete(sub.id);
+          }
+
+          // 4. Delete the folder doc itself
+          await deleteDoc(doc(db, 'users', userId, 'folders', fid));
+      };
+
+      try {
+          await performDelete(folderId);
+      } catch (e) {
+          console.error("Recursive delete failed", e);
+      }
   };
 
   // Sort Function using useMemo
@@ -206,7 +268,7 @@ export const useFileManager = (userId: string | undefined) => {
   return {
     sortedFolders, 
     sortedFiles,
-    allFolders,
+    allFolders, // Now contains only valid, reachable folders with 'path'
     currentFolderId,
     breadcrumbs,
     navigateToFolder,
