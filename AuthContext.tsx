@@ -7,6 +7,7 @@ import {
   signOut,
   onAuthStateChanged,
   sendEmailVerification,
+  sendPasswordResetEmail,
   User,
   UserCredential
 } from "firebase/auth";
@@ -18,6 +19,7 @@ interface AuthContextType {
   googleLogin: () => Promise<UserCredential>;
   logout: () => Promise<void>;
   resendVerificationEmail: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
   reloadUser: () => Promise<void>;
   loading: boolean;
 }
@@ -59,6 +61,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return signOut(auth);
   }
 
+  function resetPassword(email: string) {
+    return sendPasswordResetEmail(auth, email);
+  }
+
   async function resendVerificationEmail() {
     if (currentUser) {
       await sendEmailVerification(currentUser);
@@ -88,6 +94,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     googleLogin,
     logout,
+    resetPassword,
     resendVerificationEmail,
     reloadUser,
     loading
