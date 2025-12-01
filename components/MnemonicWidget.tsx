@@ -1,4 +1,3 @@
-
 import React, { useMemo } from 'react';
 import { Lightbulb, BookOpen } from 'lucide-react';
 import { mnemonics } from '../data/mnemonicData';
