@@ -1,4 +1,4 @@
-export type NavigationItem = 'Dashboard' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS';
+export type NavigationItem = 'Dashboard' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Personal Folder';
 
 export interface Note {
   id: string;
@@ -14,6 +14,17 @@ export interface ResourceLink {
   description: string;
   url: string;
   iconName: string;
+}
+
+export interface UserFile {
+  id: string;
+  fileName: string;
+  downloadUrl: string;
+  fileType: string;
+  fileSize: number;
+  createdAt: string;
+  userNotes?: string;
+  aiSummary?: string;
 }
 
 export interface ExamRow {
