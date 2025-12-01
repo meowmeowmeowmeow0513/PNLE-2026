@@ -3,10 +3,14 @@ import React, { useState } from 'react';
 import { X, Folder, Check, Home } from 'lucide-react';
 import { UserFolder } from '../types';
 
+interface FolderWithPath extends UserFolder {
+    path?: string;
+}
+
 interface MoveItemModalProps {
   onClose: () => void;
   onMove: (targetFolderId: string | null) => Promise<void>;
-  folders: UserFolder[];
+  folders: FolderWithPath[];
   currentFolderId: string | null;
   itemToMove: { id: string; type: 'file' | 'folder' } | null;
 }
@@ -70,6 +74,12 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({ onClose, onMove, folders,
             </button>
 
             {/* Folder List */}
+            {folders.length === 0 && (
+                <div className="p-4 text-center text-slate-400 text-sm italic">
+                    No other folders available.
+                </div>
+            )}
+
             {folders.map(folder => {
                 const disabled = isInvalidDestination(folder.id);
                 return (
@@ -83,9 +93,9 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({ onClose, onMove, folders,
                             : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                         } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >
-                        <Folder size={18} style={{ color: folder.color }} fill="currentColor" fillOpacity={0.2} />
-                        <span className="truncate">{folder.name}</span>
-                        {selectedFolderId === folder.id && <Check size={16} className="ml-auto" />}
+                        <Folder size={18} style={{ color: folder.color }} fill="currentColor" fillOpacity={0.2} className="flex-shrink-0" />
+                        <span className="truncate text-sm">{folder.path || folder.name}</span>
+                        {selectedFolderId === folder.id && <Check size={16} className="ml-auto flex-shrink-0" />}
                     </button>
                 );
             })}
