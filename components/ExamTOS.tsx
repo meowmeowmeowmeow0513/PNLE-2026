@@ -1,9 +1,11 @@
+
 import React, { useState, useMemo } from 'react';
-import { ChevronDown, Book, Info, Search, X } from 'lucide-react';
+import { ChevronDown, Book, Info, Search, X, PieChart, List } from 'lucide-react';
 import { ExamTopic, ExamPart } from '../types';
 
 const ExamTOS: React.FC = () => {
-  const [openId, setOpenId] = useState<string | null>('NP1');
+  // Changed default from 'NP1' to null so everything is collapsed initially
+  const [openId, setOpenId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const topics: ExamTopic[] = [
@@ -540,7 +542,7 @@ const ExamTOS: React.FC = () => {
                     </div>
                     <div>
                       <h3 className="text-lg font-bold text-slate-800 dark:text-white transition-colors">{topic.title}</h3>
-                      <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors">{topic.description}</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400 transition-colors line-clamp-2">{topic.description}</p>
                     </div>
                   </div>
                   <div className={`transform transition-transform duration-300 ${isOpen ? 'rotate-180 text-pink-500' : 'text-slate-400 dark:text-slate-500'}`}>
@@ -553,24 +555,25 @@ const ExamTOS: React.FC = () => {
                     isOpen ? 'max-h-[3000px] opacity-100' : 'max-h-0 opacity-0'
                   }`}
                 >
-                  <div className="p-6 pt-0 border-t border-slate-100 dark:border-slate-700 transition-colors">
+                  <div className="p-4 md:p-6 pt-0 border-t border-slate-100 dark:border-slate-700 transition-colors">
                     {topic.parts.map((part, pIdx) => (
                       <div key={pIdx} className="mt-6">
-                        <div className="flex items-center gap-3 mb-3 pl-2 border-l-4 border-pink-400">
-                          <h4 className="font-bold text-slate-800 dark:text-white text-lg transition-colors">{part.title}</h4>
+                        <div className="flex items-start md:items-center gap-3 mb-3 pl-2 border-l-4 border-pink-400">
+                          <h4 className="font-bold text-slate-800 dark:text-white text-lg transition-colors leading-tight">{part.title}</h4>
                         </div>
                         {part.description && (
                           <p className="text-sm text-slate-500 dark:text-slate-400 italic mb-4 pl-3 transition-colors">{part.description}</p>
                         )}
 
-                        <div className="overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800">
+                        {/* DESKTOP VIEW: TABLE */}
+                        <div className="hidden md:block overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700 transition-colors bg-white dark:bg-slate-800">
                           <table className="w-full text-sm text-left">
                             <thead className="bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-semibold uppercase text-xs transition-colors">
                               <tr>
                                 <th className="px-6 py-3 w-1/3">Topics & Competencies</th>
                                 <th className="px-6 py-3 w-1/3">Content</th>
                                 <th className="px-6 py-3 text-center whitespace-nowrap">Weight</th>
-                                <th className="px-6 py-3 text-center whitespace-nowrap">No. of Items</th>
+                                <th className="px-6 py-3 text-center whitespace-nowrap">Items</th>
                               </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100 dark:divide-slate-700 bg-white dark:bg-slate-800 transition-colors">
@@ -597,6 +600,37 @@ const ExamTOS: React.FC = () => {
                             </tbody>
                           </table>
                         </div>
+
+                        {/* MOBILE VIEW: CARDS */}
+                        <div className="md:hidden space-y-4">
+                          {part.rows.map((row, rIdx) => (
+                            <div key={rIdx} className="bg-slate-50 dark:bg-slate-700/30 p-4 rounded-xl border border-slate-100 dark:border-slate-700">
+                                <div className="flex items-start justify-between gap-4 mb-2">
+                                    <h5 className="font-bold text-slate-800 dark:text-white text-sm">{row.topic}</h5>
+                                    <div className="flex flex-col items-end shrink-0 gap-1">
+                                        <span className="bg-pink-100 dark:bg-pink-900/40 text-pink-600 dark:text-pink-300 text-xs px-2 py-0.5 rounded-full font-bold whitespace-nowrap">
+                                            {row.itemCount} items
+                                        </span>
+                                        <span className="text-xs text-slate-500 dark:text-slate-400 font-medium whitespace-nowrap">
+                                            {row.weight}
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <div className="text-xs text-slate-600 dark:text-slate-300 mt-2">
+                                    <ul className="space-y-2">
+                                        {row.content.map((item, i) => (
+                                            <li key={i} className="flex gap-2">
+                                                <span className="text-pink-400">•</span>
+                                                <span>{item}</span>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                </div>
+                            </div>
+                          ))}
+                        </div>
+
                       </div>
                     ))}
                   </div>
