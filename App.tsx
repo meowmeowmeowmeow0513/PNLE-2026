@@ -7,9 +7,11 @@ import Resources from './components/Resources';
 import ExamTOS from './components/ExamTOS';
 import SignUp from './components/SignUp';
 import { NavigationItem } from './types';
-import { AuthProvider } from './AuthContext';
+import { useAuth } from './AuthContext';
+import { Loader } from 'lucide-react';
 
 const App: React.FC = () => {
+  const { currentUser, loading } = useAuth();
   const [activeItem, setActiveItem] = useState<NavigationItem>('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
@@ -17,7 +19,6 @@ const App: React.FC = () => {
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('pnle_theme');
-      // Default to light if no preference, or check system pref
       return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
     }
     return false;
@@ -45,40 +46,63 @@ const App: React.FC = () => {
         return <Resources />;
       case 'Exam TOS':
         return <ExamTOS />;
-      case 'Sign Up':
-        return <SignUp />;
       default:
         return <Dashboard onNavigate={setActiveItem} />;
     }
   };
 
-  return (
-    <AuthProvider>
-      <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
-        {/* Sidebar */}
-        <Sidebar 
-          activeItem={activeItem} 
-          onNavigate={setActiveItem}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300">
-          <TopBar 
-            onMenuClick={() => setSidebarOpen(true)} 
-            isDark={isDark}
-            toggleTheme={toggleTheme}
-          />
-          
-          <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
-            <div className="max-w-7xl mx-auto h-full">
-              {renderContent()}
-            </div>
-          </main>
-        </div>
+  // 1. Loading State
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] dark:bg-slate-900 transition-colors">
+        <Loader className="animate-spin text-pink-500" size={48} />
       </div>
-    </AuthProvider>
+    );
+  }
+
+  // 2. Auth Wall - If no user, show Auth Page
+  if (!currentUser) {
+    return (
+      <div className="min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors p-4">
+        {/* Simple Header for Auth Page */}
+        <div className="max-w-md mx-auto mb-8 pt-10 text-center">
+             <div className="inline-flex items-center justify-center p-3 bg-pink-500 rounded-2xl shadow-lg mb-4">
+                 <span className="text-white font-bold text-2xl">RN</span>
+             </div>
+             <h1 className="text-2xl font-bold text-slate-800 dark:text-white">PNLE Review Companion</h1>
+             <p className="text-slate-500 dark:text-slate-400">Your journey to the license starts here.</p>
+        </div>
+        <SignUp />
+      </div>
+    );
+  }
+
+  // 3. Authenticated App Layout
+  return (
+    <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
+      {/* Sidebar */}
+      <Sidebar 
+        activeItem={activeItem} 
+        onNavigate={setActiveItem}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
+      />
+
+      {/* Main Content Area */}
+      <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300">
+        <TopBar 
+          onMenuClick={() => setSidebarOpen(true)} 
+          isDark={isDark}
+          toggleTheme={toggleTheme}
+        />
+        
+        <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+          <div className="max-w-7xl mx-auto h-full">
+            {renderContent()}
+          </div>
+        </main>
+      </div>
+    </div>
   );
 };
 
