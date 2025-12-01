@@ -1,3 +1,4 @@
+
 export type NavigationItem = 'Dashboard' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Personal Folder';
 
 export interface Note {
@@ -16,6 +17,14 @@ export interface ResourceLink {
   iconName: string;
 }
 
+export interface UserFolder {
+  id: string;
+  name: string;
+  color: string;
+  parentId: string | null;
+  createdAt: string;
+}
+
 export interface UserFile {
   id: string;
   fileName: string;
@@ -23,6 +32,7 @@ export interface UserFile {
   fileType: string;
   fileSize: number;
   createdAt: string;
+  folderId?: string | null;
   userNotes?: string;
   aiSummary?: string;
 }
