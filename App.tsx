@@ -7,6 +7,7 @@ import Resources from './components/Resources';
 import ExamTOS from './components/ExamTOS';
 import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
+import ForgotPassword from './components/ForgotPassword';
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
 import { Loader } from 'lucide-react';
@@ -15,6 +16,7 @@ const App: React.FC = () => {
   const { currentUser, loading } = useAuth();
   const [activeItem, setActiveItem] = useState<NavigationItem>('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [authView, setAuthView] = useState<'auth' | 'forgot'>('auth');
 
   // Theme Management
   const [isDark, setIsDark] = useState(() => {
@@ -73,7 +75,12 @@ const App: React.FC = () => {
              <h1 className="text-2xl font-bold text-slate-800 dark:text-white">PNLE Review Companion</h1>
              <p className="text-slate-500 dark:text-slate-400">Your journey to the license starts here.</p>
         </div>
-        <SignUp />
+        
+        {authView === 'auth' ? (
+            <SignUp onForgotPassword={() => setAuthView('forgot')} />
+        ) : (
+            <ForgotPassword onBack={() => setAuthView('auth')} />
+        )}
       </div>
     );
   }
