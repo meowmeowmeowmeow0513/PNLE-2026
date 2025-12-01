@@ -1,21 +1,28 @@
-import React, { useState, useEffect } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
 
-type TimerMode = 'pomodoro' | 'shortBreak' | 'longBreak' | 'custom';
+import React from 'react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX } from 'lucide-react';
+import { usePomodoro, TimerMode } from './PomodoroContext';
 
 const Pomodoro: React.FC = () => {
-  const [mode, setMode] = useState<TimerMode>('pomodoro');
-  const [timeLeft, setTimeLeft] = useState(25 * 60);
-  const [isActive, setIsActive] = useState(false);
-  const [customTime, setCustomTime] = useState(25);
-  const [initialTime, setInitialTime] = useState(25 * 60);
-  const [isMuted, setIsMuted] = useState(false);
+  const { 
+    mode, 
+    timeLeft, 
+    initialTime, 
+    isActive, 
+    customTime, 
+    isMuted,
+    toggleTimer, 
+    resetTimer, 
+    switchMode, 
+    setCustomTimeValue,
+    toggleMute
+  } = usePomodoro();
 
-  const modes: { id: TimerMode; label: string; minutes: number }[] = [
-    { id: 'pomodoro', label: 'Pomodoro', minutes: 25 },
-    { id: 'shortBreak', label: 'Short Break', minutes: 5 },
-    { id: 'longBreak', label: 'Long Break', minutes: 15 },
-    { id: 'custom', label: 'Custom', minutes: customTime },
+  const modes: { id: TimerMode; label: string }[] = [
+    { id: 'pomodoro', label: 'Pomodoro' },
+    { id: 'shortBreak', label: 'Short Break' },
+    { id: 'longBreak', label: 'Long Break' },
+    { id: 'custom', label: 'Custom' },
   ];
 
   // Circle animation config
@@ -23,117 +30,10 @@ const Pomodoro: React.FC = () => {
   const circumference = 2 * Math.PI * radius;
   const progressOffset = circumference - (timeLeft / initialTime) * circumference;
 
-  const playSound = (type: 'start' | 'break' | 'end') => {
-    if (isMuted) return;
-
-    try {
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContext) return;
-      
-      const audioCtx = new AudioContext();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-
-      const now = audioCtx.currentTime;
-
-      if (type === 'end') {
-        // Alarm sound
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(440, now);
-        oscillator.frequency.setValueAtTime(880, now + 0.1);
-        oscillator.frequency.setValueAtTime(440, now + 0.2);
-        oscillator.frequency.setValueAtTime(880, now + 0.3);
-        gainNode.gain.setValueAtTime(0.1, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-        oscillator.start(now);
-        oscillator.stop(now + 0.6);
-      } else if (type === 'start') {
-        // High pitch "Work" start
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(600, now);
-        oscillator.frequency.linearRampToValueAtTime(800, now + 0.1);
-        gainNode.gain.setValueAtTime(0.1, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
-        oscillator.start(now);
-        oscillator.stop(now + 0.3);
-      } else if (type === 'break') {
-        // Softer "Break" start
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(400, now);
-        oscillator.frequency.linearRampToValueAtTime(300, now + 0.2);
-        gainNode.gain.setValueAtTime(0.1, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
-        oscillator.start(now);
-        oscillator.stop(now + 0.4);
-      }
-    } catch (e) {
-      console.error("Audio playback failed", e);
-    }
-  };
-
-  useEffect(() => {
-    let interval: number | undefined;
-
-    if (isActive && timeLeft > 0) {
-      interval = window.setInterval(() => {
-        setTimeLeft((prev) => prev - 1);
-      }, 1000);
-    } else if (timeLeft === 0 && isActive) {
-      setIsActive(false);
-      playSound('end');
-    }
-
-    return () => clearInterval(interval);
-  }, [isActive, timeLeft]);
-
-  const switchMode = (newMode: TimerMode) => {
-    setMode(newMode);
-    setIsActive(false);
-    const selectedMode = modes.find((m) => m.id === newMode);
-    if (selectedMode) {
-      if (newMode === 'custom') {
-         setInitialTime(customTime * 60);
-         setTimeLeft(customTime * 60);
-      } else {
-         setInitialTime(selectedMode.minutes * 60);
-         setTimeLeft(selectedMode.minutes * 60);
-      }
-    }
-  };
-
   const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = parseInt(e.target.value);
     if (!isNaN(val) && val > 0 && val <= 180) {
-      setCustomTime(val);
-      if (mode === 'custom') {
-        setIsActive(false);
-        setInitialTime(val * 60);
-        setTimeLeft(val * 60);
-      }
-    }
-  };
-
-  const toggleTimer = () => {
-    if (!isActive && timeLeft > 0) {
-      // Starting
-      if (mode === 'pomodoro' || mode === 'custom') {
-        playSound('start');
-      } else {
-        playSound('break');
-      }
-    }
-    setIsActive(!isActive);
-  };
-
-  const resetTimer = () => {
-    setIsActive(false);
-    const currentMode = modes.find((m) => m.id === mode);
-    if (currentMode) {
-       setTimeLeft(currentMode.id === 'custom' ? customTime * 60 : currentMode.minutes * 60);
-       setInitialTime(currentMode.id === 'custom' ? customTime * 60 : currentMode.minutes * 60);
+      setCustomTimeValue(val);
     }
   };
 
@@ -152,7 +52,7 @@ const Pomodoro: React.FC = () => {
         <div className="flex items-center justify-between mb-8">
             <h2 className="text-2xl font-bold text-slate-800 dark:text-white transition-colors">Pomodoro Timer</h2>
             <button 
-                onClick={() => setIsMuted(!isMuted)}
+                onClick={toggleMute}
                 className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors"
                 title={isMuted ? "Unmute" : "Mute"}
             >
