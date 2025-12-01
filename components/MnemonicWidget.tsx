@@ -73,3 +73,4 @@ const MnemonicWidget: React.FC = () => {
 };
 
 export default MnemonicWidget;
+    
