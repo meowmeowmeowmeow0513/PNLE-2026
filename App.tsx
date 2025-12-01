@@ -5,7 +5,9 @@ import Dashboard from './components/Dashboard';
 import Pomodoro from './components/Pomodoro';
 import Resources from './components/Resources';
 import ExamTOS from './components/ExamTOS';
+import SignUp from './components/SignUp';
 import { NavigationItem } from './types';
+import { AuthProvider } from './AuthContext';
 
 const App: React.FC = () => {
   const [activeItem, setActiveItem] = useState<NavigationItem>('Dashboard');
@@ -43,36 +45,40 @@ const App: React.FC = () => {
         return <Resources />;
       case 'Exam TOS':
         return <ExamTOS />;
+      case 'Sign Up':
+        return <SignUp />;
       default:
         return <Dashboard onNavigate={setActiveItem} />;
     }
   };
 
   return (
-    <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
-      {/* Sidebar */}
-      <Sidebar 
-        activeItem={activeItem} 
-        onNavigate={setActiveItem}
-        isOpen={sidebarOpen}
-        onClose={() => setSidebarOpen(false)}
-      />
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300">
-        <TopBar 
-          onMenuClick={() => setSidebarOpen(true)} 
-          isDark={isDark}
-          toggleTheme={toggleTheme}
+    <AuthProvider>
+      <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
+        {/* Sidebar */}
+        <Sidebar 
+          activeItem={activeItem} 
+          onNavigate={setActiveItem}
+          isOpen={sidebarOpen}
+          onClose={() => setSidebarOpen(false)}
         />
-        
-        <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
-          <div className="max-w-7xl mx-auto h-full">
-            {renderContent()}
-          </div>
-        </main>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300">
+          <TopBar 
+            onMenuClick={() => setSidebarOpen(true)} 
+            isDark={isDark}
+            toggleTheme={toggleTheme}
+          />
+          
+          <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+            <div className="max-w-7xl mx-auto h-full">
+              {renderContent()}
+            </div>
+          </main>
+        </div>
       </div>
-    </div>
+    </AuthProvider>
   );
 };
 
