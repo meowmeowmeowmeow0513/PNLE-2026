@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { UserPlus, LogIn, Mail, Lock, ArrowRight, AlertCircle, CheckCircle, Send } from 'lucide-react';
+import { UserPlus, LogIn, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
 const SignUp: React.FC = () => {
-  const { signup, login, googleLogin, verifyEmail, logout } = useAuth();
+  const { signup, login, googleLogin, verifyEmail } = useAuth();
   
   const [isLogin, setIsLogin] = useState(false); // Toggle between Login and Signup
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  
-  // Verification State
-  const [verificationSent, setVerificationSent] = useState(false);
-  const [verificationEmailTarget, setVerificationEmailTarget] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,29 +27,15 @@ const SignUp: React.FC = () => {
     try {
       if (isLogin) {
         // --- LOGIN FLOW ---
-        const userCredential = await login(cleanEmail, password);
-        
-        // Check if email is verified
-        if (!userCredential.user.emailVerified) {
-           await logout(); // Prevent access
-           setError('Please verify your email address before logging in.');
-           setLoading(false);
-           return;
-        }
-        
-        // If verified, code execution ends here, App.tsx handles the state change via AuthContext
+        // We just log them in. App.tsx checks for emailVerified and blocks dashboard if false.
+        await login(cleanEmail, password);
       } else {
         // --- SIGN UP FLOW ---
         const userCredential = await signup(cleanEmail, password);
-        
         // Send Verification Email
         await verifyEmail(userCredential.user);
-        
-        // Important: Sign them out immediately so they don't access Dashboard
-        await logout();
-        
-        setVerificationEmailTarget(cleanEmail);
-        setVerificationSent(true);
+        // We do NOT logout here. We let the user stay logged in, 
+        // which triggers App.tsx to show the "Verify your email" wall.
       }
     } catch (err: any) {
       console.error(err);
@@ -70,11 +52,8 @@ const SignUp: React.FC = () => {
       } else {
         setError(`Failed to ${isLogin ? 'log in' : 'sign up'}: ${err.message}`);
       }
-    } finally {
-      if (!verificationSent) {
-        setLoading(false);
-      }
-    }
+      setLoading(false); // Only stop loading on error, otherwise let component unmount/redirect
+    } 
   };
 
   const handleGoogleLogin = async () => {
@@ -82,7 +61,7 @@ const SignUp: React.FC = () => {
     setLoading(true);
     try {
       await googleLogin();
-      // Google accounts are verified by definition, so no check needed
+      // Google accounts are verified by definition
     } catch (err: any) {
       console.error("Google Login Error:", err);
       if (err.code === 'auth/popup-closed-by-user') {
@@ -90,48 +69,9 @@ const SignUp: React.FC = () => {
       } else {
         setError(err.message || 'An unknown error occurred with Google Sign-In.');
       }
-    } finally {
       setLoading(false);
     }
   };
-
-  // --- VERIFICATION SUCCESS SCREEN ---
-  if (verificationSent) {
-    return (
-      <div className="flex items-center justify-center p-4">
-        <div className="w-full max-w-md">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-700 text-center animate-fade-in">
-            <div className="w-20 h-20 bg-green-50 dark:bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-green-500">
-              <Send size={40} />
-            </div>
-            
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">
-              Verify your email
-            </h2>
-            
-            <p className="text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
-              We have sent you a verification email to <br/>
-              <span className="font-bold text-slate-900 dark:text-white">{verificationEmailTarget}</span>.
-              <br/><br/>
-              Please verify it and log in to start your review.
-            </p>
-            
-            <button
-              onClick={() => {
-                setVerificationSent(false);
-                setIsLogin(true); // Switch form to login mode
-                setLoading(false);
-                setPassword(''); // Clear password for security
-              }}
-              className="w-full py-3.5 px-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl shadow-lg shadow-pink-500/25 transition-all transform active:scale-[0.98]"
-            >
-              Go to Login
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   // --- STANDARD AUTH FORM ---
   return (
