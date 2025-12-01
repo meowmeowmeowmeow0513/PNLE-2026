@@ -56,3 +56,12 @@ export interface ExamTopic {
   description: string;
   parts: ExamPart[];
 }
+
+export interface UserGamificationStats {
+  currentStreak: number;
+  bestStreak: number;
+  lastStudyDate: string; // YYYY-MM-DD
+  streakFreezes: number; // "Duty Leaves"
+  lastFreezeUsedDate: string | null;
+  totalSessions: number;
+}
