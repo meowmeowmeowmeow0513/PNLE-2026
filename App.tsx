@@ -5,6 +5,7 @@ import Dashboard from './components/Dashboard';
 import Pomodoro from './components/Pomodoro';
 import Resources from './components/Resources';
 import ExamTOS from './components/ExamTOS';
+import PersonalFolder from './components/PersonalFolder';
 import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
@@ -49,6 +50,8 @@ const App: React.FC = () => {
         return <Resources />;
       case 'Exam TOS':
         return <ExamTOS />;
+      case 'Personal Folder':
+        return <PersonalFolder />;
       default:
         return <Dashboard onNavigate={setActiveItem} />;
     }
