@@ -2,7 +2,7 @@
 import { useState, useEffect } from 'react';
 import { storage, db } from '../firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where, FirestoreError, getDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where, FirestoreError, getDoc, updateDoc } from 'firebase/firestore';
 import { UserFile, UserFolder } from '../types';
 
 export const useFileManager = (userId: string | undefined) => {
@@ -116,6 +116,19 @@ export const useFileManager = (userId: string | undefined) => {
     }
   };
 
+  const moveFile = async (fileId: string, targetFolderId: string | null) => {
+    if (!userId) return;
+    try {
+      const fileRef = doc(db, 'users', userId, 'files', fileId);
+      await updateDoc(fileRef, {
+        folderId: targetFolderId
+      });
+    } catch (error) {
+      console.error("Error moving file:", error);
+      throw error;
+    }
+  };
+
   const deleteFile = async (fileId: string, fileName: string) => {
     if (!userId) return;
     try {
@@ -164,6 +177,7 @@ export const useFileManager = (userId: string | undefined) => {
     navigateUp,
     createFolder,
     uploadFile,
+    moveFile,
     deleteFile,
     deleteFolder,
     uploading,
