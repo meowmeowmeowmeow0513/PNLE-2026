@@ -1,5 +1,5 @@
 
-export type NavigationItem = 'Dashboard' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS';
+export type NavigationItem = 'Dashboard' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Sign Up';
 
 export interface Note {
   id: string;
