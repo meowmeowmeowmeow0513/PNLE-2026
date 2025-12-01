@@ -1,6 +1,10 @@
+
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Flame, Users, Award } from 'lucide-react';
+import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users } from 'lucide-react';
 import { NavigationItem } from '../types';
+import StreakWidget from './StreakWidget'; // Import Widget
+import StreakRecoveryModal from './StreakRecoveryModal'; // Import Modal
+import { useStreakSystem } from '../hooks/useStreakSystem'; // Import Hook
 
 interface DashboardProps {
   onNavigate: (item: NavigationItem) => void;
@@ -14,6 +18,9 @@ interface Task {
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const targetDate = new Date('2026-08-29T00:00:00');
+  
+  // -- STREAK SYSTEM INTEGRATION --
+  const { stats, loading: streakLoading, showRecoveryModal, closeRecovery, completeDailyTask, resuscitateStreak } = useStreakSystem();
   
   const calculateTimeLeft = () => {
     const difference = +targetDate - +new Date();
@@ -30,9 +37,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
   
-  // Streak State
-  const [streak, setStreak] = useState(0);
-
   // Task Management State
   const [tasks, setTasks] = useState<Task[]>(() => {
     try {
@@ -50,42 +54,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
     return () => clearInterval(timer);
-  }, []);
-
-  // Streak Logic (Local Time Midnight Reset)
-  useEffect(() => {
-    // Helper to get YYYY-MM-DD in local time
-    const getLocalISODate = (date: Date) => {
-      const offset = date.getTimezoneOffset() * 60000; // offset in milliseconds
-      const localDate = new Date(date.getTime() - offset);
-      return localDate.toISOString().split('T')[0];
-    };
-
-    const today = getLocalISODate(new Date());
-    const lastVisit = localStorage.getItem('pnle_last_visit');
-    const currentStreak = parseInt(localStorage.getItem('pnle_streak') || '0');
-
-    if (lastVisit !== today) {
-        const yesterdayDate = new Date();
-        yesterdayDate.setDate(yesterdayDate.getDate() - 1);
-        const yesterday = getLocalISODate(yesterdayDate);
-
-        if (lastVisit === yesterday) {
-            // Consecutive day
-            const newStreak = currentStreak + 1;
-            setStreak(newStreak);
-            localStorage.setItem('pnle_streak', newStreak.toString());
-        } else {
-            // Missed a day or first visit
-            const newStreak = 1;
-            setStreak(newStreak);
-            localStorage.setItem('pnle_streak', newStreak.toString());
-        }
-        localStorage.setItem('pnle_last_visit', today);
-    } else {
-        // Same day visit, just load existing
-        setStreak(currentStreak);
-    }
   }, []);
 
   // Persist tasks to localStorage
@@ -108,7 +76,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   };
 
   const toggleTask = (id: string) => {
-    setTasks(tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t));
+    setTasks(tasks.map(t => {
+        if (t.id === id) {
+            const newStatus = !t.completed;
+            if (newStatus) {
+                // Trigger Streak Update when task is checked
+                completeDailyTask();
+            }
+            return { ...t, completed: newStatus };
+        }
+        return t;
+    }));
   };
 
   const deleteTask = (id: string) => {
@@ -122,23 +100,16 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     { label: 'Seconds', value: timeLeft.seconds },
   ];
 
-  // Helper for gamified text
-  const getStreakMessage = (days: number) => {
-    if (days >= 30) return "You are LEGENDARY! 🏆";
-    if (days >= 7) return "You're on FIRE! 🔥";
-    if (days >= 3) return "Heating up! ⚡";
-    return "Start your streak!";
-  };
-
-  const getNextMilestone = (days: number) => {
-    if (days < 3) return 3;
-    if (days < 7) return 7;
-    if (days < 30) return 30;
-    return 100;
-  };
-
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10">
+      {/* Recovery Modal */}
+      {showRecoveryModal && (
+          <StreakRecoveryModal 
+             onResuscitate={resuscitateStreak}
+             onClose={closeRecovery}
+          />
+      )}
+
       {/* Motivational Banner */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-pink-500 to-pink-600 text-white shadow-lg">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 w-40 h-40 bg-white opacity-10 rounded-full blur-2xl"></div>
@@ -229,44 +200,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       {/* Widgets Area */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         
-        {/* Gamified Streak Widget (TikTok Style) */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#FF4D4D] to-[#F9CB28] p-6 text-white shadow-lg transition-transform hover:scale-[1.02] flex flex-col justify-between h-full min-h-[220px]">
-             {/* Background Effects */}
-             <div className="absolute -right-6 -top-6 h-32 w-32 rounded-full bg-white/20 blur-2xl"></div>
-             <div className="absolute -left-6 -bottom-6 h-32 w-32 rounded-full bg-orange-600/20 blur-2xl"></div>
-             
-             <div className="relative flex items-start justify-between">
-                 <div>
-                     <div className="flex items-center gap-2 font-medium text-orange-100">
-                         <Flame className={`h-5 w-5 ${streak > 0 ? 'animate-bounce' : ''}`} fill="currentColor" />
-                         <span className="uppercase tracking-wider text-xs font-bold">Daily Streak</span>
-                     </div>
-                     <div className="mt-2 flex items-baseline gap-1">
-                         <span className="text-6xl font-black tracking-tight drop-shadow-sm">{streak}</span>
-                         <span className="text-xl font-bold text-orange-100">days</span>
-                     </div>
-                 </div>
-                 
-                 {/* Badge Icon */}
-                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm ring-4 ring-white/30 shadow-inner">
-                    <Award size={24} className="text-white" fill="currentColor" />
-                 </div>
-             </div>
-
-             <div className="relative mt-4">
-                 <p className="text-sm font-bold text-white/95 tracking-wide">
-                     {getStreakMessage(streak)}
-                 </p>
-                 
-                 {/* Progress to next milestone */}
-                 <div className="mt-4 flex items-center justify-between border-t border-white/20 pt-3">
-                     <div className="flex flex-col">
-                         <span className="text-[10px] uppercase text-orange-100 font-bold tracking-wider">Next Milestone</span>
-                         <span className="text-xs font-bold">{getNextMilestone(streak)} Days</span>
-                     </div>
-                 </div>
-             </div>
-        </div>
+        {/* New Streak Widget */}
+        <StreakWidget stats={stats} loading={streakLoading} />
 
         {/* Task Widget */}
         <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col h-full min-h-[300px] md:col-span-2 lg:col-span-1 transition-colors">
