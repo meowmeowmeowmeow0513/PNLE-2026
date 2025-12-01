@@ -4,27 +4,33 @@ import { useAuth } from '../AuthContext';
 import { useFileManager } from '../hooks/useFileManager';
 import FilePreviewModal from './FilePreviewModal';
 import FolderModal from './FolderModal';
+import MoveItemModal from './MoveItemModal';
+import FileCard from './FileCard';
+import FolderCard from './FolderCard';
 import { 
-  Folder, Upload, FileText, Image, File as FileIcon, Trash2, Download, 
-  Loader, Plus, X, Eye, Film, Music, ChevronRight, Home, Grid, FolderPlus, ArrowUp
+  Folder, Upload, FileText, X, Loader, FolderPlus, Home, ChevronRight
 } from 'lucide-react';
-import { format } from 'date-fns';
 import { UserFile } from '../types';
 
 const PersonalFolder: React.FC = () => {
   const { currentUser } = useAuth();
   const { 
-    sortedFolders, sortedFiles, breadcrumbs, 
-    navigateToFolder, navigateUp, createFolder, uploadFile, moveFile, deleteFile, deleteFolder,
+    sortedFolders, sortedFiles, allFolders, breadcrumbs, currentFolderId,
+    navigateToFolder, navigateUp, createFolder, uploadFile, moveItem, renameItem, deleteFile, deleteFolder,
     uploading, loading, sortBy, setSortBy 
   } = useFileManager(currentUser?.uid);
   
+  // Modal States
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [userNote, setUserNote] = useState('');
-  const [previewFile, setPreviewFile] = useState<{url: string, type: string, name: string} | null>(null);
+  const [previewFile, setPreviewFile] = useState<UserFile | null>(null);
   
+  // Item Action States
+  const [itemToMove, setItemToMove] = useState<{id: string, type: 'file' | 'folder'} | null>(null);
+
   // Drag and Drop State
   const [draggedFile, setDraggedFile] = useState<UserFile | null>(null);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
@@ -51,42 +57,33 @@ const PersonalFolder: React.FC = () => {
     }
   };
 
-  const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-  };
-
-  const formatDate = (isoString: string) => {
-      try {
-          return format(new Date(isoString), 'MMM dd, yyyy');
-      } catch (e) {
-          return '';
+  const handleRename = async (id: string, currentName: string, type: 'file' | 'folder') => {
+      const newName = prompt(`Rename ${type}:`, currentName);
+      if (newName && newName !== currentName) {
+          await renameItem(id, newName, type);
       }
   };
 
-  // Icon Helper
-  const getThumbnailIcon = (mimeType: string) => {
-    if (mimeType === 'application/pdf') return <FileText size={48} className="text-red-500" strokeWidth={1.5} />;
-    if (mimeType.includes('word') || mimeType.includes('document')) return <FileText size={48} className="text-blue-500" strokeWidth={1.5} />;
-    if (mimeType.includes('sheet') || mimeType.includes('excel')) return <FileText size={48} className="text-green-500" strokeWidth={1.5} />;
-    if (mimeType.startsWith('video/')) return <Film size={48} className="text-pink-500" strokeWidth={1.5} />;
-    if (mimeType.startsWith('audio/')) return <Music size={48} className="text-purple-500" strokeWidth={1.5} />;
-    return <FileIcon size={48} className="text-slate-400" strokeWidth={1.5} />;
+  const handleMoveClick = (id: string, type: 'file' | 'folder') => {
+      setItemToMove({ id, type });
+      setIsMoveModalOpen(true);
+  };
+
+  const executeMove = async (targetFolderId: string | null) => {
+      if (itemToMove) {
+          await moveItem(itemToMove.id, targetFolderId, itemToMove.type);
+      }
   };
 
   // --- Drag & Drop Handlers ---
   const handleDragStart = (e: React.DragEvent, file: UserFile) => {
     setDraggedFile(file);
     e.dataTransfer.effectAllowed = 'move';
-    // Transparent ghost image or simple styling
-    e.dataTransfer.setData('text/plain', file.id); 
+    e.dataTransfer.setData('text/plain', file.id);
   };
 
   const handleDragOver = (e: React.DragEvent, folderId: string | null) => {
-    e.preventDefault(); // Necessary to allow dropping
+    e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     if (folderId !== dragOverFolderId) {
         setDragOverFolderId(folderId);
@@ -103,8 +100,11 @@ const PersonalFolder: React.FC = () => {
     setDragOverFolderId(null);
 
     if (draggedFile && draggedFile.folderId !== targetFolderId) {
+        // Prevent moving file to the folder it's already in
+        if (draggedFile.folderId === targetFolderId) return;
+
         try {
-            await moveFile(draggedFile.id, targetFolderId);
+            await moveItem(draggedFile.id, targetFolderId, 'file');
         } catch (error) {
             console.error("Failed to move file", error);
         }
@@ -115,7 +115,7 @@ const PersonalFolder: React.FC = () => {
   return (
     <div className="max-w-7xl mx-auto space-y-6 pb-10">
       
-      {/* 1. Top Bar: Title & Actions */}
+      {/* 1. Top Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl font-bold text-slate-800 dark:text-white transition-colors">File Explorer</h2>
@@ -142,7 +142,7 @@ const PersonalFolder: React.FC = () => {
       {/* 2. Navigation Bar (Breadcrumbs & Sort) */}
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-2 flex items-center justify-between shadow-sm">
         
-        {/* Breadcrumbs (Droppable targets for moving up) */}
+        {/* Droppable Breadcrumbs */}
         <div className="flex items-center overflow-x-auto px-2 py-1 scrollbar-hide">
              {breadcrumbs.map((crumb, index) => {
                  const isTarget = dragOverFolderId === crumb.id && draggedFile?.folderId !== crumb.id;
@@ -202,130 +202,52 @@ const PersonalFolder: React.FC = () => {
       ) : (
         <div className="space-y-8">
             
-            {/* Folders Section */}
+            {/* Folders Section (Droppable) */}
             {sortedFolders.length > 0 && (
                 <div>
                     <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 pl-1">Folders</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                        {sortedFolders.map(folder => {
-                            const isTarget = dragOverFolderId === folder.id;
-                            return (
-                                <div 
-                                    key={folder.id}
-                                    onDoubleClick={() => navigateToFolder(folder.id, folder.name)}
-                                    onDragOver={(e) => handleDragOver(e, folder.id)}
-                                    onDragLeave={handleDragLeave}
-                                    onDrop={(e) => handleDrop(e, folder.id)}
-                                    className={`group bg-white dark:bg-slate-800 p-4 rounded-xl border transition-all cursor-pointer relative ${
-                                        isTarget 
-                                        ? 'border-pink-500 ring-2 ring-pink-500 bg-pink-50 dark:bg-pink-900/20 scale-105 shadow-xl' 
-                                        : 'border-slate-200 dark:border-slate-700 hover:border-pink-300 dark:hover:border-pink-500 hover:shadow-md'
-                                    }`}
-                                >
-                                    <div className="flex justify-between items-start mb-2">
-                                        <div style={{ color: folder.color }}>
-                                            <Folder size={32} fill="currentColor" fillOpacity={isTarget ? 0.4 : 0.2} />
-                                        </div>
-                                        <button 
-                                            onClick={(e) => { e.stopPropagation(); deleteFolder(folder.id); }}
-                                            className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-red-500 transition-opacity p-1"
-                                        >
-                                            <X size={14} />
-                                        </button>
-                                    </div>
-                                    <h4 className="font-semibold text-slate-800 dark:text-white truncate text-sm mb-1">{folder.name}</h4>
-                                    <p className="text-[10px] text-slate-400">
-                                        Created {formatDate(folder.createdAt)}
-                                    </p>
-                                </div>
-                            );
-                        })}
+                        {sortedFolders.map(folder => (
+                           <FolderCard 
+                                key={folder.id}
+                                folder={folder}
+                                onNavigate={navigateToFolder}
+                                onRename={(id, name) => handleRename(id, name, 'folder')}
+                                onMove={(id) => handleMoveClick(id, 'folder')}
+                                onDelete={deleteFolder}
+                                onDragOver={handleDragOver}
+                                onDragLeave={handleDragLeave}
+                                onDrop={handleDrop}
+                                isDragOver={dragOverFolderId === folder.id}
+                           />
+                        ))}
                     </div>
                 </div>
             )}
 
-            {/* Files Section */}
+            {/* Files Section (Draggable) */}
             {sortedFiles.length > 0 && (
                 <div>
                     <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 pl-1">Files</h3>
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
-                    {sortedFiles.map((file) => {
-                        const isImage = file.fileType.startsWith('image/');
-                        const isDragging = draggedFile?.id === file.id;
-
-                        return (
-                        <div 
-                            key={file.id}
-                            draggable
-                            onDragStart={(e) => handleDragStart(e, file)}
-                            className={`group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-pink-300 dark:hover:border-pink-700 transition-all duration-300 overflow-hidden flex flex-col h-[240px] ${
-                                isDragging ? 'opacity-50 scale-95 border-dashed border-pink-400' : ''
-                            }`}
-                        >
-                            {/* Thumbnail */}
-                            <div 
-                                className="h-32 w-full bg-slate-50 dark:bg-slate-900/50 flex items-center justify-center overflow-hidden cursor-pointer relative"
-                                onClick={() => setPreviewFile({ url: file.downloadUrl, type: file.fileType, name: file.fileName })}
-                            >
-                            {isImage ? (
-                                <img 
-                                src={file.downloadUrl} 
-                                alt={file.fileName} 
-                                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                                />
-                            ) : (
-                                <div className="transform transition-transform duration-300 group-hover:scale-110">
-                                {getThumbnailIcon(file.fileType)}
-                                </div>
-                            )}
-                            </div>
-
-                            {/* Details */}
-                            <div className="p-3 flex flex-col flex-1 justify-between">
-                                <div className="space-y-0.5">
-                                    <h3 className="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate" title={file.fileName}>
-                                        {file.fileName}
-                                    </h3>
-                                    <div className="flex items-center gap-2 text-[10px] text-slate-400 font-medium">
-                                        <span>{formatDate(file.createdAt)}</span>
-                                        <span>•</span>
-                                        <span>{formatFileSize(file.fileSize)}</span>
-                                    </div>
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex items-center justify-end gap-1 pt-2">
-                                    <a
-                                        href={file.downloadUrl}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/20 rounded-lg transition-colors"
-                                        title="Download"
-                                    >
-                                        <Download size={14} />
-                                    </a>
-                                    <button
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            if (window.confirm('Delete this file?')) deleteFile(file.id, file.fileName);
-                                        }}
-                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 rounded-lg transition-colors"
-                                        title="Delete"
-                                    >
-                                        <Trash2 size={14} />
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        );
-                    })}
+                    {sortedFiles.map((file) => (
+                        <FileCard 
+                            key={file.id} 
+                            file={file} 
+                            onPreview={(f) => setPreviewFile(f)}
+                            onDelete={deleteFile}
+                            onRename={(id, name) => handleRename(id, name, 'file')}
+                            onMove={(id) => handleMoveClick(id, 'file')}
+                            onDragStart={handleDragStart}
+                        />
+                    ))}
                     </div>
                 </div>
             )}
         </div>
       )}
 
-      {/* Modals */}
+      {/* Upload Modal */}
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md p-6 relative border border-slate-100 dark:border-slate-700">
@@ -349,9 +271,9 @@ const PersonalFolder: React.FC = () => {
               >
                 {selectedFile ? (
                   <>
-                    <FileIcon size={40} className="text-pink-500 mb-3" />
+                    <FileText size={40} className="text-pink-500 mb-3" />
                     <p className="text-sm font-bold text-slate-800 dark:text-white text-center break-all px-4">{selectedFile.name}</p>
-                    <p className="text-xs text-slate-500 mt-1">{formatFileSize(selectedFile.size)}</p>
+                    <p className="text-xs text-slate-500 mt-1">{(selectedFile.size / 1024).toFixed(1)} KB</p>
                   </>
                 ) : (
                   <>
@@ -385,6 +307,7 @@ const PersonalFolder: React.FC = () => {
         </div>
       )}
 
+      {/* New Folder Modal */}
       {isFolderModalOpen && (
         <FolderModal 
             onClose={() => setIsFolderModalOpen(false)} 
@@ -392,11 +315,23 @@ const PersonalFolder: React.FC = () => {
         />
       )}
 
+      {/* Move Item Modal */}
+      {isMoveModalOpen && (
+        <MoveItemModal 
+            onClose={() => setIsMoveModalOpen(false)} 
+            onMove={executeMove}
+            folders={allFolders}
+            currentFolderId={currentFolderId}
+            itemToMove={itemToMove}
+        />
+      )}
+
+      {/* File Preview */}
       {previewFile && (
         <FilePreviewModal 
-          fileUrl={previewFile.url}
-          fileType={previewFile.type}
-          fileName={previewFile.name}
+          fileUrl={previewFile.downloadUrl}
+          fileType={previewFile.fileType}
+          fileName={previewFile.fileName}
           onClose={() => setPreviewFile(null)}
         />
       )}
