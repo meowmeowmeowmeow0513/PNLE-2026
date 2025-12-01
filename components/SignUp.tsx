@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { UserPlus, LogIn, Mail, Lock, ArrowRight, AlertCircle, CheckCircle } from 'lucide-react';
+import { UserPlus, LogIn, Mail, Lock, ArrowRight, AlertCircle, CheckCircle, Send } from 'lucide-react';
 
 const SignUp: React.FC = () => {
-  const { signup, login, googleLogin } = useAuth();
+  const { signup, login, googleLogin, verifyEmail, logout } = useAuth();
   
   const [isLogin, setIsLogin] = useState(false); // Toggle between Login and Signup
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  
+  // Verification State
+  const [verificationSent, setVerificationSent] = useState(false);
+  const [verificationEmailTarget, setVerificationEmailTarget] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,9 +30,30 @@ const SignUp: React.FC = () => {
 
     try {
       if (isLogin) {
-        await login(cleanEmail, password);
+        // --- LOGIN FLOW ---
+        const userCredential = await login(cleanEmail, password);
+        
+        // Check if email is verified
+        if (!userCredential.user.emailVerified) {
+           await logout(); // Prevent access
+           setError('Please verify your email address before logging in.');
+           setLoading(false);
+           return;
+        }
+        
+        // If verified, code execution ends here, App.tsx handles the state change via AuthContext
       } else {
-        await signup(cleanEmail, password);
+        // --- SIGN UP FLOW ---
+        const userCredential = await signup(cleanEmail, password);
+        
+        // Send Verification Email
+        await verifyEmail(userCredential.user);
+        
+        // Important: Sign them out immediately so they don't access Dashboard
+        await logout();
+        
+        setVerificationEmailTarget(cleanEmail);
+        setVerificationSent(true);
       }
     } catch (err: any) {
       console.error(err);
@@ -40,11 +65,15 @@ const SignUp: React.FC = () => {
         setError('Please enter a valid email address.');
       } else if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
         setError('Invalid email or password.');
+      } else if (err.code === 'auth/too-many-requests') {
+        setError('Too many attempts. Please try again later.');
       } else {
         setError(`Failed to ${isLogin ? 'log in' : 'sign up'}: ${err.message}`);
       }
     } finally {
-      setLoading(false);
+      if (!verificationSent) {
+        setLoading(false);
+      }
     }
   };
 
@@ -53,6 +82,7 @@ const SignUp: React.FC = () => {
     setLoading(true);
     try {
       await googleLogin();
+      // Google accounts are verified by definition, so no check needed
     } catch (err: any) {
       console.error("Google Login Error:", err);
       if (err.code === 'auth/popup-closed-by-user') {
@@ -65,6 +95,45 @@ const SignUp: React.FC = () => {
     }
   };
 
+  // --- VERIFICATION SUCCESS SCREEN ---
+  if (verificationSent) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <div className="w-full max-w-md">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-700 text-center animate-fade-in">
+            <div className="w-20 h-20 bg-green-50 dark:bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 text-green-500">
+              <Send size={40} />
+            </div>
+            
+            <h2 className="text-2xl font-bold text-slate-800 dark:text-white mb-4">
+              Verify your email
+            </h2>
+            
+            <p className="text-slate-600 dark:text-slate-300 mb-8 leading-relaxed">
+              We have sent you a verification email to <br/>
+              <span className="font-bold text-slate-900 dark:text-white">{verificationEmailTarget}</span>.
+              <br/><br/>
+              Please verify it and log in to start your review.
+            </p>
+            
+            <button
+              onClick={() => {
+                setVerificationSent(false);
+                setIsLogin(true); // Switch form to login mode
+                setLoading(false);
+                setPassword(''); // Clear password for security
+              }}
+              className="w-full py-3.5 px-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl shadow-lg shadow-pink-500/25 transition-all transform active:scale-[0.98]"
+            >
+              Go to Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- STANDARD AUTH FORM ---
   return (
     <div className="flex items-center justify-center">
       <div className="w-full max-w-md">
@@ -83,7 +152,7 @@ const SignUp: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 p-3 rounded-lg text-sm flex items-center gap-2 break-words">
+              <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 p-3 rounded-lg text-sm flex items-center gap-2 break-words text-left">
                 <AlertCircle size={16} className="flex-shrink-0" />
                 <span>{error}</span>
               </div>
@@ -129,7 +198,9 @@ const SignUp: React.FC = () => {
               disabled={loading}
               className="w-full py-3.5 px-4 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold rounded-xl shadow-lg shadow-pink-500/25 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              {loading ? (isLogin ? 'Logging In...' : 'Creating Account...') : (isLogin ? 'Log In' : 'Sign Up to Review')}
+              {loading ? (
+                 <span className="flex items-center gap-2">Processing...</span>
+              ) : (isLogin ? 'Log In' : 'Sign Up to Review')}
               {!loading && <ArrowRight size={18} />}
             </button>
           </form>
