@@ -1,13 +1,14 @@
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { storage, db } from '../firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where, FirestoreError, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where, FirestoreError, getDoc, updateDoc, orderBy } from 'firebase/firestore';
 import { UserFile, UserFolder } from '../types';
 
 export const useFileManager = (userId: string | undefined) => {
   const [files, setFiles] = useState<UserFile[]>([]);
   const [folders, setFolders] = useState<UserFolder[]>([]);
+  const [allFolders, setAllFolders] = useState<UserFolder[]>([]); // For Move Modal (Directory Tree)
   const [currentFolderId, setCurrentFolderId] = useState<string | null>(null);
   const [breadcrumbs, setBreadcrumbs] = useState<{id: string | null, name: string}[]>([{id: null, name: 'Home'}]);
   
@@ -17,7 +18,21 @@ export const useFileManager = (userId: string | undefined) => {
   // Sorting
   const [sortBy, setSortBy] = useState<'name' | 'date'>('date');
 
-  // Fetch Folders & Files based on currentFolderId
+  // Fetch All Folders (for directory tree / move operations)
+  useEffect(() => {
+    if (!userId) {
+        setAllFolders([]);
+        return;
+    }
+    const q = query(collection(db, 'users', userId, 'folders'), orderBy('name'));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+        const fetched = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as UserFolder[];
+        setAllFolders(fetched);
+    });
+    return () => unsubscribe();
+  }, [userId]);
+
+  // Fetch Current View Folders & Files
   useEffect(() => {
     if (!userId) {
       setFiles([]);
@@ -29,11 +44,11 @@ export const useFileManager = (userId: string | undefined) => {
     setLoading(true);
     const uid = userId;
 
-    // 1. Fetch Folders
+    // 1. Fetch Folders in current directory
     const foldersRef = collection(db, 'users', uid, 'folders');
     const foldersQuery = query(foldersRef, where('parentId', '==', currentFolderId));
     
-    // 2. Fetch Files
+    // 2. Fetch Files in current directory
     const filesRef = collection(db, 'users', uid, 'files');
     const filesQuery = query(filesRef, where('folderId', '==', currentFolderId));
 
@@ -116,17 +131,38 @@ export const useFileManager = (userId: string | undefined) => {
     }
   };
 
-  const moveFile = async (fileId: string, targetFolderId: string | null) => {
+  const moveItem = async (itemId: string, targetFolderId: string | null, type: 'file' | 'folder') => {
     if (!userId) return;
     try {
-      const fileRef = doc(db, 'users', userId, 'files', fileId);
-      await updateDoc(fileRef, {
-        folderId: targetFolderId
-      });
+        const collectionName = type === 'file' ? 'files' : 'folders';
+        const itemRef = doc(db, 'users', userId, collectionName, itemId);
+        
+        // Field name differs: files use 'folderId', folders use 'parentId'
+        const updateData = type === 'file' 
+            ? { folderId: targetFolderId } 
+            : { parentId: targetFolderId };
+
+        await updateDoc(itemRef, updateData);
     } catch (error) {
-      console.error("Error moving file:", error);
-      throw error;
+        console.error("Error moving item:", error);
+        throw error;
     }
+  };
+
+  const renameItem = async (itemId: string, newName: string, type: 'file' | 'folder') => {
+      if (!userId) return;
+      try {
+          const collectionName = type === 'file' ? 'files' : 'folders';
+          const itemRef = doc(db, 'users', userId, collectionName, itemId);
+          const updateData = type === 'file'
+            ? { fileName: newName }
+            : { name: newName };
+          
+          await updateDoc(itemRef, updateData);
+      } catch (error) {
+          console.error("Error renaming item:", error);
+          throw error;
+      }
   };
 
   const deleteFile = async (fileId: string, fileName: string) => {
@@ -146,16 +182,14 @@ export const useFileManager = (userId: string | undefined) => {
     }
   };
 
-  // Delete folder (Optional: Recursive delete would be better, but keeping simple for now)
   const deleteFolder = async (folderId: string) => {
       if (!userId) return;
-      // Note: This leaves orphaned files if not recursive. 
-      // For a V1, we just delete the folder doc.
+      // Note: This does not delete sub-items. In a real app, you'd want a cloud function for recursive delete.
       await deleteDoc(doc(db, 'users', userId, 'folders', folderId));
   };
 
-  // Sort Function
-  const getSortedItems = () => {
+  // Sort Function using useMemo
+  const { sortedFolders, sortedFiles } = useMemo(() => {
     const sortedFolders = [...folders].sort((a, b) => {
         if (sortBy === 'name') return a.name.localeCompare(b.name);
         return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
@@ -167,17 +201,20 @@ export const useFileManager = (userId: string | undefined) => {
     });
 
     return { sortedFolders, sortedFiles };
-  };
+  }, [folders, files, sortBy]);
 
   return {
-    ...getSortedItems(),
+    sortedFolders, 
+    sortedFiles,
+    allFolders,
     currentFolderId,
     breadcrumbs,
     navigateToFolder,
     navigateUp,
     createFolder,
     uploadFile,
-    moveFile,
+    moveItem,
+    renameItem,
     deleteFile,
     deleteFolder,
     uploading,
