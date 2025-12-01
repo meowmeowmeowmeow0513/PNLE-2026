@@ -18,6 +18,7 @@ export const useFileManager = (userId: string | undefined) => {
     }
 
     const filesRef = collection(db, 'users', userId, 'files');
+    // Fetch files ordered by creation date descending (newest first)
     const q = query(filesRef, orderBy('createdAt', 'desc'));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -39,6 +40,7 @@ export const useFileManager = (userId: string | undefined) => {
     try {
       // 1. Upload to Storage
       // Path: user_uploads/{uid}/{fileName}
+      // Note: Using file.name directly. In a production app, you might want to sanitize this or add a timestamp to prevent overwrites.
       const storageRef = ref(storage, `user_uploads/${userId}/${file.name}`);
       await uploadBytes(storageRef, file);
       const downloadUrl = await getDownloadURL(storageRef);
@@ -51,7 +53,7 @@ export const useFileManager = (userId: string | undefined) => {
         fileSize: file.size,
         createdAt: new Date().toISOString(),
         userNotes: userNotes,
-        aiSummary: '' // Placeholder for future AI features
+        aiSummary: '' 
       });
 
     } catch (error) {
