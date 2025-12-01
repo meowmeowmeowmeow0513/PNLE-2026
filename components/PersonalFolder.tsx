@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useFileManager } from '../hooks/useFileManager';
 import FilePreviewModal from './FilePreviewModal';
-import { Folder, Upload, FileText, Image, File as FileIcon, Trash2, Download, Loader, Plus, X, Eye } from 'lucide-react';
+import { Folder, Upload, FileText, Image, File as FileIcon, Trash2, Download, Loader, Plus, X, Eye, FileCode, Film, Music } from 'lucide-react';
 import { format } from 'date-fns';
 
 const PersonalFolder: React.FC = () => {
@@ -53,14 +53,19 @@ const PersonalFolder: React.FC = () => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
-  const getFileIcon = (mimeType: string) => {
-    if (mimeType.startsWith('image/')) return <Image size={24} className="text-purple-500" />;
-    if (mimeType === 'application/pdf') return <FileText size={24} className="text-red-500" />;
-    return <FileIcon size={24} className="text-slate-500" />;
+  // Helper to determine the large thumbnail icon for non-image files
+  const getThumbnailIcon = (mimeType: string) => {
+    if (mimeType === 'application/pdf') return <FileText size={48} className="text-red-500" strokeWidth={1.5} />;
+    if (mimeType.includes('word') || mimeType.includes('document')) return <FileText size={48} className="text-blue-500" strokeWidth={1.5} />;
+    if (mimeType.includes('sheet') || mimeType.includes('excel')) return <FileText size={48} className="text-green-500" strokeWidth={1.5} />;
+    if (mimeType.startsWith('video/')) return <Film size={48} className="text-pink-500" strokeWidth={1.5} />;
+    if (mimeType.startsWith('audio/')) return <Music size={48} className="text-purple-500" strokeWidth={1.5} />;
+    if (mimeType.includes('zip') || mimeType.includes('compressed')) return <Folder size={48} className="text-orange-400" strokeWidth={1.5} />;
+    return <FileIcon size={48} className="text-slate-400" strokeWidth={1.5} />;
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-7xl mx-auto space-y-6 pb-10">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
@@ -69,132 +74,152 @@ const PersonalFolder: React.FC = () => {
         </div>
         <button
           onClick={() => setIsUploadModalOpen(true)}
-          className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-pink-500/20 transition-all"
+          className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-4 py-2.5 rounded-xl font-bold shadow-lg shadow-pink-500/20 transition-all active:scale-95"
         >
           <Upload size={18} />
           Upload Resource
         </button>
       </div>
 
-      {/* File List */}
+      {/* Main Content Area */}
       {loadingFiles ? (
-        <div className="flex justify-center py-12">
-          <Loader className="animate-spin text-pink-500" size={32} />
+        <div className="flex justify-center py-24">
+          <Loader className="animate-spin text-pink-500" size={40} />
         </div>
       ) : files.length === 0 ? (
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-12 text-center border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center gap-4 transition-colors">
-          <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-400 dark:text-slate-500">
-            <Folder size={32} />
+        <div className="bg-white dark:bg-slate-800 rounded-3xl p-16 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center gap-6 transition-colors">
+          <div className="w-20 h-20 bg-slate-50 dark:bg-slate-700 rounded-full flex items-center justify-center text-slate-300 dark:text-slate-500">
+            <Folder size={40} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-700 dark:text-white">Your folder is empty</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-sm">Upload PDFs, images, or notes to keep them handy.</p>
+            <h3 className="text-xl font-bold text-slate-700 dark:text-white">Your folder is empty</h3>
+            <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Upload PDFs, images, or notes to get started.</p>
           </div>
           <button
              onClick={() => setIsUploadModalOpen(true)}
-             className="text-pink-500 font-medium hover:text-pink-600 dark:hover:text-pink-400 text-sm"
+             className="text-pink-500 font-bold hover:text-pink-600 dark:hover:text-pink-400 text-sm bg-pink-50 dark:bg-pink-900/20 px-4 py-2 rounded-lg transition-colors"
           >
             Upload your first file
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {files.map((file) => (
-            <div 
-              key={file.id} 
-              onClick={() => setPreviewFile({ url: file.downloadUrl, type: file.fileType, name: file.fileName })}
-              className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-pink-200 dark:hover:border-pink-800/50 transition-all group flex flex-col justify-between cursor-pointer"
-            >
-              
-              <div className="flex items-start justify-between mb-4">
-                <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
-                  {getFileIcon(file.fileType)}
-                </div>
-                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
-                  <button 
-                    onClick={() => setPreviewFile({ url: file.downloadUrl, type: file.fileType, name: file.fileName })}
-                    className="p-1.5 text-slate-400 hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/20 rounded-md transition-colors md:hidden"
-                    title="Preview"
-                  >
-                    <Eye size={16} />
-                  </button>
-                  <a 
-                    href={file.downloadUrl} 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
-                    title="Download/Open New Tab"
-                  >
-                    <Download size={16} />
-                  </a>
-                  <button 
-                    onClick={(e) => handleDelete(e, file.id, file.fileName)}
-                    className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              </div>
+        /* Windows 11 Style Grid */
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4">
+          {files.map((file) => {
+            const isImage = file.fileType.startsWith('image/');
 
-              <div>
-                <h3 className="font-bold text-slate-800 dark:text-white truncate mb-1 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors" title={file.fileName}>
-                  {file.fileName}
-                </h3>
-                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-3">
-                  <span>{formatFileSize(file.fileSize)}</span>
-                  <span>•</span>
-                  <span>{format(new Date(file.createdAt), 'MMM d, yyyy')}</span>
+            return (
+              <div 
+                key={file.id}
+                className="group relative bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 hover:shadow-lg hover:border-pink-300 dark:hover:border-pink-700 transition-all duration-300 overflow-hidden flex flex-col h-[260px]"
+              >
+                {/* Top Section: Thumbnail */}
+                <div 
+                  className="h-36 w-full bg-slate-100 dark:bg-slate-900/50 flex items-center justify-center overflow-hidden cursor-pointer relative"
+                  onClick={() => setPreviewFile({ url: file.downloadUrl, type: file.fileType, name: file.fileName })}
+                >
+                  {isImage ? (
+                    <img 
+                      src={file.downloadUrl} 
+                      alt={file.fileName} 
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    />
+                  ) : (
+                    <div className="transform transition-transform duration-300 group-hover:scale-110">
+                      {getThumbnailIcon(file.fileType)}
+                    </div>
+                  )}
+                  
+                  {/* Hover Overlay for Thumbnail */}
+                  <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 dark:group-hover:bg-white/5 transition-colors duration-300" />
                 </div>
-                
-                {file.userNotes && (
-                  <div className="bg-slate-50 dark:bg-slate-700/30 p-3 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                    <p className="text-xs text-slate-600 dark:text-slate-300 italic line-clamp-3">
-                      "{file.userNotes}"
+
+                {/* Bottom Section: Details & Actions */}
+                <div className="p-3 flex flex-col flex-1 justify-between">
+                  <div className="space-y-1">
+                    <h3 
+                      className="font-semibold text-slate-700 dark:text-slate-200 text-sm truncate" 
+                      title={file.fileName}
+                    >
+                      {file.fileName}
+                    </h3>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-wide font-medium flex items-center gap-1">
+                      {formatFileSize(file.fileSize)}
                     </p>
                   </div>
-                )}
+
+                  {/* Action Bar */}
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100 dark:border-slate-700/50">
+                     <button
+                        onClick={() => setPreviewFile({ url: file.downloadUrl, type: file.fileType, name: file.fileName })}
+                        className="p-1.5 text-slate-400 hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-500/20 rounded-lg transition-colors"
+                        title="Preview"
+                     >
+                       <Eye size={16} />
+                     </button>
+                     
+                     <a
+                        href={file.downloadUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/20 rounded-lg transition-colors"
+                        title="Download"
+                     >
+                       <Download size={16} />
+                     </a>
+
+                     <button
+                        onClick={(e) => handleDelete(e, file.id, file.fileName)}
+                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20 rounded-lg transition-colors"
+                        title="Delete"
+                     >
+                       <Trash2 size={16} />
+                     </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
 
       {/* Upload Modal */}
       {isUploadModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 relative">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md p-6 relative border border-slate-100 dark:border-slate-700">
             <button 
               onClick={() => setIsUploadModalOpen(false)}
-              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="absolute top-4 right-4 p-1 rounded-full text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
             >
               <X size={20} />
             </button>
 
             <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-6">Upload Resource</h3>
 
-            <form onSubmit={handleUploadSubmit} className="space-y-4">
+            <form onSubmit={handleUploadSubmit} className="space-y-5">
               {/* File Select */}
               <div 
                 onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${
+                className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center cursor-pointer transition-all ${
                   selectedFile 
-                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-900/10' 
+                    ? 'border-pink-500 bg-pink-50 dark:bg-pink-500/10' 
                     : 'border-slate-300 dark:border-slate-600 hover:border-pink-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                 }`}
               >
                 {selectedFile ? (
                   <>
-                    <FileIcon size={32} className="text-pink-500 mb-2" />
-                    <p className="text-sm font-medium text-slate-800 dark:text-white text-center break-all">
+                    <FileIcon size={40} className="text-pink-500 mb-3" />
+                    <p className="text-sm font-bold text-slate-800 dark:text-white text-center break-all px-4">
                       {selectedFile.name}
                     </p>
-                    <p className="text-xs text-slate-500 mt-1">{formatFileSize(selectedFile.size)}</p>
+                    <p className="text-xs text-slate-500 mt-1 bg-white dark:bg-slate-800 px-2 py-1 rounded-md shadow-sm border border-slate-100 dark:border-slate-600">{formatFileSize(selectedFile.size)}</p>
                   </>
                 ) : (
                   <>
-                    <Upload size={32} className="text-slate-400 mb-2" />
-                    <p className="text-sm font-medium text-slate-600 dark:text-slate-300">Click to select file</p>
+                    <div className="bg-slate-100 dark:bg-slate-700 p-3 rounded-full mb-3">
+                        <Upload size={24} className="text-slate-400 dark:text-slate-300" />
+                    </div>
+                    <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">Click to select file</p>
                     <p className="text-xs text-slate-400 mt-1">PDF, Images, Word Docs</p>
                   </>
                 )}
@@ -208,7 +233,7 @@ const PersonalFolder: React.FC = () => {
 
               {/* Notes Input */}
               <div>
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-1 block">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5 block">
                   Add a note (optional)
                 </label>
                 <textarea
@@ -223,7 +248,7 @@ const PersonalFolder: React.FC = () => {
               <button
                 type="submit"
                 disabled={!selectedFile || uploading}
-                className="w-full py-3 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl shadow-lg shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
+                className="w-full py-3.5 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl shadow-lg shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
               >
                 {uploading ? <Loader size={18} className="animate-spin" /> : <Upload size={18} />}
                 {uploading ? 'Uploading...' : 'Save File'}
