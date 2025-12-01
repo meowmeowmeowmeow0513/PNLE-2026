@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Timer, Library, BookOpen, GraduationCap, X } from 'lucide-react';
+import { LayoutDashboard, Timer, Library, BookOpen, GraduationCap, X, UserCircle } from 'lucide-react';
 import { NavigationItem } from '../types';
 
 interface SidebarProps {
@@ -63,6 +63,23 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onNavigate, isOpen, onClo
                 <span>{item.label}</span>
               </button>
             ))}
+
+            <div className="pt-4 mt-4 border-t border-navy-800">
+               <button
+                onClick={() => {
+                  onNavigate('Sign Up');
+                  if (window.innerWidth < 1024) onClose();
+                }}
+                className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 font-medium ${
+                  activeItem === 'Sign Up'
+                    ? 'bg-pink-accent/10 text-pink-accent shadow-sm'
+                    : 'hover:bg-navy-800 hover:text-white'
+                }`}
+              >
+                <UserCircle size={20} />
+                <span>Sign Up</span>
+              </button>
+            </div>
           </nav>
         </div>
 
