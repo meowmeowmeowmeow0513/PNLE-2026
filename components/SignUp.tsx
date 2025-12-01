@@ -2,7 +2,11 @@ import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { UserPlus, LogIn, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 
-const SignUp: React.FC = () => {
+interface SignUpProps {
+  onForgotPassword: () => void;
+}
+
+const SignUp: React.FC<SignUpProps> = ({ onForgotPassword }) => {
   const { signup, login, googleLogin } = useAuth();
   
   const [isLogin, setIsLogin] = useState(false); // Toggle between Login and Signup
@@ -114,7 +118,18 @@ const SignUp: React.FC = () => {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Password</label>
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Password</label>
+                {isLogin && (
+                    <button 
+                        type="button"
+                        onClick={onForgotPassword}
+                        className="text-xs font-medium text-pink-500 hover:text-pink-600 dark:hover:text-pink-400 transition-colors"
+                    >
+                        Forgot Password?
+                    </button>
+                )}
+              </div>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
                   <Lock size={18} />
