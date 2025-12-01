@@ -16,11 +16,19 @@ const SignUp: React.FC = () => {
     setError(null);
     setLoading(true);
 
+    // Domain Validation Check
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.endsWith('@gmail.com')) {
+      setError('Only @gmail.com email addresses are allowed.');
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isLogin) {
-        await login(email, password);
+        await login(cleanEmail, password);
       } else {
-        await signup(email, password);
+        await signup(cleanEmail, password);
       }
     } catch (err: any) {
       console.error(err);
@@ -92,7 +100,7 @@ const SignUp: React.FC = () => {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all"
-                  placeholder="student@nursing.edu"
+                  placeholder="student@gmail.com"
                   required
                 />
               </div>
