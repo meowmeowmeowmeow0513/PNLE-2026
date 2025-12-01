@@ -1,7 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { useAuth } from '../AuthContext';
 import { useFileManager } from '../hooks/useFileManager';
-import { Folder, Upload, FileText, Image, File as FileIcon, Trash2, Download, Loader, Plus, X } from 'lucide-react';
+import FilePreviewModal from './FilePreviewModal';
+import { Folder, Upload, FileText, Image, File as FileIcon, Trash2, Download, Loader, Plus, X, Eye } from 'lucide-react';
 import { format } from 'date-fns';
 
 const PersonalFolder: React.FC = () => {
@@ -11,6 +12,9 @@ const PersonalFolder: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [userNote, setUserNote] = useState('');
+  
+  // State for Preview Modal
+  const [previewFile, setPreviewFile] = useState<{url: string, type: string, name: string} | null>(null);
   
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -34,7 +38,8 @@ const PersonalFolder: React.FC = () => {
     }
   };
 
-  const handleDelete = async (fileId: string, fileName: string) => {
+  const handleDelete = async (e: React.MouseEvent, fileId: string, fileName: string) => {
+    e.stopPropagation(); // Prevent opening preview when clicking delete
     if (window.confirm(`Are you sure you want to delete "${fileName}"?`)) {
       await deleteFile(fileId, fileName);
     }
@@ -95,24 +100,35 @@ const PersonalFolder: React.FC = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {files.map((file) => (
-            <div key={file.id} className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md transition-all group flex flex-col justify-between">
+            <div 
+              key={file.id} 
+              onClick={() => setPreviewFile({ url: file.downloadUrl, type: file.fileType, name: file.fileName })}
+              className="bg-white dark:bg-slate-800 rounded-xl p-5 shadow-sm border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-pink-200 dark:hover:border-pink-800/50 transition-all group flex flex-col justify-between cursor-pointer"
+            >
               
               <div className="flex items-start justify-between mb-4">
                 <div className="p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
                   {getFileIcon(file.fileType)}
                 </div>
-                <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                  <button 
+                    onClick={() => setPreviewFile({ url: file.downloadUrl, type: file.fileType, name: file.fileName })}
+                    className="p-1.5 text-slate-400 hover:text-pink-500 hover:bg-pink-50 dark:hover:bg-pink-900/20 rounded-md transition-colors md:hidden"
+                    title="Preview"
+                  >
+                    <Eye size={16} />
+                  </button>
                   <a 
                     href={file.downloadUrl} 
                     target="_blank" 
                     rel="noopener noreferrer"
                     className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-md transition-colors"
-                    title="Download/View"
+                    title="Download/Open New Tab"
                   >
                     <Download size={16} />
                   </a>
                   <button 
-                    onClick={() => handleDelete(file.id, file.fileName)}
+                    onClick={(e) => handleDelete(e, file.id, file.fileName)}
                     className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-colors"
                     title="Delete"
                   >
@@ -122,7 +138,7 @@ const PersonalFolder: React.FC = () => {
               </div>
 
               <div>
-                <h3 className="font-bold text-slate-800 dark:text-white truncate mb-1" title={file.fileName}>
+                <h3 className="font-bold text-slate-800 dark:text-white truncate mb-1 group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors" title={file.fileName}>
                   {file.fileName}
                 </h3>
                 <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-3">
@@ -215,6 +231,16 @@ const PersonalFolder: React.FC = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Preview Modal */}
+      {previewFile && (
+        <FilePreviewModal 
+          fileUrl={previewFile.url}
+          fileType={previewFile.type}
+          fileName={previewFile.name}
+          onClose={() => setPreviewFile(null)}
+        />
       )}
     </div>
   );
