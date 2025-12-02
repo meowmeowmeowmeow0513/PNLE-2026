@@ -1,7 +1,7 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { db } from './firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { useStreakSystem } from './hooks/useStreakSystem';
 import { Task, TaskCategory, TaskPriority } from './types';
@@ -9,7 +9,8 @@ import { Task, TaskCategory, TaskPriority } from './types';
 interface TaskContextType {
   tasks: Task[];
   loading: boolean;
-  addTask: (title: string, date: string, category: TaskCategory, priority: TaskPriority) => Promise<void>;
+  addTask: (task: Omit<Task, 'id' | 'userId' | 'createdAt' | 'completed'>) => Promise<void>;
+  updateTask: (id: string, updates: Partial<Task>) => Promise<void>;
   toggleTask: (id: string, currentStatus: boolean) => Promise<void>;
   deleteTask: (id: string) => Promise<void>;
 }
@@ -44,10 +45,24 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const fetchedTasks = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Task[];
+      const fetchedTasks = snapshot.docs.map(doc => {
+        const data = doc.data();
+        // Fallback for legacy data structure (pure date string) to start/end
+        const hasIso = data.start && data.end;
+        const fallbackStart = !hasIso && data.date ? `${data.date}T09:00:00` : new Date().toISOString();
+        const fallbackEnd = !hasIso && data.date ? `${data.date}T10:00:00` : new Date().toISOString();
+
+        return {
+          id: doc.id,
+          ...data,
+          // Ensure start/end exist even for old records
+          start: data.start || fallbackStart,
+          end: data.end || fallbackEnd,
+          allDay: data.allDay ?? false,
+          // Sync legacy date field for Dashboard compatibility
+          date: data.start ? data.start.split('T')[0] : data.date
+        };
+      }) as Task[];
       setTasks(fetchedTasks);
       setLoading(false);
     });
@@ -55,21 +70,40 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe();
   }, [currentUser]);
 
-  const addTask = async (title: string, date: string, category: TaskCategory, priority: TaskPriority) => {
+  const addTask = async (newTask: Omit<Task, 'id' | 'userId' | 'createdAt' | 'completed'>) => {
     if (!currentUser) return;
 
     try {
+      // Legacy support: extract YYYY-MM-DD from start ISO string for Dashboard
+      const legacyDate = newTask.start.split('T')[0];
+
       await addDoc(collection(db, 'users', currentUser.uid, 'tasks'), {
-        title,
+        ...newTask,
         completed: false,
-        date,
-        category,
-        priority,
         userId: currentUser.uid,
-        createdAt: Date.now()
+        createdAt: Date.now(),
+        date: legacyDate 
       });
     } catch (error) {
       console.error("Error adding task:", error);
+    }
+  };
+
+  const updateTask = async (id: string, updates: Partial<Task>) => {
+    if (!currentUser) return;
+
+    try {
+      const taskRef = doc(db, 'users', currentUser.uid, 'tasks', id);
+      
+      // If updating time, sync legacy date field
+      let finalUpdates: any = { ...updates };
+      if (updates.start) {
+        finalUpdates.date = updates.start.split('T')[0];
+      }
+
+      await updateDoc(taskRef, finalUpdates);
+    } catch (error) {
+      console.error("Error updating task:", error);
     }
   };
 
@@ -104,7 +138,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   return (
-    <TaskContext.Provider value={{ tasks, loading, addTask, toggleTask, deleteTask }}>
+    <TaskContext.Provider value={{ tasks, loading, addTask, updateTask, toggleTask, deleteTask }}>
       {children}
     </TaskContext.Provider>
   );
