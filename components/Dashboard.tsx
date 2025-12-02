@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users, Calendar, Flag, CheckSquare } from 'lucide-react';
 import { NavigationItem, TaskCategory, TaskPriority, Task } from '../types';
@@ -7,7 +6,7 @@ import StreakRecoveryModal from './StreakRecoveryModal';
 import MnemonicWidget from './MnemonicWidget';
 import { useStreakSystem } from '../hooks/useStreakSystem';
 import { useTasks } from '../TaskContext';
-import { format, isSameDay, parseISO } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 
 interface DashboardProps {
   onNavigate: (item: NavigationItem) => void;
@@ -29,7 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const todaysTasks = allTasks
     .filter(t => {
       try {
-        return isSameDay(parseISO(t.start), today);
+        return isSameDay(new Date(t.start), today);
       } catch (e) {
         return false;
       }
