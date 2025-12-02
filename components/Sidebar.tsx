@@ -1,5 +1,6 @@
+
 import React from 'react';
-import { LayoutDashboard, Timer, Library, BookOpen, GraduationCap, X, Folder } from 'lucide-react';
+import { LayoutDashboard, Timer, Library, BookOpen, GraduationCap, X, Folder, Calendar } from 'lucide-react';
 import { NavigationItem } from '../types';
 
 interface SidebarProps {
@@ -12,6 +13,7 @@ interface SidebarProps {
 const Sidebar: React.FC<SidebarProps> = ({ activeItem, onNavigate, isOpen, onClose }) => {
   const navItems: { label: NavigationItem; icon: React.ReactNode }[] = [
     { label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
+    { label: 'Planner', icon: <Calendar size={20} /> },
     { label: 'Pomodoro Timer', icon: <Timer size={20} /> },
     { label: 'Resource Hub', icon: <Library size={20} /> },
     { label: 'Exam TOS', icon: <BookOpen size={20} /> },
