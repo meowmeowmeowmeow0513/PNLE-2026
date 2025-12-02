@@ -8,7 +8,7 @@ const Resources: React.FC = () => {
       id: '1',
       title: 'Google Drive Folder',
       description: 'Access reviewers, PDFs, and shared class folders from previous batches.',
-      url: '#',
+      url: 'https://drive.google.com/drive/folders/1pRgtdnEXRKk5eA8YLTp8wohQRIRVUxZ9?usp=sharing',
       iconName: 'drive'
     },
     {
