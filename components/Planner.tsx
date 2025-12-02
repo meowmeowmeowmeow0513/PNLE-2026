@@ -14,9 +14,7 @@ import {
   Plus, 
   LayoutGrid, 
   Clock,
-  MapPin,
-  Coffee,
-  MoreHorizontal
+  Coffee
 } from 'lucide-react';
 import { format, isSameDay, differenceInMinutes } from 'date-fns';
 
@@ -180,10 +178,10 @@ const Planner: React.FC = () => {
     return (
       <div className={`w-full h-full rounded-md shadow-sm border border-t-0 border-r-0 border-b-0 border-l-[4px] bg-gradient-to-r ${gradient} overflow-hidden group hover:brightness-105 transition-all`}>
         <div className={`h-full px-2 flex ${isShort ? 'flex-row items-center gap-2' : 'flex-col justify-start py-1'}`}>
-            <span className={`font-mono font-bold text-white/90 whitespace-nowrap ${isShort ? 'text-[11px]' : 'text-[10px] uppercase tracking-wider opacity-80'}`}>
+            <span className={`font-mono font-bold text-white/90 whitespace-nowrap ${isShort ? 'text-xs' : 'text-[11px] uppercase tracking-wider opacity-90'}`}>
                 {isShort ? shortTimeText : eventInfo.timeText}
             </span>
-            <span className={`font-bold text-white truncate leading-tight ${isShort ? 'text-[11px]' : 'text-xs'}`}>
+            <span className={`font-bold text-white truncate leading-tight ${isShort ? 'text-xs' : 'text-xs md:text-sm'}`}>
                 {eventInfo.event.title}
             </span>
         </div>
@@ -228,7 +226,7 @@ const Planner: React.FC = () => {
       
       {/* 
          PREMIUM CSS INJECTION 
-         - Fixes fonts
+         - Fixes fonts for Dark Mode
          - Hides ugly "all-day" text
          - Refines grid lines
          - Adds 15-min precision visuals
@@ -257,15 +255,21 @@ const Planner: React.FC = () => {
             background: transparent !important;
         }
 
-        /* DARK MODE TEXT FIXES */
-        .dark .fc-col-header-cell-cushion,
-        .dark .fc-timegrid-slot-label-cushion,
-        .dark .fc-timegrid-axis-cushion {
-            color: #e2e8f0 !important; /* slate-200 */
+        /* DARK MODE TEXT FIXES (Month View Numbers & Week View Labels) */
+        .dark .fc-daygrid-day-number {
+             color: #e2e8f0 !important; /* slate-200 */
+             text-decoration: none !important;
         }
-        
         .dark .fc-col-header-cell-cushion {
-            color: #94a3b8; /* fallback */
+             color: #cbd5e1 !important; /* slate-300 */
+             text-decoration: none !important;
+        }
+        .dark .fc-timegrid-slot-label-cushion,
+        .dark .fc-timegrid-slot-label-frame {
+             color: #94a3b8 !important; /* slate-400 */
+        }
+        .dark .fc-scrollgrid-sync-inner {
+             color: #e2e8f0;
         }
 
         /* Today Highlight Disable (We do custom) */
