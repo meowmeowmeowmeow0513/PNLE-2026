@@ -1,5 +1,19 @@
 
-export type NavigationItem = 'Dashboard' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Personal Folder';
+export type NavigationItem = 'Dashboard' | 'Planner' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Personal Folder';
+
+export type TaskCategory = 'Review' | 'Duty' | 'School' | 'Personal';
+export type TaskPriority = 'High' | 'Medium' | 'Low';
+
+export interface Task {
+  id: string;
+  title: string;
+  completed: boolean;
+  date: string; // YYYY-MM-DD
+  category: TaskCategory;
+  priority: TaskPriority;
+  userId: string;
+  createdAt: number;
+}
 
 export interface Note {
   id: string;
