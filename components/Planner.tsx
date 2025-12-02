@@ -18,7 +18,7 @@ import {
   Coffee,
   MoreHorizontal
 } from 'lucide-react';
-import { format, isSameDay } from 'date-fns';
+import { format, isSameDay, differenceInMinutes } from 'date-fns';
 
 const Planner: React.FC = () => {
   const { tasks, addTask, updateTask, deleteTask } = useTasks();
@@ -27,7 +27,7 @@ const Planner: React.FC = () => {
   // UI State
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
-  const [currentView, setCurrentView] = useState<'dayGridMonth' | 'timeGridWeek'>('dayGridMonth');
+  const [currentView, setCurrentView] = useState<'dayGridMonth' | 'timeGridWeek'>('timeGridWeek'); // Default to Week for better 15-min view
   
   // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -45,11 +45,10 @@ const Planner: React.FC = () => {
 
   // --- 1. INTERACTION HANDLERS ---
 
-  // Handle Moving Events (Drag & Drop)
   const handleEventDrop = async (info: any) => {
     const { event } = info;
     const newStart = event.start?.toISOString();
-    const newEnd = event.end?.toISOString() || newStart; // Fallback if end is null
+    const newEnd = event.end?.toISOString() || newStart;
 
     if (event.id && newStart) {
       try {
@@ -64,7 +63,6 @@ const Planner: React.FC = () => {
     }
   };
 
-  // Handle Resizing Events (Stretch)
   const handleEventResize = async (info: any) => {
     const { event } = info;
     if (event.id && event.start && event.end) {
@@ -75,20 +73,17 @@ const Planner: React.FC = () => {
     }
   };
 
-  // Handle Drag-to-Create (Selection)
   const handleDateSelect = (selectInfo: any) => {
     const { startStr, endStr, allDay, view } = selectInfo;
     const calendarApi = selectInfo.view.calendar;
-    calendarApi.unselect(); // clear visual selection
+    calendarApi.unselect();
 
-    // Pre-fill modal with the selected range
     setSelectedTask({
         start: startStr,
         end: endStr,
         allDay: allDay
     });
     
-    // If selecting in month view, set selected date for sidebar too
     if (view.type === 'dayGridMonth') {
         setSelectedDate(selectInfo.start);
     }
@@ -96,7 +91,6 @@ const Planner: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Handle Clicking an Existing Event
   const handleEventClick = (info: any) => {
     info.jsEvent.stopPropagation(); 
     const taskId = info.event.id;
@@ -107,11 +101,8 @@ const Planner: React.FC = () => {
     }
   };
 
-  // Handle Clicking a Date (Single Click)
   const handleDateClick = (arg: { date: Date, view: any }) => {
     setSelectedDate(arg.date);
-    // If in month view, just selecting the date for sidebar is enough
-    // Double click or drag is used for creation to avoid conflict
   };
 
   const handleSaveTask = async (taskData: Partial<Task>) => {
@@ -165,42 +156,51 @@ const Planner: React.FC = () => {
 
   const getEventGradient = (cat: TaskCategory) => {
     switch(cat) {
-      case 'Review': return 'bg-gradient-to-r from-pink-500 to-pink-600';
-      case 'Duty': return 'bg-gradient-to-r from-blue-600 to-blue-500';
-      case 'School': return 'bg-gradient-to-r from-yellow-500 to-amber-500';
-      case 'Personal': return 'bg-gradient-to-r from-emerald-500 to-emerald-400';
-      default: return 'bg-slate-500';
+      case 'Review': return 'from-pink-500 to-pink-600 border-pink-600/20';
+      case 'Duty': return 'from-blue-600 to-blue-500 border-blue-600/20';
+      case 'School': return 'from-yellow-500 to-amber-500 border-yellow-600/20';
+      case 'Personal': return 'from-emerald-500 to-emerald-400 border-emerald-600/20';
+      default: return 'from-slate-500 to-slate-600 border-slate-600/20';
     }
   };
 
   const renderEventContent = (eventInfo: any) => {
     const cat = eventInfo.event.extendedProps.category as TaskCategory;
+    const gradient = getEventGradient(cat);
+    
+    // Check duration to adjust layout for short events (15-30 mins)
+    const start = eventInfo.event.start;
+    const end = eventInfo.event.end || start;
+    const durationMins = differenceInMinutes(end, start);
+    const isShort = durationMins <= 30;
+
     return (
-      <div className={`w-full h-full px-2 py-0.5 rounded-md shadow-sm border-l-[3px] border-black/20 overflow-hidden flex items-center gap-1 ${getEventGradient(cat)}`}>
-        <span className="text-[10px] font-bold text-white/90 whitespace-nowrap">
-           {eventInfo.timeText}
-        </span>
-        <span className="text-xs font-bold text-white truncate">
-           {eventInfo.event.title}
-        </span>
+      <div className={`w-full h-full rounded-md shadow-sm border border-t-0 border-r-0 border-b-0 border-l-[4px] bg-gradient-to-r ${gradient} overflow-hidden group hover:brightness-105 transition-all`}>
+        <div className={`h-full px-2 flex ${isShort ? 'flex-row items-center gap-2' : 'flex-col justify-start py-1'}`}>
+            <span className={`font-mono font-bold text-white/90 ${isShort ? 'text-[10px]' : 'text-[9px] uppercase tracking-wider opacity-80'}`}>
+                {eventInfo.timeText}
+            </span>
+            <span className="text-xs font-bold text-white truncate leading-tight">
+                {eventInfo.event.title}
+            </span>
+        </div>
       </div>
     );
   };
 
-  // Custom Day Header (iOS Style: Mon \n 24)
   const renderDayHeader = (args: any) => {
     const date = args.date;
-    const dayName = format(date, 'EEE'); // Mon
-    const dayNumber = format(date, 'd'); // 24
+    const dayName = format(date, 'EEE'); 
+    const dayNumber = format(date, 'd');
     const isToday = isSameDay(date, new Date());
 
     return (
-        <div className="flex flex-col items-center gap-1 py-2">
-            <span className={`text-[10px] font-bold uppercase tracking-widest ${isToday ? 'text-pink-500' : 'text-slate-400'}`}>
+        <div className="flex flex-col items-center gap-1 py-3 group cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg mx-1">
+            <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isToday ? 'text-pink-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}>
                 {dayName}
             </span>
-            <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-all ${
-                isToday ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30' : 'text-slate-700 dark:text-slate-300'
+            <span className={`flex items-center justify-center w-9 h-9 rounded-full text-base font-bold transition-all ${
+                isToday ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/30 scale-110' : 'text-slate-700 dark:text-slate-200 group-hover:bg-slate-200 dark:group-hover:bg-slate-700'
             }`}>
                 {dayNumber}
             </span>
@@ -208,7 +208,6 @@ const Planner: React.FC = () => {
     );
   };
 
-  // Map tasks to events
   const events = tasks.map(task => ({
     id: task.id,
     title: task.title,
@@ -222,96 +221,147 @@ const Planner: React.FC = () => {
   }));
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col gap-6 animate-fade-in pb-4">
+    <div className="h-[calc(100vh-140px)] flex flex-col gap-6 animate-fade-in pb-4 font-sans">
       
-      {/* CSS Overrides */}
+      {/* 
+         PREMIUM CSS INJECTION 
+         - Fixes fonts
+         - Hides ugly "all-day" text
+         - Refines grid lines
+         - Adds 15-min precision visuals
+      */}
       <style>{`
+        /* Force Font Family */
+        .fc {
+            font-family: 'Inter', sans-serif !important;
+        }
+
         /* Hide Default Header */
         .fc-header-toolbar { display: none !important; }
         
-        /* Grid styling */
+        /* Grid Borders - Ultra Subtle */
         .fc-theme-standard td, .fc-theme-standard th {
-           border-color: rgba(148, 163, 184, 0.1); 
+           border-color: rgba(148, 163, 184, 0.08) !important; 
         }
         .dark .fc-theme-standard td, .dark .fc-theme-standard th {
-           border-color: rgba(148, 163, 184, 0.1);
+           border-color: rgba(148, 163, 184, 0.08) !important;
         }
 
-        /* Clean up header cells */
+        /* Column Headers */
         .fc-col-header-cell {
             border-bottom: 0 !important;
             padding-bottom: 8px;
+            background: transparent !important;
         }
 
-        /* Today Highlight Override (we do it manually in renderDayHeader) */
+        /* Today Highlight Disable (We do custom) */
         .fc-day-today {
            background: transparent !important;
         }
 
-        /* TimeGrid Slots */
-        .fc-timegrid-slot { height: 3.5rem !important; }
-        .fc-timegrid-slot-label { font-size: 0.7rem; color: #94a3b8; font-weight: 500; }
+        /* 15-Minute Slot Styling */
+        .fc-timegrid-slot { 
+            height: 2.5rem !important; /* Slightly compact for 15 min slots */
+            border-bottom: 1px dotted rgba(0,0,0,0.03) !important;
+        }
+        .dark .fc-timegrid-slot {
+            border-bottom: 1px dotted rgba(255,255,255,0.03) !important;
+        }
         
-        /* Current Time Indicator */
-        .fc-timegrid-now-indicator-line { border-color: #ec4899; border-width: 2px; }
-        .fc-timegrid-now-indicator-arrow { border-color: #ec4899; border-width: 6px; }
-
-        /* Remove Default Event Styles */
-        .fc-event {
-           background: transparent;
-           border: none;
-           box-shadow: none;
-        }
-        .fc-event:hover {
-           transform: scale(1.02);
-           z-index: 50;
-           transition: transform 0.1s;
-           cursor: pointer;
+        /* Major Hour Lines */
+        .fc-timegrid-slot-lane.fc-timegrid-slot-minor {
+            border-bottom-style: none !important;
         }
 
-        /* Month View Day Number Styling */
-        .fc-daygrid-day-number {
-            font-size: 0.8rem;
-            font-weight: 600;
-            color: #64748b;
-            padding: 8px;
+        /* Time Labels */
+        .fc-timegrid-slot-label { 
+            font-size: 0.75rem; 
+            color: #94a3b8; 
+            font-weight: 500;
+            vertical-align: middle !important;
         }
-        .dark .fc-daygrid-day-number { color: #94a3b8; }
+        
+        /* Current Time Indicator - Glowing Effect */
+        .fc-timegrid-now-indicator-line { 
+            border-color: #ec4899; 
+            border-width: 2px;
+            box-shadow: 0 0 10px rgba(236, 72, 153, 0.6);
+            z-index: 50;
+        }
+        .fc-timegrid-now-indicator-arrow { 
+            border-color: #ec4899; 
+            border-width: 6px; 
+            margin-left: -6px;
+        }
+
+        /* --- ALL DAY SECTION OVERHAUL --- */
+        /* Hide the ugly "all-day" text */
+        .fc-timegrid-axis-cushion, .fc-timegrid-axis-frame {
+            display: none !important;
+            width: 0px !important;
+        }
+        /* Make the row look like a premium header */
+        .fc-scrollgrid-section-header > td {
+            border-bottom: 1px solid rgba(0,0,0,0.05) !important;
+        }
+        
+        /* All Day Events - Badge Style */
+        .fc-daygrid-event {
+            border-radius: 9999px !important; /* Pill shape */
+            margin: 2px !important;
+            padding: 2px 8px !important;
+            font-size: 0.75rem !important;
+            font-weight: 600 !important;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+
+        /* Scrollbar aesthetics for the grid */
+        .fc-scroller::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .fc-scroller::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .fc-scroller::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.3);
+            border-radius: 10px;
+        }
       `}</style>
 
       {/* --- MAIN LAYOUT --- */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 h-full overflow-hidden">
         
         {/* LEFT: CALENDAR (3 Cols) */}
-        <div className="lg:col-span-3 flex flex-col bg-white/80 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 dark:border-slate-700 overflow-hidden relative">
+        <div className="lg:col-span-3 flex flex-col bg-white/80 dark:bg-slate-800/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/40 dark:border-slate-700 overflow-hidden relative transition-colors">
             
             {/* Custom Toolbar */}
-            <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-6 pb-2">
+            <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-6 border-b border-slate-100 dark:border-slate-700/50">
                 <div className="flex items-center gap-4">
-                    <div className="p-3 bg-pink-50 dark:bg-pink-500/10 rounded-2xl text-pink-600 dark:text-pink-400 shadow-sm">
+                    <div className="p-3 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl text-white shadow-lg shadow-pink-500/30 transform hover:scale-105 transition-transform">
                         <CalendarIcon size={24} />
                     </div>
                     <div>
-                        <h2 className="text-2xl font-black text-slate-800 dark:text-white leading-none">
+                        <h2 className="text-2xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
                             {format(currentDate, 'MMMM yyyy')}
                         </h2>
-                        <p className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-1">
-                            Plan your shifts & reviews
+                        <p className="text-slate-500 dark:text-slate-400 font-medium text-xs mt-1 uppercase tracking-wider">
+                            Review Schedule
                         </p>
                     </div>
                 </div>
 
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     {/* Navigation */}
                     <div className="flex items-center bg-white dark:bg-slate-900 rounded-full p-1 shadow-sm border border-slate-200 dark:border-slate-700">
                         <button onClick={handlePrev} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors">
-                            <ChevronLeft size={20} />
+                            <ChevronLeft size={18} />
                         </button>
-                        <button onClick={handleToday} className="px-4 py-1 text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-pink-500 dark:hover:text-pink-400 transition-colors">
+                        <button onClick={handleToday} className="px-4 py-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 hover:text-pink-500 dark:hover:text-pink-400 transition-colors">
                             Today
                         </button>
                         <button onClick={handleNext} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 transition-colors">
-                            <ChevronRight size={20} />
+                            <ChevronRight size={18} />
                         </button>
                     </div>
 
@@ -319,13 +369,15 @@ const Planner: React.FC = () => {
                     <div className="flex bg-white dark:bg-slate-900 rounded-xl p-1 shadow-sm border border-slate-200 dark:border-slate-700">
                         <button 
                             onClick={() => handleViewChange('dayGridMonth')}
-                            className={`p-2 rounded-lg transition-all ${currentView === 'dayGridMonth' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400'}`}
+                            className={`p-2 rounded-lg transition-all ${currentView === 'dayGridMonth' ? 'bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400 shadow-sm' : 'text-slate-400'}`}
+                            title="Month View"
                         >
                             <LayoutGrid size={18} />
                         </button>
                         <button 
                             onClick={() => handleViewChange('timeGridWeek')}
-                            className={`p-2 rounded-lg transition-all ${currentView === 'timeGridWeek' ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm' : 'text-slate-400'}`}
+                            className={`p-2 rounded-lg transition-all ${currentView === 'timeGridWeek' ? 'bg-slate-100 dark:bg-slate-800 text-pink-600 dark:text-pink-400 shadow-sm' : 'text-slate-400'}`}
+                            title="Week View"
                         >
                             <Clock size={18} />
                         </button>
@@ -334,43 +386,49 @@ const Planner: React.FC = () => {
             </div>
 
             {/* Calendar Component */}
-            <div className="flex-1 p-4 pt-0 overflow-hidden">
+            <div className="flex-1 p-2 overflow-hidden bg-white/50 dark:bg-transparent">
                 <FullCalendar
                     ref={calendarRef}
                     plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                    initialView="dayGridMonth"
+                    initialView="timeGridWeek"
                     headerToolbar={false}
                     events={events}
                     eventContent={renderEventContent}
-                    dayHeaderContent={renderDayHeader} // Custom Header iOS Style
+                    dayHeaderContent={renderDayHeader}
                     editable={true}
                     selectable={true}
                     selectMirror={true}
                     dayMaxEvents={3}
                     nowIndicator={true}
+                    
+                    // --- PRECISION SETTINGS ---
+                    slotDuration="00:15:00"  // 15 Minute Increments
+                    slotLabelInterval="01:00" // Keep labels clean (hourly)
+                    snapDuration="00:15:00"   // Snap to 15 mins
+                    
                     // INTERACTION HANDLERS
-                    select={handleDateSelect}   // Drag-to-Create
-                    eventDrop={handleEventDrop} // Drag-Move
-                    eventResize={handleEventResize} // Drag-Stretch
-                    eventClick={handleEventClick} // Edit
-                    dateClick={handleDateClick} // Select Date for Sidebar
+                    select={handleDateSelect}
+                    eventDrop={handleEventDrop}
+                    eventResize={handleEventResize}
+                    eventClick={handleEventClick}
+                    dateClick={handleDateClick}
                     
                     height="100%"
                     slotMinTime="06:00:00"
                     slotMaxTime="24:00:00"
                     allDaySlot={true}
-                    slotDuration="00:30:00"
+                    allDayText="" /* Text hidden via CSS, but empty string here too */
                 />
             </div>
         </div>
 
         {/* RIGHT: AGENDA SIDEBAR (1 Col) */}
-        <div className="lg:col-span-1 flex flex-col bg-white/80 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 dark:border-slate-700 overflow-hidden h-full">
+        <div className="lg:col-span-1 flex flex-col bg-white/80 dark:bg-slate-800/90 backdrop-blur-2xl rounded-[2rem] shadow-2xl border border-white/40 dark:border-slate-700 overflow-hidden h-full">
             
             {/* Agenda Header */}
             <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-white/50 dark:bg-slate-800/50">
                 <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-1">
-                   {isSameDay(selectedDate, new Date()) ? "Today's Schedule" : format(selectedDate, 'EEEE, MMM do')}
+                   {isSameDay(selectedDate, new Date()) ? "Today's Focus" : format(selectedDate, 'EEEE, MMM do')}
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 font-medium uppercase tracking-wide">
                    {agendaTasks.length} Events Scheduled
@@ -378,53 +436,56 @@ const Planner: React.FC = () => {
                 
                 <button 
                     onClick={() => { setSelectedTask(null); setIsModalOpen(true); }}
-                    className="w-full mt-4 py-3 bg-pink-500 hover:bg-pink-600 text-white rounded-xl font-bold shadow-lg shadow-pink-500/20 flex items-center justify-center gap-2 transition-transform active:scale-95"
+                    className="w-full mt-6 py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 transition-all hover:scale-[1.02] active:scale-95"
                 >
                     <Plus size={18} />
-                    Add Task
+                    Create Task
                 </button>
             </div>
 
             {/* Task List */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
                 {agendaTasks.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center opacity-50 p-6">
-                        <div className="w-16 h-16 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4 text-slate-400">
-                            <Coffee size={32} />
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-60 p-6">
+                        <div className="w-20 h-20 bg-slate-50 dark:bg-slate-700/50 rounded-full flex items-center justify-center mb-4 text-slate-300 dark:text-slate-500">
+                            <Coffee size={40} />
                         </div>
-                        <p className="text-slate-800 dark:text-white font-medium">No events</p>
-                        <p className="text-slate-500 text-xs mt-1">Enjoy your free time!</p>
+                        <p className="text-slate-800 dark:text-white font-bold text-lg">No plans yet</p>
+                        <p className="text-slate-500 text-sm mt-1 max-w-[200px]">Tap a time slot on the calendar to start planning.</p>
                     </div>
                 ) : (
-                    agendaTasks.map(task => (
-                        <div 
-                            key={task.id}
-                            onClick={() => { setSelectedTask(task); setIsModalOpen(true); }}
-                            className="group bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-100 dark:border-slate-700 hover:border-pink-300 dark:hover:border-pink-500/50 hover:shadow-md transition-all cursor-pointer relative overflow-hidden"
-                        >
-                            {/* Color Strip */}
-                            <div className={`absolute left-0 top-0 bottom-0 w-1 ${getEventGradient(task.category)}`}></div>
-                            
-                            <div className="pl-3">
-                                <h4 className="font-bold text-slate-800 dark:text-white text-sm leading-tight mb-1">
-                                    {task.title}
-                                </h4>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
-                                        <Clock size={12} />
-                                        <span>{format(new Date(task.start), 'h:mm a')}</span>
-                                    </div>
-                                    <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                        task.priority === 'High' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
-                                        task.priority === 'Medium' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
-                                        'bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400'
+                    agendaTasks.map(task => {
+                        const gradient = getEventGradient(task.category);
+                        const isHigh = task.priority === 'High';
+                        
+                        return (
+                            <div 
+                                key={task.id}
+                                onClick={() => { setSelectedTask(task); setIsModalOpen(true); }}
+                                className="group bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-700 hover:border-pink-300 dark:hover:border-pink-500/50 hover:shadow-lg transition-all cursor-pointer relative overflow-hidden"
+                            >
+                                <div className="flex justify-between items-start mb-2">
+                                    <div className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${
+                                        isHigh ? 'bg-red-50 text-red-600 border-red-100' : 'bg-slate-50 text-slate-500 border-slate-100 dark:bg-slate-800 dark:text-slate-400 dark:border-slate-700'
                                     }`}>
                                         {task.priority}
-                                    </span>
+                                    </div>
+                                    <div className="text-[10px] font-mono text-slate-400">
+                                        {format(new Date(task.start), 'HH:mm')}
+                                    </div>
+                                </div>
+                                
+                                <h4 className="font-bold text-slate-800 dark:text-white text-sm leading-snug mb-2">
+                                    {task.title}
+                                </h4>
+
+                                <div className="flex items-center gap-2">
+                                     <div className={`w-2 h-2 rounded-full bg-gradient-to-r ${gradient}`}></div>
+                                     <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">{task.category}</span>
                                 </div>
                             </div>
-                        </div>
-                    ))
+                        );
+                    })
                 )}
             </div>
         </div>
