@@ -1,18 +1,22 @@
 
 export type NavigationItem = 'Dashboard' | 'Planner' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Personal Folder';
 
-export type TaskCategory = 'Review' | 'Duty' | 'School' | 'Personal';
+export type TaskCategory = 'Review' | 'School' | 'Duty' | 'Personal';
 export type TaskPriority = 'High' | 'Medium' | 'Low';
 
 export interface Task {
   id: string;
   title: string;
   completed: boolean;
-  date: string; // YYYY-MM-DD
+  start: string; // ISO String (Date + Time)
+  end: string;   // ISO String
+  allDay: boolean;
   category: TaskCategory;
   priority: TaskPriority;
   userId: string;
   createdAt: number;
+  // Legacy support for dashboard compatibility if needed, though we should transition to start/end
+  date?: string; 
 }
 
 export interface Note {
