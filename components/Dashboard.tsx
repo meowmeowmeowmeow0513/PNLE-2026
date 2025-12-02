@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users, Calendar, Flag, CheckSquare } from 'lucide-react';
+import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users, Calendar, Flag, CheckSquare, AlertCircle } from 'lucide-react';
 import { NavigationItem, TaskCategory, TaskPriority, Task } from '../types';
 import StreakWidget from './StreakWidget';
 import StreakRecoveryModal from './StreakRecoveryModal';
 import MnemonicWidget from './MnemonicWidget';
 import { useStreakSystem } from '../hooks/useStreakSystem';
 import { useTasks } from '../TaskContext';
-import { format, isSameDay } from 'date-fns';
+import { isSameDay } from 'date-fns';
 
 interface DashboardProps {
   onNavigate: (item: NavigationItem) => void;
@@ -28,6 +28,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const todaysTasks = allTasks
     .filter(t => {
       try {
+        if (!t.start) return false;
         return isSameDay(new Date(t.start), today);
       } catch (e) {
         return false;
@@ -39,7 +40,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
       
       // 2. Sort by Priority (High > Medium > Low)
       const priorityWeight: Record<TaskPriority, number> = { High: 3, Medium: 2, Low: 1 };
-      return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
+      const weightA = priorityWeight[a.priority] || 0;
+      const weightB = priorityWeight[b.priority] || 0;
+      return weightB - weightA;
     });
 
   const calculateTimeLeft = () => {
@@ -97,11 +100,24 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const getPriorityBadge = (priority: TaskPriority) => {
     switch (priority) {
       case 'High': 
-        return <Flag size={12} className="text-red-500 fill-red-500" />;
+        return (
+          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 rounded text-[10px] font-bold uppercase tracking-wider">
+             <Flag size={10} fill="currentColor" /> High
+          </div>
+        );
       case 'Medium': 
-        return <Flag size={12} className="text-orange-400" />;
+        return (
+          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 rounded text-[10px] font-bold uppercase tracking-wider">
+             <Flag size={10} /> Med
+          </div>
+        );
       case 'Low': 
-        return <Flag size={12} className="text-blue-400" />;
+        return (
+          <div className="flex items-center gap-1 px-1.5 py-0.5 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded text-[10px] font-bold uppercase tracking-wider">
+             <Flag size={10} /> Low
+          </div>
+        );
+      default: return null;
     }
   };
 
@@ -135,7 +151,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
             </div>
             <div>
               <h2 className="text-xl md:text-2xl font-bold leading-relaxed mb-4">
-                "Passing the PNLE is not about being the smartest — it’s about being prepared, consistent, and confident. Keep pushing, keep believing. Your license is waiting. ✨👩‍⚕️👨‍⚕️💙"
+                "Passing the PNLE is not about being the smartest — it’s about being prepared, consistent, and confident. Keep pushing, keep believing."
               </h2>
               <p className="text-pink-50 font-medium text-lg">
                 – Maam Chona
@@ -224,9 +240,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </div>
                 <h3 className="text-slate-800 dark:text-white font-bold transition-colors">Today's Tasks</h3>
              </div>
-             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md transition-colors">
-               {todaysTasks.filter(t => t.completed).length}/{todaysTasks.length}
-             </span>
+             <div className="flex items-center gap-2">
+               <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md transition-colors">
+                 {todaysTasks.filter(t => t.completed).length}/{todaysTasks.length}
+               </span>
+               <button 
+                  onClick={() => onNavigate('Planner')}
+                  className="p-1.5 text-slate-400 hover:text-pink-500 dark:hover:text-pink-400 transition-colors"
+                  title="Open Planner"
+               >
+                 <ArrowRight size={16} />
+               </button>
+             </div>
           </div>
 
           <form onSubmit={handleQuickAdd} className="flex gap-2 mb-4">
@@ -234,7 +259,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               type="text"
               value={newTaskText}
               onChange={(e) => setNewTaskText(e.target.value)}
-              placeholder="Add task..."
+              placeholder="Quick add (Review)..."
               className="flex-1 px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400"
             />
             <button 
@@ -248,21 +273,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 -mr-1 space-y-3">
             {todaysTasks.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-sm py-8 gap-3">
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-sm py-8 gap-3 opacity-60">
+                <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+                   <Calendar size={20} />
+                </div>
                 <p className="italic">All clear for today!</p>
-                <button 
-                  onClick={() => onNavigate('Planner')}
-                  className="text-pink-500 hover:text-pink-600 font-bold flex items-center gap-1 text-xs uppercase tracking-wide"
-                >
-                  <Calendar size={14} /> Open Planner
-                </button>
               </div>
             ) : (
               todaysTasks.map(task => (
                 <div 
                   key={task.id} 
-                  className={`group relative p-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 transition-all border-l-[4px] ${getCategoryBorderColor(task.category)} ${
-                    task.completed ? 'opacity-50' : 'hover:shadow-md hover:translate-x-1'
+                  className={`group relative p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 transition-all border-l-[4px] shadow-sm hover:shadow-md ${getCategoryBorderColor(task.category)} ${
+                    task.completed ? 'opacity-60 bg-slate-50 dark:bg-slate-800/50' : 'hover:-translate-y-0.5'
                   }`}
                 >
                   <div className="flex items-start gap-3">
@@ -277,27 +299,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-2">
-                         <span className={`text-sm font-medium leading-snug truncate w-full ${
-                           task.completed ? 'text-slate-400 line-through decoration-pink-500/30' : 'text-slate-700 dark:text-slate-200'
+                         <span className={`text-sm font-semibold leading-snug truncate w-full ${
+                           task.completed ? 'text-slate-500 line-through decoration-slate-400' : 'text-slate-800 dark:text-white'
                          }`}>
                            {task.title}
                          </span>
                       </div>
                       
-                      <div className="flex items-center gap-3 mt-1.5">
-                         <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-slate-400">
-                            {getPriorityBadge(task.priority)}
-                            <span>{task.priority}</span>
-                         </div>
-                         <div className="text-[10px] text-slate-400 font-medium bg-slate-50 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
+                      <div className="flex items-center gap-2 mt-2">
+                         {getPriorityBadge(task.priority)}
+                         <span className="text-[10px] text-slate-400 font-medium px-1.5 py-0.5 bg-slate-100 dark:bg-slate-700 rounded">
                            {task.category}
-                         </div>
+                         </span>
                       </div>
                     </div>
 
                     <button 
                       onClick={() => deleteTask(task.id)}
                       className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all absolute top-2 right-2"
+                      title="Delete Task"
                     >
                       <Trash2 size={14} />
                     </button>
