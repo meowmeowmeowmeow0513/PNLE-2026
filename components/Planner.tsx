@@ -18,7 +18,7 @@ import {
   Coffee,
   MoreHorizontal
 } from 'lucide-react';
-import { format, isSameDay, parseISO } from 'date-fns';
+import { format, isSameDay } from 'date-fns';
 
 const Planner: React.FC = () => {
   const { tasks, addTask, updateTask, deleteTask } = useTasks();
@@ -38,17 +38,18 @@ const Planner: React.FC = () => {
     .filter(task => {
       try {
         if (!task.start) return false;
-        return isSameDay(parseISO(task.start), selectedDate);
+        return isSameDay(new Date(task.start), selectedDate);
       } catch (e) { return false; }
     })
     .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
 
   // --- 1. INTERACTION HANDLERS ---
 
+  // Handle Moving Events (Drag & Drop)
   const handleEventDrop = async (info: any) => {
     const { event } = info;
     const newStart = event.start?.toISOString();
-    const newEnd = event.end?.toISOString() || newStart;
+    const newEnd = event.end?.toISOString() || newStart; // Fallback if end is null
 
     if (event.id && newStart) {
       try {
@@ -63,6 +64,7 @@ const Planner: React.FC = () => {
     }
   };
 
+  // Handle Resizing Events (Stretch)
   const handleEventResize = async (info: any) => {
     const { event } = info;
     if (event.id && event.start && event.end) {
@@ -73,8 +75,29 @@ const Planner: React.FC = () => {
     }
   };
 
+  // Handle Drag-to-Create (Selection)
+  const handleDateSelect = (selectInfo: any) => {
+    const { startStr, endStr, allDay, view } = selectInfo;
+    const calendarApi = selectInfo.view.calendar;
+    calendarApi.unselect(); // clear visual selection
+
+    // Pre-fill modal with the selected range
+    setSelectedTask({
+        start: startStr,
+        end: endStr,
+        allDay: allDay
+    });
+    
+    // If selecting in month view, set selected date for sidebar too
+    if (view.type === 'dayGridMonth') {
+        setSelectedDate(selectInfo.start);
+    }
+    
+    setIsModalOpen(true);
+  };
+
+  // Handle Clicking an Existing Event
   const handleEventClick = (info: any) => {
-    // Prevent bubbling if we click the event element directly
     info.jsEvent.stopPropagation(); 
     const taskId = info.event.id;
     const task = tasks.find(t => t.id === taskId);
@@ -84,9 +107,11 @@ const Planner: React.FC = () => {
     }
   };
 
-  const handleDateClick = (arg: { date: Date }) => {
-    // Just select the date for the Agenda view
+  // Handle Clicking a Date (Single Click)
+  const handleDateClick = (arg: { date: Date, view: any }) => {
     setSelectedDate(arg.date);
+    // If in month view, just selecting the date for sidebar is enough
+    // Double click or drag is used for creation to avoid conflict
   };
 
   const handleSaveTask = async (taskData: Partial<Task>) => {
@@ -136,7 +161,7 @@ const Planner: React.FC = () => {
     }
   };
 
-  // --- 3. CUSTOM EVENT RENDERING ---
+  // --- 3. CUSTOM RENDERERS ---
 
   const getEventGradient = (cat: TaskCategory) => {
     switch(cat) {
@@ -162,6 +187,27 @@ const Planner: React.FC = () => {
     );
   };
 
+  // Custom Day Header (iOS Style: Mon \n 24)
+  const renderDayHeader = (args: any) => {
+    const date = args.date;
+    const dayName = format(date, 'EEE'); // Mon
+    const dayNumber = format(date, 'd'); // 24
+    const isToday = isSameDay(date, new Date());
+
+    return (
+        <div className="flex flex-col items-center gap-1 py-2">
+            <span className={`text-[10px] font-bold uppercase tracking-widest ${isToday ? 'text-pink-500' : 'text-slate-400'}`}>
+                {dayName}
+            </span>
+            <span className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold transition-all ${
+                isToday ? 'bg-pink-500 text-white shadow-md shadow-pink-500/30' : 'text-slate-700 dark:text-slate-300'
+            }`}>
+                {dayNumber}
+            </span>
+        </div>
+    );
+  };
+
   // Map tasks to events
   const events = tasks.map(task => ({
     id: task.id,
@@ -170,10 +216,9 @@ const Planner: React.FC = () => {
     end: task.end,
     allDay: task.allDay,
     extendedProps: { category: task.category, priority: task.priority },
-    // We handle styling in renderEventContent, so we make background transparent here to avoid double styling
     backgroundColor: 'transparent', 
     borderColor: 'transparent',
-    textColor: 'transparent' // Hide default text
+    textColor: 'transparent'
   }));
 
   return (
@@ -184,44 +229,34 @@ const Planner: React.FC = () => {
         /* Hide Default Header */
         .fc-header-toolbar { display: none !important; }
         
-        /* Glassmorphism Grid */
+        /* Grid styling */
         .fc-theme-standard td, .fc-theme-standard th {
-           border-color: rgba(148, 163, 184, 0.1); /* Very subtle slate */
+           border-color: rgba(148, 163, 184, 0.1); 
         }
         .dark .fc-theme-standard td, .dark .fc-theme-standard th {
            border-color: rgba(148, 163, 184, 0.1);
         }
-        
-        /* Headers */
-        .fc-col-header-cell-cushion {
-           padding: 12px 0;
-           font-size: 0.75rem;
-           font-weight: 700;
-           text-transform: uppercase;
-           letter-spacing: 0.1em;
-           color: #94a3b8;
+
+        /* Clean up header cells */
+        .fc-col-header-cell {
+            border-bottom: 0 !important;
+            padding-bottom: 8px;
         }
 
-        /* Today Cell Highlight (Number Only) */
+        /* Today Highlight Override (we do it manually in renderDayHeader) */
         .fc-day-today {
            background: transparent !important;
         }
-        .fc-day-today .fc-daygrid-day-number {
-           background-color: #ec4899;
-           color: white;
-           border-radius: 50%;
-           width: 28px;
-           height: 28px;
-           display: flex;
-           align-items: center;
-           justify-content: center;
-           margin: 4px;
-        }
 
-        /* Slots */
-        .fc-timegrid-slot { height: 3rem !important; }
+        /* TimeGrid Slots */
+        .fc-timegrid-slot { height: 3.5rem !important; }
+        .fc-timegrid-slot-label { font-size: 0.7rem; color: #94a3b8; font-weight: 500; }
         
-        /* Remove Event Default Styles since we use Custom Component */
+        /* Current Time Indicator */
+        .fc-timegrid-now-indicator-line { border-color: #ec4899; border-width: 2px; }
+        .fc-timegrid-now-indicator-arrow { border-color: #ec4899; border-width: 6px; }
+
+        /* Remove Default Event Styles */
         .fc-event {
            background: transparent;
            border: none;
@@ -233,6 +268,15 @@ const Planner: React.FC = () => {
            transition: transform 0.1s;
            cursor: pointer;
         }
+
+        /* Month View Day Number Styling */
+        .fc-daygrid-day-number {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #64748b;
+            padding: 8px;
+        }
+        .dark .fc-daygrid-day-number { color: #94a3b8; }
       `}</style>
 
       {/* --- MAIN LAYOUT --- */}
@@ -298,18 +342,24 @@ const Planner: React.FC = () => {
                     headerToolbar={false}
                     events={events}
                     eventContent={renderEventContent}
+                    dayHeaderContent={renderDayHeader} // Custom Header iOS Style
                     editable={true}
                     selectable={true}
+                    selectMirror={true}
                     dayMaxEvents={3}
                     nowIndicator={true}
-                    eventDrop={handleEventDrop}
-                    eventResize={handleEventResize}
-                    eventClick={handleEventClick}
-                    dateClick={handleDateClick}
+                    // INTERACTION HANDLERS
+                    select={handleDateSelect}   // Drag-to-Create
+                    eventDrop={handleEventDrop} // Drag-Move
+                    eventResize={handleEventResize} // Drag-Stretch
+                    eventClick={handleEventClick} // Edit
+                    dateClick={handleDateClick} // Select Date for Sidebar
+                    
                     height="100%"
                     slotMinTime="06:00:00"
                     slotMaxTime="24:00:00"
                     allDaySlot={true}
+                    slotDuration="00:30:00"
                 />
             </div>
         </div>
@@ -362,7 +412,7 @@ const Planner: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 font-medium">
                                         <Clock size={12} />
-                                        <span>{format(parseISO(task.start), 'h:mm a')}</span>
+                                        <span>{format(new Date(task.start), 'h:mm a')}</span>
                                     </div>
                                     <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-wider ${
                                         task.priority === 'High' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
