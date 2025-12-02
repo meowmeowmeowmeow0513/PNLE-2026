@@ -174,13 +174,16 @@ const Planner: React.FC = () => {
     const durationMins = differenceInMinutes(end, start);
     const isShort = durationMins <= 30;
 
+    // Format time manually for short events to save space (e.g., "6:15" instead of "6:15 - 6:30")
+    const shortTimeText = format(start, 'h:mm');
+
     return (
       <div className={`w-full h-full rounded-md shadow-sm border border-t-0 border-r-0 border-b-0 border-l-[4px] bg-gradient-to-r ${gradient} overflow-hidden group hover:brightness-105 transition-all`}>
         <div className={`h-full px-2 flex ${isShort ? 'flex-row items-center gap-2' : 'flex-col justify-start py-1'}`}>
-            <span className={`font-mono font-bold text-white/90 ${isShort ? 'text-[10px]' : 'text-[9px] uppercase tracking-wider opacity-80'}`}>
-                {eventInfo.timeText}
+            <span className={`font-mono font-bold text-white/90 whitespace-nowrap ${isShort ? 'text-[11px]' : 'text-[10px] uppercase tracking-wider opacity-80'}`}>
+                {isShort ? shortTimeText : eventInfo.timeText}
             </span>
-            <span className="text-xs font-bold text-white truncate leading-tight">
+            <span className={`font-bold text-white truncate leading-tight ${isShort ? 'text-[11px]' : 'text-xs'}`}>
                 {eventInfo.event.title}
             </span>
         </div>
@@ -196,7 +199,7 @@ const Planner: React.FC = () => {
 
     return (
         <div className="flex flex-col items-center gap-1 py-3 group cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/50 rounded-lg mx-1">
-            <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isToday ? 'text-pink-500' : 'text-slate-400 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}>
+            <span className={`text-[10px] font-bold uppercase tracking-widest transition-colors ${isToday ? 'text-pink-500' : 'text-slate-400 group-hover:text-slate-600 dark:text-slate-500 dark:group-hover:text-slate-300'}`}>
                 {dayName}
             </span>
             <span className={`flex items-center justify-center w-9 h-9 rounded-full text-base font-bold transition-all ${
@@ -244,7 +247,7 @@ const Planner: React.FC = () => {
            border-color: rgba(148, 163, 184, 0.08) !important; 
         }
         .dark .fc-theme-standard td, .dark .fc-theme-standard th {
-           border-color: rgba(148, 163, 184, 0.08) !important;
+           border-color: rgba(255, 255, 255, 0.08) !important;
         }
 
         /* Column Headers */
@@ -252,6 +255,17 @@ const Planner: React.FC = () => {
             border-bottom: 0 !important;
             padding-bottom: 8px;
             background: transparent !important;
+        }
+
+        /* DARK MODE TEXT FIXES */
+        .dark .fc-col-header-cell-cushion,
+        .dark .fc-timegrid-slot-label-cushion,
+        .dark .fc-timegrid-axis-cushion {
+            color: #e2e8f0 !important; /* slate-200 */
+        }
+        
+        .dark .fc-col-header-cell-cushion {
+            color: #94a3b8; /* fallback */
         }
 
         /* Today Highlight Disable (We do custom) */
@@ -304,6 +318,9 @@ const Planner: React.FC = () => {
         .fc-scrollgrid-section-header > td {
             border-bottom: 1px solid rgba(0,0,0,0.05) !important;
         }
+        .dark .fc-scrollgrid-section-header > td {
+            border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+        }
         
         /* All Day Events - Badge Style */
         .fc-daygrid-event {
@@ -326,6 +343,9 @@ const Planner: React.FC = () => {
         .fc-scroller::-webkit-scrollbar-thumb {
             background: rgba(148, 163, 184, 0.3);
             border-radius: 10px;
+        }
+        .dark .fc-scroller::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, 0.2);
         }
       `}</style>
 
