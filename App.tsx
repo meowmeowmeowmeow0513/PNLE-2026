@@ -7,13 +7,15 @@ import Pomodoro from './components/Pomodoro';
 import Resources from './components/Resources';
 import ExamTOS from './components/ExamTOS';
 import PersonalFolder from './components/PersonalFolder';
+import Planner from './components/Planner';
 import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
 import FloatingTimer from './components/FloatingTimer'; // Import FloatingTimer
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
-import { PomodoroProvider } from './components/PomodoroContext'; // Import Provider
+import { PomodoroProvider } from './components/PomodoroContext'; 
+import { TaskProvider } from './TaskContext';
 import { Loader } from 'lucide-react';
 
 const App: React.FC = () => {
@@ -47,6 +49,8 @@ const App: React.FC = () => {
     switch (activeItem) {
       case 'Dashboard':
         return <Dashboard onNavigate={setActiveItem} />;
+      case 'Planner':
+        return <Planner />;
       case 'Pomodoro Timer':
         return <Pomodoro />;
       case 'Resource Hub':
@@ -96,36 +100,38 @@ const App: React.FC = () => {
     return <VerifyEmail />;
   }
 
-  // 4. Authenticated App Layout (Wrapped in PomodoroProvider)
+  // 4. Authenticated App Layout (Wrapped in PomodoroProvider AND TaskProvider)
   return (
     <PomodoroProvider>
-      <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
-        {/* Sidebar */}
-        <Sidebar 
-          activeItem={activeItem} 
-          onNavigate={setActiveItem}
-          isOpen={sidebarOpen}
-          onClose={() => setSidebarOpen(false)}
-        />
-
-        {/* Main Content Area */}
-        <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300 relative">
-          <TopBar 
-            onMenuClick={() => setSidebarOpen(true)} 
-            isDark={isDark}
-            toggleTheme={toggleTheme}
+      <TaskProvider>
+        <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
+          {/* Sidebar */}
+          <Sidebar 
+            activeItem={activeItem} 
+            onNavigate={setActiveItem}
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
           />
-          
-          <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
-            <div className="max-w-7xl mx-auto h-full">
-              {renderContent()}
-            </div>
-          </main>
 
-          {/* Floating Timer - Only shows if running and NOT on Pomodoro page */}
-          <FloatingTimer activeItem={activeItem} />
+          {/* Main Content Area */}
+          <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300 relative">
+            <TopBar 
+              onMenuClick={() => setSidebarOpen(true)} 
+              isDark={isDark}
+              toggleTheme={toggleTheme}
+            />
+            
+            <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
+              <div className="max-w-7xl mx-auto h-full">
+                {renderContent()}
+              </div>
+            </main>
+
+            {/* Floating Timer - Only shows if running and NOT on Pomodoro page */}
+            <FloatingTimer activeItem={activeItem} />
+          </div>
         </div>
-      </div>
+      </TaskProvider>
     </PomodoroProvider>
   );
 };
