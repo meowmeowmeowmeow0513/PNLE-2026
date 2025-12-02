@@ -1,28 +1,32 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users } from 'lucide-react';
+import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users, Calendar } from 'lucide-react';
 import { NavigationItem } from '../types';
 import StreakWidget from './StreakWidget';
 import StreakRecoveryModal from './StreakRecoveryModal';
 import MnemonicWidget from './MnemonicWidget';
 import { useStreakSystem } from '../hooks/useStreakSystem';
+import { useTasks } from '../TaskContext';
+import { format } from 'date-fns';
 
 interface DashboardProps {
   onNavigate: (item: NavigationItem) => void;
-}
-
-interface Task {
-  id: string;
-  text: string;
-  completed: boolean;
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const targetDate = new Date('2026-08-29T00:00:00');
   
   // -- STREAK SYSTEM INTEGRATION --
-  const { stats, loading: streakLoading, showRecoveryModal, closeRecovery, completeDailyTask, resuscitateStreak } = useStreakSystem();
+  const { stats, loading: streakLoading, showRecoveryModal, closeRecovery, resuscitateStreak } = useStreakSystem();
   
+  // -- TASK CONTEXT --
+  const { tasks: allTasks, addTask, toggleTask, deleteTask } = useTasks();
+  const [newTaskText, setNewTaskText] = useState('');
+  
+  // Filter for Today's Tasks
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const todaysTasks = allTasks.filter(t => t.date === todayStr);
+
   const calculateTimeLeft = () => {
     const difference = +targetDate - +new Date();
     if (difference > 0) {
@@ -37,18 +41,6 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   };
 
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
-  
-  // Task Management State
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    try {
-      const saved = localStorage.getItem('pnle_tasks');
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Failed to load tasks", e);
-      return [];
-    }
-  });
-  const [newTask, setNewTask] = useState('');
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -57,41 +49,13 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     return () => clearInterval(timer);
   }, []);
 
-  // Persist tasks to localStorage
-  useEffect(() => {
-    localStorage.setItem('pnle_tasks', JSON.stringify(tasks));
-  }, [tasks]);
-
-  const addTask = (e: React.FormEvent) => {
+  const handleQuickAdd = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTask.trim()) return;
+    if (!newTaskText.trim()) return;
     
-    const task: Task = {
-      id: Date.now().toString(),
-      text: newTask.trim(),
-      completed: false
-    };
-    
-    setTasks([...tasks, task]);
-    setNewTask('');
-  };
-
-  const toggleTask = (id: string) => {
-    setTasks(tasks.map(t => {
-        if (t.id === id) {
-            const newStatus = !t.completed;
-            if (newStatus) {
-                // Trigger Streak Update when task is checked
-                completeDailyTask();
-            }
-            return { ...t, completed: newStatus };
-        }
-        return t;
-    }));
-  };
-
-  const deleteTask = (id: string) => {
-    setTasks(tasks.filter(t => t.id !== id));
+    // Default to Review, Medium Priority for Quick Add
+    await addTask(newTaskText.trim(), todayStr, 'Review', 'Medium');
+    setNewTaskText('');
   };
 
   const timeUnits = [
@@ -214,21 +178,21 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 <h3 className="text-slate-800 dark:text-white font-bold transition-colors">Daily Tasks</h3>
              </div>
              <span className="text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700 px-2 py-1 rounded-md transition-colors">
-               {tasks.filter(t => t.completed).length}/{tasks.length} Done
+               {todaysTasks.filter(t => t.completed).length}/{todaysTasks.length} Done
              </span>
           </div>
 
-          <form onSubmit={addTask} className="flex gap-2 mb-4">
+          <form onSubmit={handleQuickAdd} className="flex gap-2 mb-4">
             <input
               type="text"
-              value={newTask}
-              onChange={(e) => setNewTask(e.target.value)}
-              placeholder="Add a new task..."
+              value={newTaskText}
+              onChange={(e) => setNewTaskText(e.target.value)}
+              placeholder="Quick add (Review)..."
               className="flex-1 px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400"
             />
             <button 
               type="submit"
-              disabled={!newTask.trim()}
+              disabled={!newTaskText.trim()}
               className="p-2 bg-navy-900 dark:bg-navy-800 text-white rounded-lg hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               <Plus size={18} />
@@ -236,13 +200,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </form>
 
           <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 -mr-1 space-y-2">
-            {tasks.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-sm italic py-8">
-                <p>No tasks yet.</p>
-                <p>Add one to get started!</p>
+            {todaysTasks.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-sm py-8 gap-3">
+                <p className="italic">No tasks for today.</p>
+                <button 
+                  onClick={() => onNavigate('Planner')}
+                  className="text-pink-500 hover:text-pink-600 font-bold flex items-center gap-1 text-xs uppercase tracking-wide"
+                >
+                  <Calendar size={14} /> Open Planner
+                </button>
               </div>
             ) : (
-              tasks.map(task => (
+              todaysTasks.map(task => (
                 <div 
                   key={task.id} 
                   className={`group flex items-center gap-3 p-3 rounded-lg border transition-all ${
@@ -252,7 +221,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   }`}
                 >
                   <button 
-                    onClick={() => toggleTask(task.id)}
+                    onClick={() => toggleTask(task.id, task.completed)}
                     className={`flex-shrink-0 transition-colors ${
                       task.completed ? 'text-pink-500' : 'text-slate-300 dark:text-slate-600 hover:text-pink-400'
                     }`}
@@ -263,7 +232,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                   <span className={`flex-1 text-sm truncate ${
                     task.completed ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-200'
                   }`}>
-                    {task.text}
+                    {task.title}
                   </span>
 
                   <button 
@@ -278,7 +247,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
           </div>
         </div>
 
-        {/* Mnemonic Widget (Replaces Wellness Placeholder) */}
+        {/* Mnemonic Widget */}
         <MnemonicWidget />
 
       </div>
@@ -287,4 +256,3 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 };
 
 export default Dashboard;
-    
