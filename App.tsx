@@ -11,7 +11,8 @@ import Planner from './components/Planner';
 import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
-import FloatingTimer from './components/FloatingTimer'; // Import FloatingTimer
+import FloatingTimer from './components/FloatingTimer'; 
+import GlobalYoutubePlayer from './components/GlobalYoutubePlayer'; // Added
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
 import { PomodoroProvider } from './components/PomodoroContext'; 
@@ -127,6 +128,10 @@ const App: React.FC = () => {
               </div>
             </main>
 
+            {/* PERSISTENT COMPONENTS */}
+            {/* The YouTube player lives here to persist state, but portals into Pomodoro.tsx */}
+            <GlobalYoutubePlayer activeItem={activeItem} />
+            
             {/* Floating Timer - Only shows if running and NOT on Pomodoro page */}
             <FloatingTimer activeItem={activeItem} />
           </div>
