@@ -1,73 +1,59 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { useTasks } from '../TaskContext';
 import TaskModal from './TaskModal';
-import { Task, TaskCategory, TaskPriority } from '../types';
-import { Loader, Coffee, Calendar as CalendarIcon, Clock, Plus, ChevronRight } from 'lucide-react';
-import { format, isSameDay, parseISO, startOfToday } from 'date-fns';
+import { Task, TaskCategory } from '../types';
+import { 
+  ChevronLeft, 
+  ChevronRight, 
+  Calendar as CalendarIcon, 
+  Plus, 
+  LayoutGrid, 
+  Clock,
+  MoreHorizontal
+} from 'lucide-react';
+import { format } from 'date-fns';
 
 const Planner: React.FC = () => {
-  const { tasks, addTask, updateTask, deleteTask, loading } = useTasks();
+  const { tasks, addTask, updateTask, deleteTask } = useTasks();
   const calendarRef = useRef<FullCalendar>(null);
   
-  // State
+  // UI State
+  const [currentTitle, setCurrentTitle] = useState(format(new Date(), 'MMMM yyyy'));
+  const [currentView, setCurrentView] = useState<'dayGridMonth' | 'timeGridWeek'>('dayGridMonth');
+  
+  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState<Partial<Task> | null>(null);
-  
-  // Default selected date to today for the Agenda view
-  const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
 
-  // Derived state for Agenda Sidebar
-  const selectedDateTasks = tasks
-    .filter(task => {
-        try {
-            return isSameDay(parseISO(task.start), selectedDate);
-        } catch (e) {
-            return false;
-        }
-    })
-    .sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime());
-
-  // --- Handlers ---
-
-  const handleDateClick = (arg: { date: Date }) => {
-    // Update the sidebar view to this date
-    setSelectedDate(arg.date);
-    
-    // Optional: Double click logic could go here to open modal immediately
-    // For now, we just select the date for the agenda. 
-    // To add a task, user can click the "Add Task" button in sidebar or header
-  };
-
-  const handleEventClick = (info: any) => {
-    const taskId = info.event.id;
-    const task = tasks.find(t => t.id === taskId);
-    if (task) {
-      setSelectedTask(task);
-      // Also set the agenda date to this event's start date
-      if (task.start) {
-          setSelectedDate(new Date(task.start));
-      }
-      setIsModalOpen(true);
-    }
-  };
+  // --- 1. INTERACTION HANDLERS ---
 
   const handleEventDrop = async (info: any) => {
     const { event } = info;
     const id = event.id;
+    
+    // Extract new ISO strings
     const newStart = event.start?.toISOString();
-    const newEnd = event.end?.toISOString() || newStart;
+    const newEnd = event.end?.toISOString() || newStart; // Fallback if single-day event drop
 
     if (id && newStart) {
-      await updateTask(id, {
-        start: newStart,
-        end: newEnd,
-        allDay: event.allDay
-      });
+      try {
+        await updateTask(id, {
+          start: newStart,
+          end: newEnd,
+          allDay: event.allDay
+        });
+        // Optional: Add a toast notification here
+        console.log(`Rescheduled task ${event.title} to ${format(event.start, 'PP p')}`);
+      } catch (error) {
+        info.revert(); // Revert UI if DB update fails
+        console.error("Failed to reschedule:", error);
+      }
     }
   };
 
@@ -82,10 +68,28 @@ const Planner: React.FC = () => {
     }
   };
 
+  const handleEventClick = (info: any) => {
+    const taskId = info.event.id;
+    const task = tasks.find(t => t.id === taskId);
+    if (task) {
+      setSelectedTask(task);
+      setSelectedDate(null); // Clear create-mode date
+      setIsModalOpen(true);
+    }
+  };
+
+  const handleDateClick = (arg: { date: Date }) => {
+    // Open modal for NEW task at this specific time
+    setSelectedTask(null);
+    setSelectedDate(arg.date);
+    setIsModalOpen(true);
+  };
+
   const handleSaveTask = async (taskData: Partial<Task>) => {
     if (taskData.id) {
       await updateTask(taskData.id, taskData);
     } else {
+      // Create new
       if (taskData.title && taskData.category && taskData.priority && taskData.start && taskData.end) {
          await addTask({
             title: taskData.title,
@@ -99,318 +103,241 @@ const Planner: React.FC = () => {
     }
   };
 
-  const openNewTaskModal = () => {
-    setSelectedTask(null);
-    setIsModalOpen(true);
+  // --- 2. TOOLBAR CONTROLS ---
+
+  const handlePrev = () => {
+    const api = calendarRef.current?.getApi();
+    api?.prev();
   };
 
-  // --- Styling Helpers ---
+  const handleNext = () => {
+    const api = calendarRef.current?.getApi();
+    api?.next();
+  };
 
-  const getGradientClass = (cat: TaskCategory) => {
+  const handleToday = () => {
+    const api = calendarRef.current?.getApi();
+    api?.today();
+  };
+
+  const handleViewChange = (viewName: 'dayGridMonth' | 'timeGridWeek') => {
+    const api = calendarRef.current?.getApi();
+    api?.changeView(viewName);
+    setCurrentView(viewName);
+  };
+
+  const handleDatesSet = (arg: any) => {
+    setCurrentTitle(arg.view.title);
+  };
+
+  // --- 3. DATA MAPPING ---
+
+  const getCategoryColor = (cat: TaskCategory) => {
     switch(cat) {
-      case 'Review': return 'bg-gradient-to-r from-pink-600 to-pink-500';
-      case 'Duty': return 'bg-gradient-to-r from-blue-600 to-blue-500';
-      case 'School': return 'bg-gradient-to-r from-yellow-500 to-amber-500';
-      case 'Personal': return 'bg-gradient-to-r from-emerald-500 to-emerald-400';
-      default: return 'bg-gradient-to-r from-slate-500 to-slate-400';
+      case 'Review': return '#ec4899'; // Pink-500
+      case 'Duty': return '#2563eb';   // Blue-600
+      case 'School': return '#eab308'; // Yellow-500
+      case 'Personal': return '#10b981'; // Emerald-500
+      default: return '#64748b';
     }
   };
 
-  const getBorderColor = (cat: TaskCategory) => {
-      switch(cat) {
-        case 'Review': return 'border-l-pink-500';
-        case 'Duty': return 'border-l-blue-500';
-        case 'School': return 'border-l-yellow-500';
-        case 'Personal': return 'border-l-emerald-500';
-        default: return 'border-l-slate-400';
-      }
-  };
-
-  // Custom Event Rendering for FullCalendar
-  const renderEventContent = (eventInfo: any) => {
-     const category = eventInfo.event.extendedProps.category as TaskCategory;
-     const gradientClass = getGradientClass(category);
-     
-     return (
-        <div className={`w-full h-full px-2 py-0.5 rounded-md shadow-sm flex items-center gap-1 overflow-hidden ${gradientClass}`}>
-            {eventInfo.event.allDay && <div className="w-1.5 h-1.5 rounded-full bg-white/80 shrink-0" />}
-            <div className="text-xs font-bold text-white truncate leading-tight">
-                {eventInfo.timeText && !eventInfo.event.allDay && <span className="opacity-80 mr-1 font-medium">{eventInfo.timeText}</span>}
-                {eventInfo.event.title}
-            </div>
-        </div>
-     );
-  };
-
-  // Map tasks to events
-  const calendarEvents = tasks.map(task => ({
+  const events = tasks.map(task => ({
     id: task.id,
     title: task.title,
     start: task.start,
     end: task.end,
     allDay: task.allDay,
-    extendedProps: { category: task.category, priority: task.priority },
-    // We handle visual styling in renderEventContent, so we make the default background transparent
-    backgroundColor: 'transparent',
-    borderColor: 'transparent',
-    textColor: 'transparent' 
+    backgroundColor: getCategoryColor(task.category),
+    borderColor: 'transparent', // We use CSS for the border strip
+    extendedProps: {
+      category: task.category,
+      priority: task.priority
+    },
+    classNames: ['drop-shadow-sm', 'cursor-pointer', 'font-medium']
   }));
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-140px)] gap-6 animate-fade-in pb-6">
+    <div className="h-[calc(100vh-140px)] flex flex-col gap-6 animate-fade-in pb-4">
       
-      {/* --- GLOBAL STYLES FOR FULLCALENDAR OVERRIDES --- */}
+      {/* --- CSS INJECTION FOR VISUAL OVERRIDES --- */}
       <style>{`
+        /* 1. Global Calendar Variables */
         :root {
-            --fc-border-color: rgba(226, 232, 240, 0.6);
-            --fc-today-bg-color: transparent;
-            --fc-now-indicator-color: #EC4899;
+          --fc-border-color: rgba(226, 232, 240, 0.5); /* Slate-200 / 50% */
+          --fc-today-bg-color: transparent;
+          --fc-now-indicator-color: #ef4444; /* Red-500 */
         }
         .dark {
-            --fc-border-color: rgba(51, 65, 85, 0.5);
+          --fc-border-color: rgba(51, 65, 85, 0.5); /* Slate-700 / 50% */
         }
 
-        /* Container & Fonts */
-        .fc {
-            font-family: 'Inter', sans-serif;
-        }
-
-        /* Toolbar */
+        /* 2. Remove default Header since we built a custom one */
         .fc-header-toolbar {
-            margin-bottom: 1.5rem !important;
-            padding: 0 0.5rem;
-        }
-        .fc-toolbar-title {
-            font-size: 1.5rem !important;
-            font-weight: 800;
-            color: #1e293b;
-            letter-spacing: -0.025em;
-        }
-        html.dark .fc-toolbar-title {
-            color: #f8fafc;
+          display: none !important;
         }
 
-        /* Buttons (Prev/Next/Today) */
-        .fc-button-primary {
-            background-color: transparent !important;
-            border: 1px solid #e2e8f0 !important;
-            color: #64748b !important;
-            font-weight: 600;
-            text-transform: capitalize;
-            border-radius: 0.75rem !important;
-            padding: 0.4rem 1rem !important;
-            box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            transition: all 0.2s;
-        }
-        html.dark .fc-button-primary {
-            border-color: #334155 !important;
-            color: #94a3b8 !important;
-        }
-        .fc-button-primary:hover {
-            background-color: #f8fafc !important;
-            color: #334155 !important;
-            transform: translateY(-1px);
-        }
-        html.dark .fc-button-primary:hover {
-            background-color: #1e293b !important;
-            color: #e2e8f0 !important;
-        }
-        .fc-button-active {
-            background-color: #f1f5f9 !important;
-            color: #0f172a !important;
-        }
-        html.dark .fc-button-active {
-            background-color: #1e293b !important;
-            color: #fff !important;
-        }
-
-        /* Grid & Headers */
-        .fc-theme-standard th {
-            border: none; 
-            padding-bottom: 10px;
+        /* 3. Grid & Cells */
+        .fc-theme-standard td, .fc-theme-standard th {
+          border-color: var(--fc-border-color);
         }
         .fc-col-header-cell-cushion {
-            text-transform: uppercase;
-            font-size: 0.7rem;
-            font-weight: 700;
-            letter-spacing: 0.1em;
-            color: #94a3b8; /* Slate-400 */
+          text-transform: uppercase;
+          font-size: 0.75rem;
+          font-weight: 700;
+          letter-spacing: 0.1em;
+          color: #94a3b8; /* Slate-400 */
+          padding: 12px 0;
         }
-        .fc-theme-standard td {
-            border-color: var(--fc-border-color);
-        }
-
-        /* Day Cells */
-        .fc-daygrid-day-top {
-            flex-direction: row;
-            justify-content: center;
-            padding-top: 8px;
-        }
-        .fc-daygrid-day-number {
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #475569;
-            z-index: 2;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 9999px;
-            transition: all 0.2s;
-        }
-        html.dark .fc-daygrid-day-number {
-            color: #cbd5e1;
-        }
-
-        /* Today Highlight Override */
-        .fc-day-today {
-            background: transparent !important;
-        }
+        
+        /* 4. "Today" Highlight - Number Only */
         .fc-day-today .fc-daygrid-day-number {
-            background-color: #EC4899; /* Pink-500 */
-            color: white !important;
-            box-shadow: 0 4px 6px -1px rgba(236, 72, 153, 0.4);
+          background-color: #ec4899;
+          color: white;
+          border-radius: 9999px;
+          width: 28px;
+          height: 28px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          margin: 4px;
         }
 
-        /* Events */
+        /* 5. Events Styling */
         .fc-event {
-            border: none;
-            background: transparent;
-            box-shadow: none;
-            margin-bottom: 2px;
-            cursor: pointer;
-            transition: transform 0.1s;
+          border-radius: 6px;
+          border: none;
+          font-size: 0.75rem;
+          padding: 2px 4px;
+          transition: transform 0.1s ease;
         }
         .fc-event:hover {
-            transform: scale(1.02);
-            z-index: 5;
+          transform: scale(1.02);
+          z-index: 50;
         }
-        .fc-daygrid-event-harness {
-            margin-top: 4px;
+        
+        /* Left Border Strip Logic */
+        .fc-event-main {
+           padding-left: 6px; /* Space for the strip */
+           position: relative;
+        }
+        .fc-event-main::before {
+           content: '';
+           position: absolute;
+           left: 0;
+           top: 0;
+           bottom: 0;
+           width: 4px;
+           background-color: rgba(0,0,0,0.2); /* Darker strip */
+           border-top-left-radius: 4px;
+           border-bottom-left-radius: 4px;
         }
 
-        /* Week View Specifics */
-        .fc-timegrid-slot-label-cushion {
-            font-size: 0.75rem;
-            color: #94a3b8;
+        /* 6. Week View Cleanups */
+        .fc-timegrid-slot {
+           height: 3rem !important; /* Taller slots */
         }
-        .fc-timegrid-axis-cushion {
-            color: #94a3b8;
+        .fc-timegrid-slot-minor {
+           border-top-style: dotted;
         }
       `}</style>
 
-      {/* --- LEFT: CALENDAR CANVAS --- */}
-      <div className="flex-1 bg-white/80 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 dark:border-slate-700 overflow-hidden relative flex flex-col">
-        {loading && (
-             <div className="absolute inset-0 z-20 flex items-center justify-center bg-white/50 dark:bg-black/50 backdrop-blur-sm">
-                 <Loader className="animate-spin text-pink-500" size={32} />
-             </div>
-        )}
+      {/* --- CUSTOM HEADER TOOLBAR --- */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 p-1">
         
-        <div className="flex-1 p-6">
-            <FullCalendar
-                ref={calendarRef}
-                plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-                initialView="dayGridMonth"
-                headerToolbar={{
-                    left: 'prev,next',
-                    center: 'title',
-                    right: 'today dayGridMonth,timeGridWeek'
-                }}
-                editable={true}
-                selectable={true}
-                selectMirror={true}
-                dayMaxEvents={3}
-                weekends={true}
-                events={calendarEvents}
-                eventContent={renderEventContent}
-                dateClick={handleDateClick}
-                eventClick={handleEventClick}
-                eventDrop={handleEventDrop}
-                eventResize={handleEventResize}
-                height="100%"
-                droppable={true}
-                nowIndicator={true}
-                slotMinTime="06:00:00"
-                slotMaxTime="24:00:00"
-            />
+        {/* Left: Title */}
+        <div className="flex items-center gap-4">
+           <div className="p-3 bg-pink-50 dark:bg-pink-500/10 rounded-2xl text-pink-600 dark:text-pink-400 shadow-sm">
+              <CalendarIcon size={24} />
+           </div>
+           <div>
+              <h2 className="text-2xl font-black text-slate-800 dark:text-white leading-none">
+                 Planner
+              </h2>
+              <p className="text-slate-500 dark:text-slate-400 font-medium text-lg mt-0.5 capitalize">
+                 {currentTitle}
+              </p>
+           </div>
+        </div>
+
+        {/* Middle: Navigation Pills */}
+        <div className="flex items-center bg-white dark:bg-slate-800 rounded-full p-1 shadow-sm border border-slate-200 dark:border-slate-700">
+           <button onClick={handlePrev} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+              <ChevronLeft size={20} />
+           </button>
+           <button onClick={handleToday} className="px-4 py-1 text-sm font-bold text-slate-600 dark:text-slate-300 hover:text-pink-500 dark:hover:text-pink-400 transition-colors">
+              Today
+           </button>
+           <button onClick={handleNext} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors">
+              <ChevronRight size={20} />
+           </button>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-3">
+           {/* View Switcher */}
+           <div className="flex bg-white dark:bg-slate-800 rounded-xl p-1 shadow-sm border border-slate-200 dark:border-slate-700">
+              <button 
+                onClick={() => handleViewChange('dayGridMonth')}
+                className={`p-2 rounded-lg transition-all ${
+                    currentView === 'dayGridMonth' 
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                }`}
+                title="Month View"
+              >
+                 <LayoutGrid size={18} />
+              </button>
+              <button 
+                onClick={() => handleViewChange('timeGridWeek')}
+                className={`p-2 rounded-lg transition-all ${
+                    currentView === 'timeGridWeek' 
+                    ? 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-white shadow-sm' 
+                    : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'
+                }`}
+                title="Week View"
+              >
+                 <Clock size={18} />
+              </button>
+           </div>
+
+           {/* Primary Action */}
+           <button 
+             onClick={() => { setSelectedTask(null); setSelectedDate(new Date()); setIsModalOpen(true); }}
+             className="flex items-center gap-2 bg-pink-500 hover:bg-pink-600 text-white px-5 py-2.5 rounded-xl font-bold shadow-lg shadow-pink-500/20 transition-all hover:scale-105 active:scale-95"
+           >
+              <Plus size={20} />
+              <span className="hidden sm:inline">New Task</span>
+           </button>
         </div>
       </div>
 
-      {/* --- RIGHT: AGENDA SIDEBAR --- */}
-      <div className="w-full lg:w-96 bg-white/80 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 dark:border-slate-700 flex flex-col overflow-hidden">
-         
-         {/* Sidebar Header */}
-         <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-white/50 dark:bg-slate-900/50">
-             <h3 className="text-lg font-black text-slate-800 dark:text-white flex items-center gap-2">
-                <CalendarIcon size={20} className="text-pink-500" />
-                AGENDA
-             </h3>
-             <p className="text-sm text-slate-500 dark:text-slate-400 font-medium mt-1">
-                 {isSameDay(selectedDate, new Date()) 
-                    ? "Today's Schedule" 
-                    : format(selectedDate, 'EEEE, MMM do')}
-             </p>
-         </div>
-
-         {/* Task List */}
-         <div className="flex-1 overflow-y-auto p-4 space-y-3 custom-scrollbar">
-             {selectedDateTasks.length === 0 ? (
-                 <div className="h-full flex flex-col items-center justify-center text-center p-6 opacity-60">
-                     <div className="w-20 h-20 bg-slate-100 dark:bg-slate-700 rounded-full flex items-center justify-center mb-4 text-slate-400 dark:text-slate-500">
-                         <Coffee size={32} />
-                     </div>
-                     <h4 className="text-slate-800 dark:text-white font-bold mb-2">No Tasks Scheduled</h4>
-                     <p className="text-slate-500 dark:text-slate-400 text-sm">
-                         Enjoy your rest! Or click the + button to add a new task.
-                     </p>
-                 </div>
-             ) : (
-                 selectedDateTasks.map(task => (
-                     <div 
-                        key={task.id}
-                        onClick={() => { setSelectedTask(task); setIsModalOpen(true); }}
-                        className={`bg-white dark:bg-slate-700/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-600 shadow-sm hover:shadow-md transition-all cursor-pointer group border-l-[6px] ${getBorderColor(task.category)}`}
-                     >
-                         <div className="flex justify-between items-start mb-2">
-                             <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-600 text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-300">
-                                 {task.category}
-                             </span>
-                             {task.priority === 'High' && (
-                                 <span className="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.6)] animate-pulse" />
-                             )}
-                         </div>
-                         
-                         <h4 className="font-bold text-slate-800 dark:text-white text-sm mb-1 leading-snug group-hover:text-pink-500 transition-colors">
-                             {task.title}
-                         </h4>
-
-                         <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500 font-medium">
-                             <Clock size={12} />
-                             {task.allDay ? (
-                                 <span>All Day</span>
-                             ) : (
-                                 <span>
-                                     {format(parseISO(task.start), 'h:mm a')} - {format(parseISO(task.end), 'h:mm a')}
-                                 </span>
-                             )}
-                         </div>
-                     </div>
-                 ))
-             )}
-         </div>
-
-         {/* Footer Action */}
-         <div className="p-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700">
-             <button
-                onClick={openNewTaskModal}
-                className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg flex items-center justify-center gap-2 hover:opacity-90 transition-opacity active:scale-[0.98]"
-             >
-                 <Plus size={18} />
-                 Add New Task
-             </button>
-         </div>
+      {/* --- CALENDAR CONTAINER --- */}
+      <div className="flex-1 bg-white/80 dark:bg-slate-800/90 backdrop-blur-xl rounded-3xl shadow-xl border border-white/20 dark:border-slate-700 overflow-hidden relative p-4">
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="dayGridMonth"
+            headerToolbar={false} // Hiding default
+            events={events}
+            editable={true}
+            selectable={true}
+            dayMaxEvents={3}
+            nowIndicator={true}
+            // Interaction Callbacks
+            eventDrop={handleEventDrop}
+            eventResize={handleEventResize}
+            eventClick={handleEventClick}
+            dateClick={handleDateClick}
+            // State Sync
+            datesSet={handleDatesSet}
+            // Layout config
+            height="100%"
+            slotMinTime="06:00:00"
+            slotMaxTime="24:00:00"
+            allDaySlot={true}
+            slotEventOverlap={false}
+          />
       </div>
 
       <TaskModal 
