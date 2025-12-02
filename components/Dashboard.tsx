@@ -1,13 +1,13 @@
 
 import React, { useState, useEffect } from 'react';
-import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users, Calendar } from 'lucide-react';
-import { NavigationItem } from '../types';
+import { Sparkles, Timer, ArrowRight, Plus, Trash2, Check, Square, Users, Calendar, Flag, CheckSquare } from 'lucide-react';
+import { NavigationItem, TaskCategory, TaskPriority, Task } from '../types';
 import StreakWidget from './StreakWidget';
 import StreakRecoveryModal from './StreakRecoveryModal';
 import MnemonicWidget from './MnemonicWidget';
 import { useStreakSystem } from '../hooks/useStreakSystem';
 import { useTasks } from '../TaskContext';
-import { format } from 'date-fns';
+import { format, isSameDay, parseISO } from 'date-fns';
 
 interface DashboardProps {
   onNavigate: (item: NavigationItem) => void;
@@ -23,9 +23,25 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const { tasks: allTasks, addTask, toggleTask, deleteTask } = useTasks();
   const [newTaskText, setNewTaskText] = useState('');
   
-  // Filter for Today's Tasks
-  const todayStr = format(new Date(), 'yyyy-MM-dd');
-  const todaysTasks = allTasks.filter(t => t.date === todayStr);
+  // -- FILTERING & SORTING --
+  const today = new Date();
+  
+  const todaysTasks = allTasks
+    .filter(t => {
+      try {
+        return isSameDay(parseISO(t.start), today);
+      } catch (e) {
+        return false;
+      }
+    })
+    .sort((a, b) => {
+      // 1. Sort by Completed (Uncompleted first)
+      if (a.completed !== b.completed) return a.completed ? 1 : -1;
+      
+      // 2. Sort by Priority (High > Medium > Low)
+      const priorityWeight: Record<TaskPriority, number> = { High: 3, Medium: 2, Low: 1 };
+      return (priorityWeight[b.priority] || 0) - (priorityWeight[a.priority] || 0);
+    });
 
   const calculateTimeLeft = () => {
     const difference = +targetDate - +new Date();
@@ -54,8 +70,40 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     if (!newTaskText.trim()) return;
     
     // Default to Review, Medium Priority for Quick Add
-    await addTask(newTaskText.trim(), todayStr, 'Review', 'Medium');
+    // Start time: Now, End time: Now + 1 hour
+    const now = new Date();
+    const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000);
+
+    await addTask({
+      title: newTaskText.trim(),
+      category: 'Review',
+      priority: 'Medium',
+      start: now.toISOString(),
+      end: oneHourLater.toISOString(),
+      allDay: false
+    });
     setNewTaskText('');
+  };
+
+  const getCategoryBorderColor = (category: TaskCategory) => {
+    switch (category) {
+      case 'Review': return 'border-l-pink-500';
+      case 'Duty': return 'border-l-blue-600';
+      case 'School': return 'border-l-yellow-500';
+      case 'Personal': return 'border-l-emerald-500';
+      default: return 'border-l-slate-400';
+    }
+  };
+
+  const getPriorityBadge = (priority: TaskPriority) => {
+    switch (priority) {
+      case 'High': 
+        return <Flag size={12} className="text-red-500 fill-red-500" />;
+      case 'Medium': 
+        return <Flag size={12} className="text-orange-400" />;
+      case 'Low': 
+        return <Flag size={12} className="text-blue-400" />;
+    }
   };
 
   const timeUnits = [
@@ -168,17 +216,17 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         {/* Streak Widget */}
         <StreakWidget stats={stats} loading={streakLoading} />
 
-        {/* Task Widget */}
-        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col h-full min-h-[300px] md:col-span-2 lg:col-span-1 transition-colors">
+        {/* Task Widget (Updated) */}
+        <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 shadow-sm border border-slate-100 dark:border-slate-700 flex flex-col h-full min-h-[400px] md:col-span-2 lg:col-span-1 transition-colors">
           <div className="flex items-center justify-between mb-4">
              <div className="flex items-center gap-2">
                 <div className="h-8 w-8 bg-pink-50 dark:bg-pink-500/20 rounded-lg flex items-center justify-center text-pink-600 dark:text-pink-400">
-                  <Check size={18} />
+                  <CheckSquare size={18} />
                 </div>
-                <h3 className="text-slate-800 dark:text-white font-bold transition-colors">Daily Tasks</h3>
+                <h3 className="text-slate-800 dark:text-white font-bold transition-colors">Today's Tasks</h3>
              </div>
-             <span className="text-xs font-medium text-slate-400 dark:text-slate-500 bg-slate-50 dark:bg-slate-700 px-2 py-1 rounded-md transition-colors">
-               {todaysTasks.filter(t => t.completed).length}/{todaysTasks.length} Done
+             <span className="text-xs font-bold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-1 rounded-md transition-colors">
+               {todaysTasks.filter(t => t.completed).length}/{todaysTasks.length}
              </span>
           </div>
 
@@ -187,22 +235,22 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               type="text"
               value={newTaskText}
               onChange={(e) => setNewTaskText(e.target.value)}
-              placeholder="Quick add (Review)..."
-              className="flex-1 px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400"
+              placeholder="Add task..."
+              className="flex-1 px-3 py-2 text-sm border border-slate-200 dark:border-slate-600 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400"
             />
             <button 
               type="submit"
               disabled={!newTaskText.trim()}
-              className="p-2 bg-navy-900 dark:bg-navy-800 text-white rounded-lg hover:bg-navy-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              className="p-2 bg-pink-500 text-white rounded-xl hover:bg-pink-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors shadow-sm"
             >
               <Plus size={18} />
             </button>
           </form>
 
-          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 -mr-1 space-y-2">
+          <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 -mr-1 space-y-3">
             {todaysTasks.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 text-sm py-8 gap-3">
-                <p className="italic">No tasks for today.</p>
+                <p className="italic">All clear for today!</p>
                 <button 
                   onClick={() => onNavigate('Planner')}
                   className="text-pink-500 hover:text-pink-600 font-bold flex items-center gap-1 text-xs uppercase tracking-wide"
@@ -214,33 +262,47 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
               todaysTasks.map(task => (
                 <div 
                   key={task.id} 
-                  className={`group flex items-center gap-3 p-3 rounded-lg border transition-all ${
-                    task.completed 
-                      ? 'bg-slate-50 dark:bg-slate-700/30 border-slate-100 dark:border-slate-700' 
-                      : 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 hover:border-pink-200 dark:hover:border-pink-800/50 shadow-sm'
+                  className={`group relative p-3 rounded-xl border border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 transition-all border-l-[4px] ${getCategoryBorderColor(task.category)} ${
+                    task.completed ? 'opacity-50' : 'hover:shadow-md hover:translate-x-1'
                   }`}
                 >
-                  <button 
-                    onClick={() => toggleTask(task.id, task.completed)}
-                    className={`flex-shrink-0 transition-colors ${
-                      task.completed ? 'text-pink-500' : 'text-slate-300 dark:text-slate-600 hover:text-pink-400'
-                    }`}
-                  >
-                    {task.completed ? <Check size={20} /> : <Square size={20} />}
-                  </button>
-                  
-                  <span className={`flex-1 text-sm truncate ${
-                    task.completed ? 'text-slate-400 dark:text-slate-500 line-through' : 'text-slate-700 dark:text-slate-200'
-                  }`}>
-                    {task.title}
-                  </span>
+                  <div className="flex items-start gap-3">
+                    <button 
+                      onClick={() => toggleTask(task.id, task.completed)}
+                      className={`mt-0.5 flex-shrink-0 transition-colors ${
+                        task.completed ? 'text-pink-500' : 'text-slate-300 dark:text-slate-600 hover:text-pink-400'
+                      }`}
+                    >
+                      {task.completed ? <Check size={20} className="animate-in zoom-in duration-200" /> : <Square size={20} />}
+                    </button>
+                    
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-start justify-between gap-2">
+                         <span className={`text-sm font-medium leading-snug truncate w-full ${
+                           task.completed ? 'text-slate-400 line-through decoration-pink-500/30' : 'text-slate-700 dark:text-slate-200'
+                         }`}>
+                           {task.title}
+                         </span>
+                      </div>
+                      
+                      <div className="flex items-center gap-3 mt-1.5">
+                         <div className="flex items-center gap-1 text-[10px] uppercase font-bold text-slate-400">
+                            {getPriorityBadge(task.priority)}
+                            <span>{task.priority}</span>
+                         </div>
+                         <div className="text-[10px] text-slate-400 font-medium bg-slate-50 dark:bg-slate-700/50 px-1.5 py-0.5 rounded">
+                           {task.category}
+                         </div>
+                      </div>
+                    </div>
 
-                  <button 
-                    onClick={() => deleteTask(task.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 dark:text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md transition-all"
-                  >
-                    <Trash2 size={16} />
-                  </button>
+                    <button 
+                      onClick={() => deleteTask(task.id)}
+                      className="opacity-0 group-hover:opacity-100 p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all absolute top-2 right-2"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               ))
             )}
