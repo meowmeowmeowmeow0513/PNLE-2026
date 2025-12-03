@@ -9,31 +9,33 @@ interface GlobalYoutubePlayerProps {
 const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem }) => {
   const [targetNode, setTargetNode] = useState<HTMLElement | null>(null);
 
-  // Poll for the placeholder in the DOM when on the Pomodoro page
   useEffect(() => {
-    let interval: number;
-    
     const findTarget = () => {
+      // 1. Priority: Main Pomodoro Page Placeholder
       if (activeItem === 'Pomodoro Timer') {
-        const placeholder = document.getElementById('video-placeholder');
-        if (placeholder) {
-          setTargetNode(placeholder);
+        const mainPlaceholder = document.getElementById('video-placeholder');
+        if (mainPlaceholder) {
+          setTargetNode(mainPlaceholder);
+          return;
         }
-      } else {
-        setTargetNode(null); // Reset to null to trigger "Hidden Mode"
+      }
+
+      // 2. Fallback: Floating Timer Mini Player
+      // We look for this even if activeItem is NOT Pomodoro Timer
+      const miniPlaceholder = document.getElementById('mini-player-container');
+      if (miniPlaceholder) {
+        setTargetNode(miniPlaceholder);
       }
     };
 
+    // Check immediately and poll briefly to handle mounting race conditions
     findTarget();
+    const interval = setInterval(findTarget, 500);
     
-    // Aggressive polling for the first second to catch the mount
-    interval = window.setInterval(findTarget, 200);
-    setTimeout(() => clearInterval(interval), 2000);
-
+    // Cleanup
     return () => clearInterval(interval);
   }, [activeItem]);
 
-  // The Player Content
   const playerContent = (
     <iframe 
       width="100%" 
@@ -48,26 +50,25 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
     />
   );
 
-  // 1. If we found the specific placeholder in the Pomodoro UI, Portal into it.
-  if (activeItem === 'Pomodoro Timer' && targetNode) {
+  // If we have a target (either main page or mini player), portal there.
+  if (targetNode) {
     return ReactDOM.createPortal(
-      <div className="w-full h-full rounded-2xl overflow-hidden shadow-inner animate-fade-in">
+      <div className="w-full h-full animate-fade-in bg-black">
         {playerContent}
       </div>, 
       targetNode
     );
   }
 
-  // 2. Otherwise, render in "Immortal Hidden Mode" (Fixed to body, invisible but active)
-  // We do NOT use display: none, as that reloads the iframe in some browsers.
+  // Fallback (Should rarely happen if FloatingTimer is mounted)
   return (
     <div 
       style={{
         position: 'fixed',
         bottom: 0,
         right: 0,
-        width: '1px',
-        height: '1px',
+        width: '0px',
+        height: '0px',
         opacity: 0,
         pointerEvents: 'none',
         zIndex: -9999
