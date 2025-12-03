@@ -29,6 +29,7 @@ export default async function handler(req: any, res: any) {
     const ai = new GoogleGenAI({ apiKey });
 
     // System Persona: High-tier Clinical Instructor
+    // Using gemini-3-pro-preview for maximum reasoning capability (Gemini 1.5 Pro class)
     const systemInstruction = `You are a top-tier Clinical Nursing Instructor helping a student master a specific medical mnemonic.
     
     Structure your response with these exact sections (do not use markdown headers like # or ##, just bold labels):
@@ -47,7 +48,6 @@ export default async function handler(req: any, res: any) {
       Provide a clinical deep dive.
     `;
 
-    // Using gemini-3-pro-preview for complex reasoning tasks (closest equivalent to 1.5 Pro for this SDK context)
     const response = await ai.models.generateContent({
       model: 'gemini-3-pro-preview', 
       contents: prompt,
