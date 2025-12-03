@@ -42,53 +42,53 @@ const Pomodoro: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // --- THEME ENGINE (Aligned Light & Dark Modes) ---
+  // --- THEME ENGINE (Restored Deep Dark & Sleek Light) ---
   const getTheme = () => {
     switch (mode) {
       case 'pomodoro':
         return {
-          // Premium White / Deep Navy
-          bg: 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-xl shadow-pink-500/5',
+          // Dark: Deep Navy/Slate | Light: Pure White
+          bg: 'bg-white dark:bg-[#0B1120] border-slate-200 dark:border-slate-800 shadow-2xl shadow-pink-500/5 dark:shadow-none',
           accent: 'text-pink-600 dark:text-pink-400',
           ring: 'stroke-pink-500',
-          button: 'bg-pink-500 hover:bg-pink-600 shadow-pink-500/30',
+          button: 'bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-pink-500/30',
           icon: <Brain size={20} className="text-pink-500 dark:text-pink-400" />,
-          text: 'text-slate-900 dark:text-white',
+          text: 'text-slate-800 dark:text-white',
           subtext: 'text-slate-500 dark:text-slate-400',
-          inputBg: 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400'
+          inputBg: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400'
         };
       case 'shortBreak':
         return {
-          bg: 'bg-white dark:bg-slate-900 border border-teal-200 dark:border-teal-900/50 shadow-xl shadow-teal-500/5',
+          bg: 'bg-white dark:bg-[#0B1120] border-teal-200 dark:border-teal-900/30 shadow-2xl shadow-teal-500/5 dark:shadow-none',
           accent: 'text-teal-600 dark:text-teal-400',
           ring: 'stroke-teal-500',
-          button: 'bg-teal-500 hover:bg-teal-600 shadow-teal-500/30',
+          button: 'bg-gradient-to-br from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-teal-500/30',
           icon: <Coffee size={20} className="text-teal-500 dark:text-teal-400" />,
-          text: 'text-slate-900 dark:text-white',
+          text: 'text-slate-800 dark:text-white',
           subtext: 'text-slate-500 dark:text-slate-400',
-          inputBg: 'bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800 text-slate-900 dark:text-white placeholder-teal-400'
+          inputBg: 'bg-teal-50 dark:bg-teal-950/30 border-teal-200 dark:border-teal-900/50 text-slate-900 dark:text-white placeholder-teal-400'
         };
       case 'longBreak':
         return {
-          bg: 'bg-white dark:bg-slate-900 border border-indigo-200 dark:border-indigo-900/50 shadow-xl shadow-indigo-500/5',
+          bg: 'bg-white dark:bg-[#0B1120] border-indigo-200 dark:border-indigo-900/30 shadow-2xl shadow-indigo-500/5 dark:shadow-none',
           accent: 'text-indigo-600 dark:text-indigo-400',
           ring: 'stroke-indigo-500',
-          button: 'bg-indigo-500 hover:bg-indigo-600 shadow-indigo-500/30',
+          button: 'bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-indigo-500/30',
           icon: <Zap size={20} className="text-indigo-500 dark:text-indigo-400" />,
-          text: 'text-slate-900 dark:text-white',
+          text: 'text-slate-800 dark:text-white',
           subtext: 'text-slate-500 dark:text-slate-400',
-          inputBg: 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-slate-900 dark:text-white placeholder-indigo-400'
+          inputBg: 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900/50 text-slate-900 dark:text-white placeholder-indigo-400'
         };
       case 'custom':
         return {
-          bg: 'bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl',
+          bg: 'bg-white dark:bg-[#0B1120] border-slate-200 dark:border-slate-800 shadow-2xl shadow-slate-500/5 dark:shadow-none',
           accent: 'text-slate-600 dark:text-slate-300',
           ring: 'stroke-slate-500 dark:stroke-slate-400',
-          button: 'bg-slate-600 hover:bg-slate-700 dark:bg-slate-500 dark:hover:bg-slate-600 shadow-slate-500/30',
+          button: 'bg-slate-600 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white shadow-slate-500/30',
           icon: <Settings size={20} className="text-slate-500 dark:text-slate-400" />,
-          text: 'text-slate-900 dark:text-white',
+          text: 'text-slate-800 dark:text-white',
           subtext: 'text-slate-500 dark:text-slate-400',
-          inputBg: 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-600 text-slate-900 dark:text-white placeholder-slate-400'
+          inputBg: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400'
         };
       default:
         return {
@@ -113,11 +113,12 @@ const Pomodoro: React.FC = () => {
   const dashOffset = circumference * (1 - progress);
 
   return (
-    <div className={`w-full min-h-[calc(100vh-140px)] rounded-[2.5rem] relative flex flex-col items-center justify-center p-6 lg:p-12 transition-all duration-500 ease-in-out ${theme.bg}`}>
+    <div className={`w-full min-h-[calc(100vh-140px)] rounded-[2.5rem] relative flex flex-col items-center justify-center p-6 lg:p-12 transition-all duration-500 ease-in-out border ${theme.bg}`}>
       
-      {/* Background Ambience */}
+      {/* Background Ambience (Dark Mode Deep Glow) */}
       <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] pointer-events-none">
-        <div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-white/10 to-transparent dark:from-white/5 blur-3xl rounded-full"></div>
+        <div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-white/20 to-transparent dark:from-white/5 blur-3xl rounded-full opacity-50"></div>
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-tl from-pink-500/10 to-transparent blur-3xl rounded-full opacity-30"></div>
       </div>
 
       {/* --- CONTENT CONTAINER --- */}
@@ -127,14 +128,14 @@ const Pomodoro: React.FC = () => {
         <div className="flex flex-col items-center animate-fade-in-up">
             
             {/* Focus Input & Quick Select */}
-            <div className="mb-8 w-full max-w-md relative z-20">
+            <div className="mb-6 w-full max-w-md relative z-20">
                 <div className="relative group">
                     <input 
                         type="text"
                         value={focusTask}
                         onChange={(e) => setFocusTask(e.target.value)}
                         placeholder="What is your main focus?"
-                        className={`w-full rounded-2xl py-4 pl-12 pr-12 text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all border ${theme.inputBg} focus:ring-current`}
+                        className={`w-full rounded-2xl py-3.5 pl-12 pr-12 text-center font-bold text-lg focus:outline-none focus:ring-2 focus:ring-opacity-50 transition-all border ${theme.inputBg} focus:ring-current`}
                     />
                     <Pencil className={`absolute left-4 top-1/2 -translate-y-1/2 opacity-50 ${theme.text}`} size={18} />
                     
@@ -150,7 +151,7 @@ const Pomodoro: React.FC = () => {
 
                 {/* Task Dropdown */}
                 {showTaskDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-2xl border border-slate-100 dark:border-slate-700 overflow-hidden z-30 animate-in fade-in slide-in-from-top-2">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-100 dark:border-slate-700 overflow-hidden z-30 animate-in fade-in slide-in-from-top-2">
                      <div className="p-3 bg-slate-50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-700">
                         <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Today's Tasks</p>
                      </div>
@@ -179,34 +180,34 @@ const Pomodoro: React.FC = () => {
             </div>
 
             {/* SVG Timer Ring */}
-            <div className="relative mb-10 group cursor-pointer select-none" onClick={toggleTimer}>
-                <svg width="320" height="320" className="transform -rotate-90 filter drop-shadow-xl">
+            <div className="relative mb-8 group cursor-pointer select-none" onClick={toggleTimer}>
+                <svg width="300" height="300" className="transform -rotate-90 filter drop-shadow-lg">
                     {/* Background Ring */}
                     <circle 
-                        cx="160" cy="160" r={radius} 
+                        cx="150" cy="150" r={radius} 
                         fill="transparent" 
                         stroke="currentColor"
                         className="opacity-10 text-slate-400 dark:text-slate-600"
-                        strokeWidth="8" 
+                        strokeWidth="6" 
                     />
                     {/* Progress Ring */}
                     <circle 
-                        cx="160" cy="160" r={radius} 
+                        cx="150" cy="150" r={radius} 
                         fill="transparent" 
                         className={`transition-all duration-1000 ease-linear ${theme.ring}`}
-                        strokeWidth="8"
+                        strokeWidth="6"
                         strokeLinecap="round"
                         strokeDasharray={circumference}
                         strokeDashoffset={dashOffset}
                     />
                 </svg>
                 
-                {/* Timer Text */}
+                {/* Timer Text (REDUCED SIZE) */}
                 <div className={`absolute inset-0 flex flex-col items-center justify-center ${theme.text}`}>
-                    <span className="text-7xl lg:text-8xl font-black font-mono tracking-tighter tabular-nums">
+                    <span className="text-6xl lg:text-7xl font-black font-mono tracking-tighter tabular-nums selection:bg-transparent">
                         {formatTime(timeLeft)}
                     </span>
-                    <div className="flex items-center gap-2 mt-2 uppercase tracking-widest text-sm font-bold opacity-60">
+                    <div className="flex items-center gap-2 mt-2 uppercase tracking-widest text-xs font-bold opacity-60">
                         {theme.icon}
                         <span>{isActive ? 'Running' : 'Paused'}</span>
                     </div>
@@ -215,8 +216,8 @@ const Pomodoro: React.FC = () => {
 
             {/* Custom Time Input (Only shows in Custom Mode) */}
             {mode === 'custom' && !isActive && (
-               <div className="mb-10 w-full max-w-xs animate-in slide-in-from-top-4 fade-in">
-                  <div className="bg-white dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-lg">
+               <div className="mb-8 w-full max-w-xs animate-in slide-in-from-top-4 fade-in">
+                  <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
                       <div className="flex justify-between items-center mb-2">
                           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Session Length</label>
                           <span className="text-xs font-bold text-slate-900 dark:text-white">{customTime} min</span>
@@ -236,7 +237,7 @@ const Pomodoro: React.FC = () => {
                       <div className="flex items-center gap-2">
                         <button 
                           onClick={() => setCustomTimeValue(Math.max(1, customTime - 5))}
-                          className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-white font-bold transition-colors"
+                          className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-white font-bold transition-colors"
                         >-</button>
                         <div className="flex-1 relative">
                             <input 
@@ -245,12 +246,12 @@ const Pomodoro: React.FC = () => {
                               min="1"
                               max="180"
                               onChange={(e) => setCustomTimeValue(Number(e.target.value))}
-                              className="w-full text-center py-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-600 rounded-xl font-bold text-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400 outline-none"
+                              className="w-full text-center py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-bold text-lg text-slate-900 dark:text-white focus:ring-2 focus:ring-slate-400 outline-none"
                             />
                         </div>
                         <button 
                           onClick={() => setCustomTimeValue(Math.min(180, customTime + 5))}
-                          className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-600 dark:text-white font-bold transition-colors"
+                          className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-white font-bold transition-colors"
                         >+</button>
                       </div>
                       <p className="text-[10px] text-center mt-2 text-slate-400">Min: 1m • Max: 180m</p>
@@ -259,33 +260,33 @@ const Pomodoro: React.FC = () => {
             )}
 
             {/* Main Action Buttons */}
-            <div className="flex items-center gap-8">
+            <div className="flex items-center gap-6">
                 <button 
                     onClick={resetTimer}
-                    className={`p-5 rounded-full backdrop-blur-sm transition-all active:scale-95 border hover:scale-110 ${theme.inputBg} hover:shadow-lg`}
+                    className={`p-4 rounded-full backdrop-blur-sm transition-all active:scale-95 border hover:scale-105 ${theme.inputBg} hover:shadow-lg`}
                     title="Reset Timer"
                 >
-                    <RotateCcw size={24} className={theme.subtext} />
+                    <RotateCcw size={20} className={theme.subtext} />
                 </button>
 
                 <button 
                     onClick={toggleTimer}
-                    className={`h-28 w-28 rounded-[2rem] flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 shadow-2xl ${theme.button}`}
+                    className={`h-24 w-24 rounded-[2rem] flex items-center justify-center text-white transition-all hover:scale-105 active:scale-95 shadow-xl ${theme.button}`}
                 >
-                    {isActive ? <Pause size={40} fill="currentColor" /> : <Play size={40} fill="currentColor" className="ml-1"/>}
+                    {isActive ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1"/>}
                 </button>
 
                 <button 
                     onClick={toggleMute}
-                    className={`p-5 rounded-full backdrop-blur-sm transition-all active:scale-95 border hover:scale-110 ${theme.inputBg} hover:shadow-lg`}
+                    className={`p-4 rounded-full backdrop-blur-sm transition-all active:scale-95 border hover:scale-105 ${theme.inputBg} hover:shadow-lg`}
                     title={isMuted ? "Unmute Alarm" : "Mute Alarm"}
                 >
-                    {isMuted ? <VolumeX size={24} className={theme.subtext} /> : <Volume2 size={24} className={theme.subtext} />}
+                    {isMuted ? <VolumeX size={20} className={theme.subtext} /> : <Volume2 size={20} className={theme.subtext} />}
                 </button>
             </div>
 
             {/* Mode Switcher Pills */}
-            <div className="flex flex-wrap justify-center gap-3 mt-12 bg-slate-100/50 dark:bg-black/20 p-2 rounded-2xl border border-slate-200 dark:border-slate-800">
+            <div className="flex flex-wrap justify-center gap-2 mt-10 bg-slate-100/50 dark:bg-black/20 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800/50">
                 {[
                   { id: 'pomodoro', label: 'Focus' },
                   { id: 'shortBreak', label: 'Short Break' },
@@ -295,9 +296,9 @@ const Pomodoro: React.FC = () => {
                    <button
                      key={m.id}
                      onClick={() => switchMode(m.id as TimerMode)}
-                     className={`px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${
+                     className={`px-5 py-2 rounded-xl text-xs font-bold transition-all ${
                         mode === m.id 
-                        ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-md transform scale-105 ring-1 ring-black/5 dark:ring-white/10' 
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-sm ring-1 ring-black/5 dark:ring-white/5' 
                         : 'text-slate-500 dark:text-slate-400 hover:bg-white/50 dark:hover:bg-white/5'
                      }`}
                    >
@@ -306,16 +307,16 @@ const Pomodoro: React.FC = () => {
                 ))}
             </div>
             
-            <div className="mt-8">
+            <div className="mt-6">
                  <button 
                     onClick={toggleBrownNoise}
-                    className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all border ${
+                    className={`flex items-center gap-2 px-5 py-2.5 rounded-full font-bold text-xs transition-all border ${
                         isPlayingNoise 
-                        ? 'bg-amber-100 dark:bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-200 shadow-amber-500/20 shadow-lg' 
-                        : `bg-transparent border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800`
+                        ? 'bg-amber-100 dark:bg-amber-500/10 border-amber-500/50 text-amber-700 dark:text-amber-400 shadow-amber-500/10 shadow-lg' 
+                        : `bg-transparent border-slate-200 dark:border-slate-700/50 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800`
                     }`}
                  >
-                    <Waves size={18} className={isPlayingNoise ? 'animate-bounce' : ''} />
+                    <Waves size={14} className={isPlayingNoise ? 'animate-bounce' : ''} />
                     {isPlayingNoise ? 'Brown Noise Active' : 'Enable Brown Noise'}
                  </button>
             </div>
@@ -330,19 +331,22 @@ const Pomodoro: React.FC = () => {
             */}
             <div 
                 id="video-anchor" 
-                className="w-full aspect-video bg-slate-100 dark:bg-slate-800/50 rounded-3xl border border-slate-200 dark:border-slate-700 border-dashed relative"
+                className="w-full aspect-video bg-slate-100 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 border-dashed relative overflow-hidden"
             >
                {/* Placeholder content just in case the player hasn't snapped yet */}
-               <div className="absolute inset-0 flex items-center justify-center text-slate-300 dark:text-slate-600">
-                  <span className="font-bold tracking-widest text-sm uppercase">Video Player Anchor</span>
+               <div className="absolute inset-0 flex items-center justify-center text-slate-300 dark:text-slate-700">
+                  <div className="text-center">
+                    <Brain size={40} className="mx-auto mb-2 opacity-50" />
+                    <span className="font-bold tracking-widest text-xs uppercase">Video Player Anchor</span>
+                  </div>
                </div>
             </div>
 
-            <div className="mt-8 p-6 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-sm">
+            <div className="mt-8 p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
                 <h4 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
                     <Zap size={16} className="text-yellow-500 fill-yellow-500" /> Pro Tip
                 </h4>
-                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">
+                <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
                    When you switch tabs, the music player will seamlessly transform into a 
                    <span className="font-bold text-slate-800 dark:text-white"> Floating Widget</span> so your flow stays uninterrupted.
                 </p>
@@ -356,8 +360,8 @@ const Pomodoro: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm animate-fade-in" />
             
-            <div className="relative bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 p-10 rounded-[2.5rem] shadow-2xl max-w-md w-full text-center animate-in zoom-in duration-300">
-                <div className="w-24 h-24 bg-gradient-to-br from-pink-100 to-rose-100 dark:from-pink-900/40 dark:to-rose-900/40 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner animate-bounce">
+            <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-10 rounded-[2.5rem] shadow-2xl max-w-md w-full text-center animate-in zoom-in duration-300">
+                <div className="w-24 h-24 bg-gradient-to-br from-pink-100 to-rose-100 dark:from-pink-900/20 dark:to-rose-900/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner animate-bounce">
                     <Coffee size={48} className="text-pink-500 dark:text-pink-400" />
                 </div>
                 
