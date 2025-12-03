@@ -1,4 +1,3 @@
-
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 
 export type TimerMode = 'pomodoro' | 'shortBreak' | 'longBreak' | 'custom';
@@ -12,6 +11,8 @@ interface PomodoroContextType {
   isMuted: boolean;
   focusTask: string;
   isPlayingNoise: boolean;
+  isAlarmRinging: boolean;
+  showBreakModal: boolean;
   toggleTimer: () => void;
   resetTimer: () => void;
   switchMode: (mode: TimerMode) => void;
@@ -19,6 +20,8 @@ interface PomodoroContextType {
   toggleMute: () => void;
   setFocusTask: (task: string) => void;
   toggleBrownNoise: () => void;
+  stopAlarm: () => void;
+  setShowBreakModal: (show: boolean) => void;
 }
 
 const PomodoroContext = createContext<PomodoroContextType | undefined>(undefined);
@@ -36,6 +39,7 @@ interface PomodoroProviderProps {
 }
 
 export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) => {
+  // Timer State
   const [mode, setMode] = useState<TimerMode>('pomodoro');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [initialTime, setInitialTime] = useState(25 * 60);
@@ -44,13 +48,17 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   const [isMuted, setIsMuted] = useState(false);
   const [focusTask, setFocusTask] = useState('');
   
-  // Brown Noise State
+  // Audio State
   const [isPlayingNoise, setIsPlayingNoise] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
-  const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
-  const gainNodeRef = useRef<GainNode | null>(null);
+  const [isAlarmRinging, setIsAlarmRinging] = useState(false);
+  const [showBreakModal, setShowBreakModal] = useState(false);
 
-  // Timer Refs
+  // Refs
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const brownNoiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
+  const alarmOscillatorRef = useRef<OscillatorNode | null>(null);
+  const alarmIntervalRef = useRef<number | null>(null);
+  
   const endTimeRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
 
@@ -61,95 +69,94 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     custom: customTime,
   };
 
-  const playSound = (type: 'start' | 'break' | 'end') => {
-    if (isMuted) return;
-
-    try {
+  // --- AUDIO ENGINE ---
+  const getAudioContext = () => {
+    if (!audioCtxRef.current) {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!AudioContext) return;
-      
-      const audioCtx = new AudioContext();
-      const oscillator = audioCtx.createOscillator();
-      const gainNode = audioCtx.createGain();
-      
-      oscillator.connect(gainNode);
-      gainNode.connect(audioCtx.destination);
-
-      const now = audioCtx.currentTime;
-
-      if (type === 'end') {
-        oscillator.type = 'square';
-        oscillator.frequency.setValueAtTime(440, now);
-        oscillator.frequency.setValueAtTime(880, now + 0.1);
-        oscillator.frequency.setValueAtTime(440, now + 0.2);
-        oscillator.frequency.setValueAtTime(880, now + 0.3);
-        gainNode.gain.setValueAtTime(0.1, now);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-        oscillator.start(now);
-        oscillator.stop(now + 0.6);
-      } else if (type === 'start') {
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(600, now);
-        oscillator.frequency.linearRampToValueAtTime(800, now + 0.1);
-        gainNode.gain.setValueAtTime(0.1, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + 0.3);
-        oscillator.start(now);
-        oscillator.stop(now + 0.3);
-      } else if (type === 'break') {
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(400, now);
-        oscillator.frequency.linearRampToValueAtTime(300, now + 0.2);
-        gainNode.gain.setValueAtTime(0.1, now);
-        gainNode.gain.linearRampToValueAtTime(0, now + 0.4);
-        oscillator.start(now);
-        oscillator.stop(now + 0.4);
-      }
-    } catch (e) {
-      console.error("Audio playback failed", e);
+      audioCtxRef.current = new AudioContext();
     }
+    // Resume if suspended (browser policy)
+    if (audioCtxRef.current.state === 'suspended') {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
   };
 
   const toggleBrownNoise = () => {
+    const ctx = getAudioContext();
+    
     if (isPlayingNoise) {
-      // Stop logic
-      if (audioCtxRef.current?.state === 'running') {
-        audioCtxRef.current.suspend();
+      if (brownNoiseNodeRef.current) {
+        brownNoiseNodeRef.current.stop();
+        brownNoiseNodeRef.current = null;
       }
       setIsPlayingNoise(false);
     } else {
-      // Start logic
-      const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-      if (!audioCtxRef.current) {
-        audioCtxRef.current = new AudioContext();
-        
-        // Create Brown Noise Buffer (2 seconds loop)
-        const bufferSize = audioCtxRef.current.sampleRate * 2;
-        const buffer = audioCtxRef.current.createBuffer(1, bufferSize, audioCtxRef.current.sampleRate);
-        const data = buffer.getChannelData(0);
-        let lastOut = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            data[i] = (lastOut + (0.02 * white)) / 1.02;
-            lastOut = data[i];
-            data[i] *= 3.5; // Gain compensation
-        }
-
-        gainNodeRef.current = audioCtxRef.current.createGain();
-        gainNodeRef.current.gain.value = 0.05; // Gentle volume
-        gainNodeRef.current.connect(audioCtxRef.current.destination);
-
-        noiseNodeRef.current = audioCtxRef.current.createBufferSource();
-        noiseNodeRef.current.buffer = buffer;
-        noiseNodeRef.current.loop = true;
-        noiseNodeRef.current.connect(gainNodeRef.current);
-        noiseNodeRef.current.start(0);
-      } else {
-        audioCtxRef.current.resume();
+      // Generate Brown Noise Buffer
+      const bufferSize = ctx.sampleRate * 2; // 2 seconds
+      const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let lastOut = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        data[i] = (lastOut + (0.02 * white)) / 1.02;
+        lastOut = data[i];
+        data[i] *= 3.5; 
       }
+
+      const noise = ctx.createBufferSource();
+      noise.buffer = buffer;
+      noise.loop = true;
+      
+      const gainNode = ctx.createGain();
+      gainNode.gain.value = 0.05; // Gentle volume
+      
+      noise.connect(gainNode);
+      gainNode.connect(ctx.destination);
+      noise.start();
+      
+      brownNoiseNodeRef.current = noise;
       setIsPlayingNoise(true);
     }
   };
 
+  const triggerAlarm = () => {
+    if (isMuted) return;
+    setIsAlarmRinging(true);
+    
+    const ctx = getAudioContext();
+    
+    // Create a pulsing alarm effect
+    const playBeep = () => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime); // A5
+      osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.5);
+      
+      gain.gain.setValueAtTime(0.3, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
+      
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.6);
+    };
+
+    playBeep();
+    alarmIntervalRef.current = window.setInterval(playBeep, 1500);
+  };
+
+  const stopAlarm = () => {
+    if (alarmIntervalRef.current) {
+      clearInterval(alarmIntervalRef.current);
+      alarmIntervalRef.current = null;
+    }
+    setIsAlarmRinging(false);
+  };
+
+  // --- TIMER LOGIC ---
   const tick = () => {
     if (!endTimeRef.current) return;
     
@@ -161,29 +168,26 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
       setIsActive(false);
       endTimeRef.current = null;
       if (intervalRef.current) clearInterval(intervalRef.current);
-      playSound('end');
+      
+      // Timer Complete!
+      triggerAlarm();
+      setShowBreakModal(true);
     } else {
       setTimeLeft(remaining);
     }
   };
 
   const toggleTimer = () => {
+    const ctx = getAudioContext(); // Ensure AudioContext is unlocked by user interaction
+    
     if (isActive) {
-      // PAUSE
+      // Pause
       setIsActive(false);
       endTimeRef.current = null;
       if (intervalRef.current) clearInterval(intervalRef.current);
     } else {
-      // START
+      // Start
       if (timeLeft === 0) return;
-      
-      // Play sound based on mode
-      if (mode === 'pomodoro' || mode === 'custom') {
-        playSound('start');
-      } else {
-        playSound('break');
-      }
-
       setIsActive(true);
       endTimeRef.current = Date.now() + timeLeft * 1000;
       intervalRef.current = window.setInterval(tick, 200);
@@ -194,6 +198,7 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     setIsActive(false);
     endTimeRef.current = null;
     if (intervalRef.current) clearInterval(intervalRef.current);
+    stopAlarm();
     
     const time = modes[mode] * 60;
     setTimeLeft(time);
@@ -205,6 +210,7 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     setIsActive(false);
     endTimeRef.current = null;
     if (intervalRef.current) clearInterval(intervalRef.current);
+    stopAlarm();
     
     const minutes = newMode === 'custom' ? customTime : modes[newMode];
     setTimeLeft(minutes * 60);
@@ -222,10 +228,12 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
 
   const toggleMute = () => setIsMuted(!isMuted);
 
-  // Cleanup on unmount
+  // Cleanup
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (alarmIntervalRef.current) clearInterval(alarmIntervalRef.current);
+      if (brownNoiseNodeRef.current) brownNoiseNodeRef.current.stop();
       if (audioCtxRef.current) audioCtxRef.current.close();
     };
   }, []);
@@ -239,13 +247,17 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     isMuted,
     focusTask,
     isPlayingNoise,
+    isAlarmRinging,
+    showBreakModal,
     toggleTimer,
     resetTimer,
     switchMode,
     setCustomTimeValue,
     toggleMute,
     setFocusTask,
-    toggleBrownNoise
+    toggleBrownNoise,
+    stopAlarm,
+    setShowBreakModal
   };
 
   return (
