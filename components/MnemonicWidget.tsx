@@ -2,6 +2,7 @@
 import React, { useMemo, useState } from 'react';
 import { Lightbulb, BookOpen, Sparkles, ChevronDown, ChevronUp, AlertTriangle, Loader2 } from 'lucide-react';
 import { mnemonics } from '../data/mnemonicData';
+import { GoogleGenAI } from "@google/genai";
 
 const MnemonicWidget: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -31,22 +32,41 @@ const MnemonicWidget: React.FC = () => {
     setLoading(true);
 
     try {
-        const res = await fetch('/api/explain', {
-            method: 'POST',
-            body: JSON.stringify({
-                mnemonic: todayMnemonic.code,
-                meaning: todayMnemonic.meaning,
-                category: todayMnemonic.category
-            }),
-            headers: { 'Content-Type': 'application/json' }
-        });
+        // Direct Client-Side Call to fix preview connection issues
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         
-        if (!res.ok) throw new Error('Failed to fetch');
+        const systemInstruction = `You are a top-tier Clinical Nursing Instructor helping a student master a specific medical mnemonic.
+    
+        Structure your response with these exact sections (do not use markdown headers like # or ##, just bold labels):
+        1. **Clinical Application:** Explain *when* and *why* we use this assessment or intervention in a hospital setting.
+        2. **Memory Hook:** Give a clever trick, visualization, or rhyme to make it stick forever.
+        3. **Board Exam Alert:** Identify one common trick question, 'Red Flag', or priority nursing action related to this topic that appears on the PNLE/NCLEX.
 
-        const data = await res.json();
-        
-        if (data.error) throw new Error(data.error);
-        setExplanation(data.text);
+        Tone: Professional, high-yield, and concise (max 250 words total).
+        Format: Plain text with bolding for emphasis. No JSON.`;
+
+        const prompt = `
+          Mnemonic: ${todayMnemonic.code}
+          Category: ${todayMnemonic.category}
+          Meaning: ${todayMnemonic.meaning}
+
+          Provide a clinical deep dive.
+        `;
+
+        const response = await ai.models.generateContent({
+          model: 'gemini-3-pro-preview', 
+          contents: prompt,
+          config: {
+            systemInstruction: systemInstruction,
+            temperature: 0.7,
+          }
+        });
+
+        if (response.text) {
+             setExplanation(response.text);
+        } else {
+             throw new Error("Empty response");
+        }
     } catch (error) {
         console.error(error);
         setExplanation("Unable to contact the Clinical Instructor at this moment. Please check your connection and try again.");
