@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -11,8 +10,7 @@ import Planner from './components/Planner';
 import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
-import FloatingTimer from './components/FloatingTimer'; 
-import GlobalYoutubePlayer from './components/GlobalYoutubePlayer'; // Added
+import GlobalYoutubePlayer from './components/GlobalYoutubePlayer'; // Enhanced Persistent Player
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
 import { PomodoroProvider } from './components/PomodoroContext'; 
@@ -128,12 +126,12 @@ const App: React.FC = () => {
               </div>
             </main>
 
-            {/* PERSISTENT COMPONENTS */}
-            {/* The YouTube player lives here to persist state, but portals into Pomodoro.tsx */}
+            {/* 
+                PERSISTENT PLAYER
+                This component now handles BOTH the main video view (via overlay snapping)
+                and the floating mini-player widget. It is never unmounted.
+            */}
             <GlobalYoutubePlayer activeItem={activeItem} />
-            
-            {/* Floating Timer - Only shows if running and NOT on Pomodoro page */}
-            <FloatingTimer activeItem={activeItem} />
           </div>
         </div>
       </TaskProvider>
