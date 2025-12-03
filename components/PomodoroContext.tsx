@@ -217,12 +217,15 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     setInitialTime(minutes * 60);
   };
 
+  // CLAMPING LOGIC ADDED HERE
   const setCustomTimeValue = (minutes: number) => {
-    setCustomTime(minutes);
+    // Clamp between 1 and 180 minutes (3 hours max)
+    const clamped = Math.min(180, Math.max(1, Math.floor(minutes)));
+    setCustomTime(clamped);
     if (mode === 'custom') {
       setIsActive(false);
-      setTimeLeft(minutes * 60);
-      setInitialTime(minutes * 60);
+      setTimeLeft(clamped * 60);
+      setInitialTime(clamped * 60);
     }
   };
 
