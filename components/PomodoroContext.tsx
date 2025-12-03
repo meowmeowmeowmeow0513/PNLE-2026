@@ -62,7 +62,6 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   // Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
   const brownNoiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
-  const alarmOscillatorRef = useRef<OscillatorNode | null>(null);
   const alarmIntervalRef = useRef<number | null>(null);
   
   const endTimeRef = useRef<number | null>(null);
