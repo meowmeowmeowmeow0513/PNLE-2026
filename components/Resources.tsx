@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Download } from 'lucide-react';
+import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Globe, X, Link as LinkIcon, Send, Check, Loader2 } from 'lucide-react';
 import { ResourceLink } from '../types';
 
 // Extended interface for internal use
@@ -12,6 +12,14 @@ interface EnhancedResource extends ResourceLink {
 
 const Resources: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
+  
+  // Modal States
+  const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
+  const [isWebsitesModalOpen, setIsWebsitesModalOpen] = useState(false);
+
+  // Request Form State
+  const [requestForm, setRequestForm] = useState({ title: '', url: '', type: 'Website' });
+  const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success'>('idle');
 
   const resources: EnhancedResource[] = [
     {
@@ -45,10 +53,10 @@ const Resources: React.FC = () => {
     {
       id: '4',
       title: 'RNPedia',
-      description: 'Comprehensive nursing notes and drug study references.',
+      description: 'Comprehensive nursing notes, drug studies, and practice exams.',
       url: 'https://rnpedia.com',
       iconName: 'book',
-      tags: ['NOTES', 'DRUGS'],
+      tags: ['NOTES', 'DRUGS', 'EXAMS'],
       color: 'orange'
     },
     {
@@ -61,14 +69,21 @@ const Resources: React.FC = () => {
       color: 'slate'
     },
     {
-      id: '6',
-      title: 'Saunders Q&A',
-      description: 'Online practice questions bank for NCLEX/PNLE.',
-      url: 'https://evolve.elsevier.com',
-      iconName: 'book',
-      tags: ['PRACTICE', 'HARD'],
-      color: 'purple'
+      id: '6', // Replaced Saunders
+      title: 'Credible Websites',
+      description: 'Verified portals: Simple Nursing, RegisteredNurseRN, and more.',
+      url: '#websites', // Trigger for modal
+      iconName: 'globe',
+      tags: ['PORTAL', 'VERIFIED'],
+      color: 'cyan'
     }
+  ];
+
+  const trustedWebsites = [
+    { name: 'Simple Nursing PH', url: 'https://simplenursing.ph/', desc: 'Visual learning simplified for Filipino students.' },
+    { name: 'RegisteredNurseRN', url: 'https://www.registerednursern.com/', desc: 'Lectures, skills videos, and NCLEX practice quizzes.' },
+    { name: 'Level Up RN', url: 'https://www.leveluprn.com/', desc: 'Flashcards and concise review videos.' },
+    { name: 'Khan Academy Medicine', url: 'https://www.khanacademy.org/science/health-and-medicine', desc: 'In-depth physiology and pathophysiology.' }
   ];
 
   const getIcon = (name: string, className?: string) => {
@@ -78,8 +93,23 @@ const Resources: React.FC = () => {
       case 'file': return <FileText className={className} />;
       case 'book': return <Book className={className} />;
       case 'layers': return <Layers className={className} />;
+      case 'globe': return <Globe className={className} />;
       default: return <ExternalLink className={className} />;
     }
+  };
+
+  const handleRequestSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRequestStatus('loading');
+    // Simulate API call
+    setTimeout(() => {
+      setRequestStatus('success');
+      setTimeout(() => {
+        setIsRequestModalOpen(false);
+        setRequestStatus('idle');
+        setRequestForm({ title: '', url: '', type: 'Website' });
+      }, 1500);
+    }, 1000);
   };
 
   const filteredResources = resources.filter(r => 
@@ -91,7 +121,7 @@ const Resources: React.FC = () => {
   const otherResources = filteredResources.filter(r => !r.featured);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in">
+    <div className="max-w-6xl mx-auto space-y-8 animate-fade-in relative">
       
       {/* Header & Search */}
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -169,9 +199,15 @@ const Resources: React.FC = () => {
           <a
             key={resource.id}
             href={resource.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 hover:border-pink-200 dark:hover:border-pink-500/30 shadow-sm hover:shadow-xl hover:shadow-pink-500/5 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full"
+            target={resource.url.startsWith('#') ? undefined : "_blank"}
+            rel={resource.url.startsWith('#') ? undefined : "noopener noreferrer"}
+            onClick={(e) => {
+              if (resource.url === '#websites') {
+                e.preventDefault();
+                setIsWebsitesModalOpen(true);
+              }
+            }}
+            className="group relative bg-white dark:bg-slate-800 rounded-2xl p-6 border border-slate-100 dark:border-slate-700/50 hover:border-pink-200 dark:hover:border-pink-500/30 shadow-sm hover:shadow-xl hover:shadow-pink-500/5 transition-all duration-300 hover:-translate-y-1 flex flex-col h-full cursor-pointer"
           >
             <div className="flex justify-between items-start mb-4">
               <div className={`p-3.5 rounded-xl transition-colors ${
@@ -179,6 +215,7 @@ const Resources: React.FC = () => {
                 resource.color === 'emerald' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500' :
                 resource.color === 'orange' ? 'bg-orange-50 dark:bg-orange-500/10 text-orange-500' :
                 resource.color === 'purple' ? 'bg-purple-50 dark:bg-purple-500/10 text-purple-500' :
+                resource.color === 'cyan' ? 'bg-cyan-50 dark:bg-cyan-500/10 text-cyan-600 dark:text-cyan-400' :
                 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
               }`}>
                 {getIcon(resource.iconName, "w-6 h-6")}
@@ -206,7 +243,10 @@ const Resources: React.FC = () => {
         ))}
 
         {/* Add New Placeholder */}
-        <button className="group relative rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col items-center justify-center p-8 gap-4 hover:border-pink-300 dark:hover:border-pink-500/50 hover:bg-pink-50/50 dark:hover:bg-pink-500/5 transition-all duration-300 min-h-[220px]">
+        <button 
+          onClick={() => setIsRequestModalOpen(true)}
+          className="group relative rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col items-center justify-center p-8 gap-4 hover:border-pink-300 dark:hover:border-pink-500/50 hover:bg-pink-50/50 dark:hover:bg-pink-500/5 transition-all duration-300 min-h-[220px]"
+        >
           <div className="w-14 h-14 rounded-full bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
             <Plus size={24} className="text-slate-400 dark:text-slate-500 group-hover:text-pink-500 transition-colors" />
           </div>
@@ -216,6 +256,128 @@ const Resources: React.FC = () => {
           </div>
         </button>
       </div>
+
+      {/* --- CREDIBLE WEBSITES MODAL --- */}
+      {isWebsitesModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setIsWebsitesModalOpen(false)}>
+          <div 
+            className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[80vh] animate-zoom-in"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="p-6 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 flex justify-between items-center">
+                <div className="flex items-center gap-3">
+                    <div className="p-2.5 bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 rounded-xl">
+                        <Globe size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-800 dark:text-white">Credible Nursing Websites</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Verified sources for extra reading and practice</p>
+                    </div>
+                </div>
+                <button onClick={() => setIsWebsitesModalOpen(false)} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full transition-colors">
+                    <X size={20} />
+                </button>
+            </div>
+            
+            <div className="p-6 overflow-y-auto custom-scrollbar">
+                <div className="grid grid-cols-1 gap-3">
+                    {trustedWebsites.map((site, i) => (
+                        <a 
+                            key={i} 
+                            href={site.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-4 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 bg-white dark:bg-slate-800 hover:border-cyan-300 dark:hover:border-cyan-700 hover:shadow-lg hover:shadow-cyan-500/5 transition-all group"
+                        >
+                            <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-700 flex items-center justify-center text-slate-400 group-hover:text-cyan-500 group-hover:bg-cyan-50 dark:group-hover:bg-cyan-900/20 transition-colors">
+                                <LinkIcon size={20} />
+                            </div>
+                            <div className="flex-1">
+                                <h4 className="font-bold text-slate-800 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors flex items-center gap-2">
+                                    {site.name}
+                                    <ExternalLink size={12} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                                </h4>
+                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{site.desc}</p>
+                            </div>
+                        </a>
+                    ))}
+                </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* --- REQUEST RESOURCE MODAL --- */}
+      {isRequestModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md p-6 relative border border-slate-200 dark:border-slate-700 animate-zoom-in">
+            <button 
+              onClick={() => setIsRequestModalOpen(false)}
+              className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+            >
+              <X size={20} />
+            </button>
+
+            <div className="mb-6">
+                <div className="w-12 h-12 bg-pink-50 dark:bg-pink-500/10 rounded-full flex items-center justify-center text-pink-500 mb-4">
+                    <Send size={24} />
+                </div>
+                <h3 className="text-xl font-bold text-slate-800 dark:text-white">Request a Resource</h3>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Found something useful? Let us add it to the hub.</p>
+            </div>
+
+            {requestStatus === 'success' ? (
+                <div className="flex flex-col items-center justify-center py-8 text-center animate-in zoom-in">
+                    <div className="w-16 h-16 bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mb-4">
+                        <Check size={32} />
+                    </div>
+                    <h4 className="font-bold text-lg text-slate-800 dark:text-white">Request Sent!</h4>
+                    <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">Thanks for contributing to the batch.</p>
+                </div>
+            ) : (
+                <form onSubmit={handleRequestSubmit} className="space-y-4">
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Resource Title</label>
+                        <input 
+                            type="text" 
+                            required
+                            placeholder="e.g. Awesome Anatomy Quiz"
+                            value={requestForm.title}
+                            onChange={(e) => setRequestForm({...requestForm, title: e.target.value})}
+                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all"
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Link / URL</label>
+                        <input 
+                            type="url" 
+                            required
+                            placeholder="https://..."
+                            value={requestForm.url}
+                            onChange={(e) => setRequestForm({...requestForm, url: e.target.value})}
+                            className="w-full p-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all"
+                        />
+                    </div>
+                    
+                    <button 
+                        type="submit"
+                        disabled={requestStatus === 'loading'}
+                        className="w-full py-3.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl font-bold shadow-lg shadow-pink-500/20 transition-all flex items-center justify-center gap-2 mt-2 disabled:opacity-70"
+                    >
+                        {requestStatus === 'loading' ? (
+                            <>
+                                <Loader2 size={18} className="animate-spin" /> Sending...
+                            </>
+                        ) : (
+                            'Submit Request'
+                        )}
+                    </button>
+                </form>
+            )}
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
