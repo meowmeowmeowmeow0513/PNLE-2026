@@ -57,11 +57,14 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
 
-  // --- REFS ---
+  // --- AUDIO REFS ---
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const brownNoiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
+  const brownNoiseSourceRef = useRef<AudioBufferSourceNode | null>(null);
+  const noiseGainNodeRef = useRef<GainNode | null>(null);
   const alarmOscillatorsRef = useRef<OscillatorNode[]>([]);
   const alarmGainNodeRef = useRef<GainNode | null>(null);
+  
+  // --- TIMER REFS ---
   const endTimeRef = useRef<number | null>(null);
   const intervalRef = useRef<number | null>(null);
 
@@ -72,7 +75,7 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     custom: customTime,
   };
 
-  // --- WEB AUDIO API INIT ---
+  // --- AUDIO ENGINE INIT ---
   const getAudioContext = () => {
     if (!audioCtxRef.current) {
       const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
@@ -84,73 +87,91 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     return audioCtxRef.current;
   };
 
-  // --- BROWN NOISE GENERATOR ---
+  // --- BROWN NOISE ENGINE (Warm Texture) ---
   const toggleBrownNoise = () => {
     const ctx = getAudioContext();
-    
+    const fadeTime = 2; // Seconds
+
     if (isPlayingNoise) {
-      if (brownNoiseNodeRef.current) {
-        brownNoiseNodeRef.current.stop();
-        brownNoiseNodeRef.current.disconnect();
-        brownNoiseNodeRef.current = null;
+      // Fade Out
+      if (noiseGainNodeRef.current) {
+        noiseGainNodeRef.current.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + fadeTime);
+        setTimeout(() => {
+            if (brownNoiseSourceRef.current) {
+                brownNoiseSourceRef.current.stop();
+                brownNoiseSourceRef.current.disconnect();
+            }
+        }, fadeTime * 1000);
       }
       setIsPlayingNoise(false);
     } else {
-      const bufferSize = ctx.sampleRate * 2; // 2 seconds buffer
+      // Create Brown Noise Buffer
+      const bufferSize = ctx.sampleRate * 2; // 2 seconds loop
       const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
       const data = buffer.getChannelData(0);
       let lastOut = 0;
+      
       for (let i = 0; i < bufferSize; i++) {
         const white = Math.random() * 2 - 1;
+        // Brown noise integration
         data[i] = (lastOut + (0.02 * white)) / 1.02;
         lastOut = data[i];
-        data[i] *= 3.5; // Gain compensation
+        data[i] *= 3.5; // Compensate gain
       }
 
       const noise = ctx.createBufferSource();
       noise.buffer = buffer;
       noise.loop = true;
-      
+
+      // Create Low Pass Filter (Make it warm)
+      const filter = ctx.createBiquadFilter();
+      filter.type = 'lowpass';
+      filter.frequency.value = 400; // Hz
+
+      // Gain Node for Volume
       const gainNode = ctx.createGain();
-      gainNode.gain.value = 0.05; // Soft background volume
-      
-      noise.connect(gainNode);
+      gainNode.gain.setValueAtTime(0.001, ctx.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.08, ctx.currentTime + fadeTime);
+
+      // Connect Graph
+      noise.connect(filter);
+      filter.connect(gainNode);
       gainNode.connect(ctx.destination);
+      
       noise.start();
       
-      brownNoiseNodeRef.current = noise;
+      brownNoiseSourceRef.current = noise;
+      noiseGainNodeRef.current = gainNode;
       setIsPlayingNoise(true);
     }
   };
 
-  // --- ALARM (Pleasant Chime) ---
+  // --- ALARM ENGINE (Ethereal Chord) ---
   const playAlarmTone = () => {
     if (isMuted) return;
     const ctx = getAudioContext();
-    
-    // Stop previous if any
-    stopAlarm();
+    stopAlarm(); // Stop existing
 
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0.1, ctx.currentTime);
     masterGain.connect(ctx.destination);
     alarmGainNodeRef.current = masterGain;
 
-    // Create a major chord (C5, E5, G5)
-    const frequencies = [523.25, 659.25, 783.99]; 
+    // Major 7th Chord (Cmaj7: C, E, G, B)
+    const frequencies = [523.25, 659.25, 783.99, 987.77]; 
     const oscillators: OscillatorNode[] = [];
 
     frequencies.forEach((freq, i) => {
         const osc = ctx.createOscillator();
-        osc.type = i === 0 ? 'sine' : 'triangle';
+        osc.type = i % 2 === 0 ? 'sine' : 'triangle';
         osc.frequency.setValueAtTime(freq, ctx.currentTime);
         
-        // Pulsing effect
+        // Subtle LFO for pulsing effect
         const lfo = ctx.createOscillator();
         lfo.type = 'sine';
-        lfo.frequency.value = 2; // 2Hz pulse
+        lfo.frequency.value = 3; // 3Hz pulse
         const lfoGain = ctx.createGain();
-        lfoGain.gain.value = 0.05;
+        lfoGain.gain.value = 0.3; // Depth
         
         osc.connect(lfoGain);
         lfoGain.connect(masterGain);
@@ -169,26 +190,28 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     });
     alarmOscillatorsRef.current = [];
     if (alarmGainNodeRef.current) {
-        alarmGainNodeRef.current.disconnect();
-        alarmGainNodeRef.current = null;
+        // Fade out
+        const ctx = getAudioContext();
+        alarmGainNodeRef.current.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
+        setTimeout(() => {
+           alarmGainNodeRef.current?.disconnect(); 
+           alarmGainNodeRef.current = null;
+        }, 500);
     }
     setIsAlarmRinging(false);
   };
 
-  // --- TIMER ENGINE ---
+  // --- TIMER LOGIC ---
   const tick = () => {
     if (!endTimeRef.current) return;
-    
     const now = Date.now();
     const remaining = Math.ceil((endTimeRef.current - now) / 1000);
 
     if (remaining <= 0) {
-      // Timer Finished
       setTimeLeft(0);
       setIsActive(false);
       endTimeRef.current = null;
       if (intervalRef.current) clearInterval(intervalRef.current);
-      
       playAlarmTone();
       setShowBreakModal(true);
     } else {
@@ -197,8 +220,7 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   };
 
   const toggleTimer = () => {
-    getAudioContext(); // Ensure AudioContext is initialized on user interaction
-
+    getAudioContext(); // Wake up audio context
     if (isActive) {
       // Pause
       setIsActive(false);
@@ -209,7 +231,7 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
       if (timeLeft === 0) return;
       setIsActive(true);
       endTimeRef.current = Date.now() + timeLeft * 1000;
-      intervalRef.current = window.setInterval(tick, 100); // 100ms for responsiveness
+      intervalRef.current = window.setInterval(tick, 100);
     }
   };
 
@@ -218,7 +240,6 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     endTimeRef.current = null;
     if (intervalRef.current) clearInterval(intervalRef.current);
     stopAlarm();
-    
     const time = modes[mode] * 60;
     setTimeLeft(time);
     setInitialTime(time);
@@ -248,38 +269,20 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
 
   const toggleMute = () => setIsMuted(!isMuted);
 
-  // Cleanup
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
       stopAlarm();
-      if (brownNoiseNodeRef.current) brownNoiseNodeRef.current.stop();
+      if (brownNoiseSourceRef.current) brownNoiseSourceRef.current.stop();
       if (audioCtxRef.current) audioCtxRef.current.close();
     };
   }, []);
 
   const value = {
-    mode,
-    timeLeft,
-    initialTime,
-    isActive,
-    customTime,
-    isMuted,
-    focusTask,
-    isPlayingNoise,
-    isAlarmRinging,
-    showBreakModal,
-    pipWindow,
-    toggleTimer,
-    resetTimer,
-    switchMode,
-    setCustomTimeValue,
-    toggleMute,
-    setFocusTask,
-    toggleBrownNoise,
-    stopAlarm,
-    setShowBreakModal,
-    setPipWindow
+    mode, timeLeft, initialTime, isActive, customTime, isMuted, focusTask,
+    isPlayingNoise, isAlarmRinging, showBreakModal, pipWindow,
+    toggleTimer, resetTimer, switchMode, setCustomTimeValue,
+    toggleMute, setFocusTask, toggleBrownNoise, stopAlarm, setShowBreakModal, setPipWindow
   };
 
   return (
