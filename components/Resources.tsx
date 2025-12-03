@@ -2,6 +2,9 @@
 import React, { useState } from 'react';
 import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Globe, X, Link as LinkIcon, Send, Check, Loader2 } from 'lucide-react';
 import { ResourceLink } from '../types';
+import { db } from '../firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { useAuth } from '../AuthContext';
 
 // Extended interface for internal use
 interface EnhancedResource extends ResourceLink {
@@ -11,6 +14,7 @@ interface EnhancedResource extends ResourceLink {
 }
 
 const Resources: React.FC = () => {
+  const { currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modal States
@@ -98,18 +102,38 @@ const Resources: React.FC = () => {
     }
   };
 
-  const handleRequestSubmit = (e: React.FormEvent) => {
+  const handleRequestSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!requestForm.title.trim() || !requestForm.url.trim()) return;
+
     setRequestStatus('loading');
-    // Simulate API call
-    setTimeout(() => {
-      setRequestStatus('success');
-      setTimeout(() => {
-        setIsRequestModalOpen(false);
+    
+    try {
+        // Save to Firebase Firestore
+        await addDoc(collection(db, 'resource_requests'), {
+            title: requestForm.title,
+            url: requestForm.url,
+            type: requestForm.type,
+            requestedBy: currentUser?.email || 'Anonymous',
+            userId: currentUser?.uid || 'unknown',
+            createdAt: new Date().toISOString(),
+            status: 'pending' // pending, approved, rejected
+        });
+
+        setRequestStatus('success');
+        
+        // Reset form after delay
+        setTimeout(() => {
+            setIsRequestModalOpen(false);
+            setRequestStatus('idle');
+            setRequestForm({ title: '', url: '', type: 'Website' });
+        }, 1500);
+
+    } catch (error) {
+        console.error("Error submitting resource request:", error);
+        alert("Failed to send request. Please check your connection.");
         setRequestStatus('idle');
-        setRequestForm({ title: '', url: '', type: 'Website' });
-      }, 1500);
-    }, 1000);
+    }
   };
 
   const filteredResources = resources.filter(r => 
