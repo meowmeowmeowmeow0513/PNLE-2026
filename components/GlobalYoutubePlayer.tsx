@@ -5,7 +5,7 @@ import { NavigationItem } from '../types';
 import { usePomodoro } from './PomodoroContext';
 import { 
     Pause, Play, RotateCcw, Maximize2, 
-    ChevronUp, ChevronDown, Music 
+    ChevronUp, ChevronDown, Music, Volume2, VolumeX, Target 
 } from 'lucide-react';
 
 interface GlobalYoutubePlayerProps {
@@ -14,8 +14,8 @@ interface GlobalYoutubePlayerProps {
 
 const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem }) => {
   const { 
-    timeLeft, isActive, mode, pipWindow, focusTask,
-    toggleTimer, resetTimer, setPipWindow 
+    timeLeft, isActive, mode, pipWindow, focusTask, isMuted,
+    toggleTimer, resetTimer, setPipWindow, toggleMute
   } = usePomodoro();
   
   // -- STATE --
@@ -24,8 +24,6 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
   const [isExpanded, setIsExpanded] = useState(false); // For floating widget
 
   // -- ANCHOR SYSTEM --
-  // We poll the DOM to see if the "video-anchor" element exists in the Pomodoro page.
-  // If it does, we assume its dimensions. If not, we float.
   useEffect(() => {
     const checkAnchor = () => {
         const anchorEl = document.getElementById('video-anchor');
@@ -43,7 +41,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
     };
 
     checkAnchor();
-    const interval = setInterval(checkAnchor, 100); // 10Hz poll for snappy response
+    const interval = setInterval(checkAnchor, 100); 
     window.addEventListener('resize', checkAnchor);
     window.addEventListener('scroll', checkAnchor);
 
@@ -71,20 +69,15 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
             const dpip = (window as any).documentPictureInPicture;
             const win = await dpip.requestWindow({ width: 320, height: 320 });
 
-            // 1. Force Dark Mode
             win.document.body.className = "dark bg-[#020617] text-white flex flex-col items-center justify-center h-full overflow-hidden";
             
-            // 2. Clone Stylesheets (Robust Method)
             const style = win.document.createElement('style');
             let cssRules = '';
-            
             Array.from(document.styleSheets).forEach(sheet => {
                 try {
-                    // Try to access rules (might fail on CORS)
                     const rules = Array.from(sheet.cssRules).map(rule => rule.cssText).join('');
                     cssRules += rules;
                 } catch (e) {
-                    // Fallback for CDN links
                     if (sheet.href) {
                         const link = win.document.createElement('link');
                         link.rel = 'stylesheet';
@@ -96,7 +89,6 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
             style.textContent = cssRules;
             win.document.head.appendChild(style);
 
-            // 3. State Sync
             win.addEventListener('pagehide', () => setPipWindow(null));
             setPipWindow(win);
 
@@ -110,7 +102,6 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
   }, [pipWindow, setPipWindow]);
 
   // -- STYLE CALCULATION --
-  // Transition between "Overlay" (Anchored) and "Floating Capsule" (Widget)
   const getContainerStyle = (): React.CSSProperties => {
       if (isAnchored && anchorRect) {
           return {
@@ -132,14 +123,14 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
               bottom: '24px',
               right: '24px',
               width: isExpanded ? '340px' : '180px',
-              height: isExpanded ? '240px' : '56px',
+              height: isExpanded ? '260px' : '56px',
               zIndex: 50,
               borderRadius: isExpanded ? '20px' : '100px',
               transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
               boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
               backgroundColor: 'rgba(2, 6, 23, 0.8)', // Deep Midnight
               backdropFilter: 'blur(20px)',
-              border: '1px solid rgba(255,255,255,0.1)'
+              // The pulse animation class is handled in className, but border here is fallback
           };
       }
   };
@@ -147,16 +138,13 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
   // -- PIP PORTAL CONTENT --
   const PiPContent = pipWindow ? createPortal(
     <div className="w-full h-full flex flex-col items-center justify-center p-6 relative select-none">
-        {/* Neon Glow Background */}
         <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${isActive ? 'from-pink-500 to-purple-600' : 'from-cyan-500 to-blue-600'}`}></div>
         
         <div className="relative z-10 flex flex-col items-center gap-4">
-             {/* Timer */}
              <span className="text-6xl font-mono font-bold tracking-tighter tabular-nums drop-shadow-2xl">
                  {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{Math.floor(timeLeft % 60).toString().padStart(2, '0')}
              </span>
              
-             {/* Controls */}
              <div className="flex items-center gap-4 mt-2">
                  <button onClick={resetTimer} className="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
                      <RotateCcw size={20} />
@@ -176,56 +164,57 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
 
   return (
     <>
-      <div style={getContainerStyle()} className="overflow-hidden flex flex-col">
+      <div 
+        style={getContainerStyle()} 
+        className={`overflow-hidden flex flex-col border border-white/10 ${!isAnchored && isActive ? 'animate-pulse ring-1 ring-pink-500/50 border-pink-500/30' : ''}`}
+      >
           
           {/* -- FLOATING HEADER (Only when NOT anchored) -- */}
           {!isAnchored && (
               <div 
-                className={`flex items-center justify-between px-4 cursor-pointer ${isExpanded ? 'h-10 border-b border-white/5' : 'h-full'}`}
+                className={`flex items-center justify-between px-4 cursor-pointer transition-all ${isExpanded ? 'h-12 border-b border-white/5 bg-white/5' : 'h-full'}`}
                 onClick={() => setIsExpanded(!isExpanded)}
               >
                   {!isExpanded ? (
                     // Collapsed State: Mini Player
                     <div className="flex items-center gap-3 w-full">
                          {/* Mini Progress Ring */}
-                         <div className={`relative w-6 h-6 rounded-full border-2 ${isActive ? 'border-pink-500 animate-pulse' : 'border-slate-600'}`}>
-                            {isActive && <div className="absolute inset-0 bg-pink-500 rounded-full opacity-20"></div>}
+                         <div className={`relative w-6 h-6 rounded-full border-2 flex items-center justify-center ${isActive ? 'border-pink-500' : 'border-slate-600'}`}>
+                            {isActive && <div className="w-1.5 h-1.5 bg-pink-500 rounded-full animate-ping"></div>}
                          </div>
                          
                          <div className="flex flex-col flex-1 min-w-0">
-                             <span className="text-sm font-bold text-white font-mono leading-none">
+                             <span className="text-sm font-bold text-white font-mono leading-none tracking-tight">
                                 {Math.floor(timeLeft / 60)}:{Math.floor(timeLeft % 60).toString().padStart(2, '0')}
                              </span>
-                             {focusTask && (
-                                <span className="text-[10px] text-slate-400 truncate max-w-[80px]">
-                                    {focusTask}
-                                </span>
-                             )}
+                             <span className="text-[10px] text-slate-400 truncate max-w-[90px] font-medium mt-0.5">
+                                {focusTask || 'No Active Task'}
+                             </span>
                          </div>
 
                          {/* Mini Controls */}
                          <button 
                             onClick={(e) => { e.stopPropagation(); toggleTimer(); }}
-                            className="p-1.5 rounded-full hover:bg-white/10 text-white"
+                            className="p-2 rounded-full hover:bg-white/10 text-white transition-colors"
                          >
                             {isActive ? <Pause size={14} fill="currentColor"/> : <Play size={14} fill="currentColor"/>}
                          </button>
                     </div>
                   ) : (
                     // Expanded Header
-                    <>
+                    <div className="flex items-center justify-between w-full">
                         <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
                             <Music size={12} className="text-pink-500" />
-                            <span>Audio Active</span>
+                            <span>Audio Player</span>
                         </div>
-                        <ChevronDown size={14} className="text-slate-400" />
-                    </>
+                        <ChevronDown size={16} className="text-slate-400" />
+                    </div>
                   )}
               </div>
           )}
 
           {/* -- VIDEO CONTAINER -- */}
-          <div className="flex-1 bg-black relative w-full h-full">
+          <div className="flex-1 bg-black relative w-full h-full group">
              <iframe 
                 width="100%" 
                 height="100%" 
@@ -242,6 +231,19 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                     transition: 'opacity 0.3s'
                 }}
             />
+            
+            {/* Expanded Controls Overlay (Mute Toggle) */}
+            {(!isAnchored && isExpanded) && (
+                <div className="absolute top-2 right-2 flex gap-2">
+                    <button 
+                        onClick={toggleMute}
+                        className="p-2 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-lg text-white/80 hover:text-white transition-colors"
+                        title="Toggle Mute"
+                    >
+                        {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                    </button>
+                </div>
+            )}
             
             {/* Overlay Gradient for Anchor Mode to blend it */}
             {isAnchored && (
