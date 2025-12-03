@@ -3,6 +3,7 @@ import React, { useMemo, useState } from 'react';
 import { Lightbulb, BookOpen, Sparkles, ChevronDown, ChevronUp, AlertTriangle, Loader2 } from 'lucide-react';
 import { mnemonics } from '../data/mnemonicData';
 import { GoogleGenAI } from "@google/genai";
+import ReactMarkdown from 'react-markdown';
 
 const MnemonicWidget: React.FC = () => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -48,7 +49,7 @@ const MnemonicWidget: React.FC = () => {
         3. **Board Exam Alert:** Identify one common trick question, 'Red Flag', or priority nursing action related to this topic that appears on the PNLE/NCLEX.
 
         Tone: Professional, high-yield, and concise (max 250 words total).
-        Format: Plain text with bolding for emphasis. No JSON.`;
+        Format: Markdown. Use **bold** for headers. Bullet points for lists.`;
 
         const prompt = `
           Mnemonic: ${todayMnemonic.code}
@@ -58,7 +59,6 @@ const MnemonicWidget: React.FC = () => {
           Provide a clinical deep dive.
         `;
 
-        // Switch to gemini-2.5-flash for better speed and stability in UI widgets
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash', 
           contents: prompt,
@@ -75,7 +75,6 @@ const MnemonicWidget: React.FC = () => {
         }
     } catch (error: any) {
         console.error("Deep Dive Error:", error);
-        // Provide a user-friendly error message while logging the detail
         let userMessage = "Unable to load instructor notes.";
         
         if (error.message?.includes("API Key")) {
@@ -165,13 +164,46 @@ const MnemonicWidget: React.FC = () => {
                       <div className="h-4 bg-current rounded opacity-20 w-5/6 animate-pulse"></div>
                   </div>
               ) : (
-                  <div className="prose prose-sm dark:prose-invert max-w-none">
-                      <div className="flex items-center gap-2 mb-3 text-sm font-bold uppercase tracking-wider opacity-80 text-amber-600 dark:text-amber-400">
-                          <AlertTriangle size={16} />
-                          <span>Board Exam Alert</span>
-                      </div>
-                      <div className="text-sm leading-relaxed whitespace-pre-wrap">
-                          {explanation}
+                  <div className="relative">
+                      {/* Medical Note Styling Container */}
+                      <div className="bg-slate-50 dark:bg-[#1e293b] border-l-4 border-pink-500 rounded-r-xl p-5 shadow-sm">
+                          
+                          {/* Header Icon */}
+                          <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-200 dark:border-slate-700">
+                              <AlertTriangle size={16} className="text-amber-500" />
+                              <span className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                  Instructor's Notes
+                              </span>
+                          </div>
+
+                          {/* Markdown Content */}
+                          <div className="text-slate-700 dark:text-slate-200">
+                             {explanation?.startsWith("Error") ? (
+                                <p className="text-red-500 text-sm font-medium">{explanation}</p>
+                             ) : (
+                                <ReactMarkdown
+                                    components={{
+                                        // Custom styling for Bold Headers
+                                        strong: ({node, ...props}) => (
+                                            <span className="text-pink-600 dark:text-pink-400 font-bold text-xs uppercase tracking-wider mb-2 block mt-5 first:mt-0" {...props} />
+                                        ),
+                                        // Paragraphs
+                                        p: ({node, ...props}) => (
+                                            <p className="text-slate-600 dark:text-slate-300 text-sm mb-3 leading-relaxed" {...props} />
+                                        ),
+                                        // Lists
+                                        ul: ({node, ...props}) => (
+                                            <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600 dark:text-slate-300 mb-4" {...props} />
+                                        ),
+                                        li: ({node, ...props}) => (
+                                            <li className="pl-1 marker:text-pink-400" {...props} />
+                                        ),
+                                    }}
+                                >
+                                    {explanation || ""}
+                                </ReactMarkdown>
+                             )}
+                          </div>
                       </div>
                   </div>
               )}
