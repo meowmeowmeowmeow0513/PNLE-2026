@@ -20,7 +20,8 @@
     "@fullcalendar/interaction": "^6.1.13",
     "clsx": "^2.1.1",
     "tailwind-merge": "^2.3.0",
-    "canvas-confetti": "^1.9.3"
+    "canvas-confetti": "^1.9.3",
+    "@google/genai": "^0.1.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.3",
