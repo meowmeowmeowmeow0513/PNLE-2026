@@ -1,6 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import ReactDOM from 'react-dom';
-import { Pause, Play, Maximize2, X, Timer } from 'lucide-react';
+import React, { useState } from 'react';
+import { Pause, Play, RotateCcw, ChevronUp, ChevronDown, X } from 'lucide-react';
 import { usePomodoro } from './PomodoroContext';
 import { NavigationItem } from '../types';
 
@@ -9,78 +8,11 @@ interface FloatingTimerProps {
 }
 
 const FloatingTimer: React.FC<FloatingTimerProps> = ({ activeItem }) => {
-  const { timeLeft, isActive, toggleTimer, mode } = usePomodoro();
-  const [pipWindow, setPipWindow] = useState<Window | null>(null);
+  const { timeLeft, isActive, toggleTimer, resetTimer, mode, focusTask } = usePomodoro();
+  const [isExpanded, setIsExpanded] = useState(true);
 
-  // Close PiP window when component unmounts
-  useEffect(() => {
-    return () => {
-      if (pipWindow) {
-        pipWindow.close();
-      }
-    };
-  }, [pipWindow]);
-
-  const togglePiP = async () => {
-    if (pipWindow) {
-      pipWindow.close();
-      setPipWindow(null);
-      return;
-    }
-
-    if (!('documentPictureInPicture' in window)) {
-      alert("Your browser doesn't support the Document Picture-in-Picture API.");
-      return;
-    }
-
-    try {
-      // @ts-ignore
-      const win = await window.documentPictureInPicture.requestWindow({
-        width: 320,
-        height: 100,
-      });
-
-      // --- CRITICAL: Copy All Stylesheets ---
-      [...document.styleSheets].forEach((styleSheet) => {
-        try {
-          if (styleSheet.href) {
-            // Link tags (Tailwind CDN)
-            const link = document.createElement('link');
-            link.rel = 'stylesheet';
-            link.type = 'text/css';
-            link.href = styleSheet.href;
-            win.document.head.appendChild(link);
-          } else {
-            // Internal styles
-            const cssRules = [...styleSheet.cssRules].map(rule => rule.cssText).join('');
-            const style = document.createElement('style');
-            style.textContent = cssRules;
-            win.document.head.appendChild(style);
-          }
-        } catch (e) {
-          console.warn("Could not copy stylesheet:", e);
-        }
-      });
-
-      // Ensure Dark Mode persists if active
-      if (document.documentElement.classList.contains('dark')) {
-        win.document.documentElement.classList.add('dark');
-      }
-
-      // Basic Body Reset for PiP
-      win.document.body.className = "bg-slate-900 overflow-hidden flex items-center justify-center p-0 m-0 h-full w-full";
-
-      win.addEventListener('pagehide', () => {
-        setPipWindow(null);
-      });
-
-      setPipWindow(win);
-    } catch (err) {
-      console.error("Failed to open PiP window:", err);
-    }
-  };
-
-  if (!isActive || activeItem === 'Pomodoro Timer') {
+  // Do not show if we are on the main Pomodoro page (it has the big timer)
+  if (activeItem === 'Pomodoro Timer') {
     return null;
   }
 
@@ -90,69 +22,91 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ activeItem }) => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Determine glow color based on mode
-  const getGlowColor = () => {
-    if (mode === 'pomodoro') return 'border-pink-500 shadow-pink-500/30';
-    if (mode === 'shortBreak') return 'border-teal-400 shadow-teal-400/30';
-    return 'border-indigo-500 shadow-indigo-500/30';
-  };
-
-  const TimerContent = (
-    <div className={`
-      flex items-center gap-4 px-4 py-2.5 rounded-full 
-      bg-black/90 backdrop-blur-md text-white 
-      border-2 ${getGlowColor()} shadow-lg 
-      transition-all duration-300 hover:scale-105
-    `}>
-      {/* Dynamic Icon */}
-      <div className={`p-2 rounded-full ${mode === 'pomodoro' ? 'bg-pink-600' : 'bg-teal-600'} animate-pulse`}>
-         <Timer size={16} className="text-white" />
-      </div>
-
-      <div className="flex flex-col">
-        <span className="font-mono text-2xl font-bold leading-none tracking-tight">
-          {formatTime(timeLeft)}
-        </span>
-        <span className="text-[9px] uppercase tracking-widest font-bold opacity-70">
-          {mode === 'pomodoro' ? 'Focusing' : 'Break'}
-        </span>
-      </div>
-
-      <div className="h-6 w-[1px] bg-white/20 mx-1"></div>
-
-      <div className="flex items-center gap-1">
-        <button 
-          onClick={toggleTimer}
-          className="p-2 hover:bg-white/20 rounded-full transition-colors active:scale-95"
-        >
-          {isActive ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
-        </button>
-
-        {!pipWindow && (
-          <button 
-            onClick={togglePiP}
-            className="p-2 hover:bg-white/20 rounded-full transition-colors active:scale-95"
-            title="Open Mini Player"
-          >
-            <Maximize2 size={16} />
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
-  if (pipWindow) {
-    return ReactDOM.createPortal(
-      <div className="w-full h-full flex items-center justify-center">
-        {TimerContent}
-      </div>,
-      pipWindow.document.body
-    );
-  }
-
   return (
-    <div className="fixed bottom-6 right-6 z-[100] animate-fade-in origin-bottom-right">
-      {TimerContent}
+    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-2 animate-fade-in origin-bottom-right font-sans">
+      
+      {/* THE CARD */}
+      <div className={`
+        bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl 
+        border border-slate-200 dark:border-slate-700 
+        shadow-2xl rounded-2xl overflow-hidden
+        transition-all duration-300 ease-in-out
+        ${isExpanded ? 'w-80' : 'w-48'}
+      `}>
+        
+        {/* Header / Dragger */}
+        <div className="flex items-center justify-between px-4 py-3 bg-slate-50/50 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-700/50">
+           <div className="flex items-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`}></div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                {mode === 'pomodoro' ? 'Focus Session' : 'Break Time'}
+              </span>
+           </div>
+           <button 
+             onClick={() => setIsExpanded(!isExpanded)}
+             className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+           >
+             {isExpanded ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+           </button>
+        </div>
+
+        {/* Content Body */}
+        <div className="p-4">
+            
+            {/* Timer Display */}
+            <div className="flex items-center justify-between mb-4">
+                <span className={`font-mono text-3xl font-black tracking-tighter ${
+                    isActive 
+                    ? 'text-pink-500 dark:text-pink-400' 
+                    : 'text-slate-700 dark:text-white'
+                }`}>
+                    {formatTime(timeLeft)}
+                </span>
+                
+                <div className="flex items-center gap-2">
+                    <button 
+                        onClick={toggleTimer}
+                        className="w-10 h-10 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 transition-transform active:scale-95"
+                    >
+                        {isActive ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+                    </button>
+                    {isExpanded && !isActive && (
+                        <button 
+                            onClick={resetTimer}
+                            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-colors"
+                        >
+                            <RotateCcw size={14} />
+                        </button>
+                    )}
+                </div>
+            </div>
+
+            {/* Focus Task (If Expanded) */}
+            {isExpanded && focusTask && (
+                <div className="mb-4">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold mb-1">Current Task</p>
+                    <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
+                        {focusTask}
+                    </p>
+                </div>
+            )}
+
+            {/* Video Container (The Portal Target) */}
+            {/* We keep this in the DOM even if collapsed (using hidden) to keep audio alive if needed, 
+                or just shrink it. For best audio persistence, we render it but hide visually if needed. */}
+            <div 
+                className={`
+                    relative rounded-xl overflow-hidden bg-black aspect-video
+                    transition-all duration-300
+                    ${isExpanded ? 'opacity-100 h-auto' : 'opacity-0 h-0'}
+                `}
+            >
+                {/* ID used by GlobalYoutubePlayer to portal content here */}
+                <div id="mini-player-container" className="w-full h-full"></div>
+            </div>
+
+        </div>
+      </div>
     </div>
   );
 };
