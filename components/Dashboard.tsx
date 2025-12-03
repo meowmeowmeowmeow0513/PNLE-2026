@@ -15,6 +15,107 @@ interface DashboardProps {
   onNavigate: (item: NavigationItem) => void;
 }
 
+// Internal Component: Cute Ghost Empty State
+const GhostEmptyState = () => {
+  return (
+    <div className="h-full min-h-[300px] flex flex-col items-center justify-center relative overflow-hidden rounded-2xl bg-[#0B1121] border border-white/5 group select-none">
+       {/* Background Stars */}
+       <div className="absolute inset-0 overflow-hidden opacity-50">
+          {[...Array(6)].map((_, i) => (
+             <div key={i} className="absolute bg-white rounded-full opacity-20 animate-twinkle" 
+                  style={{
+                      width: Math.random() * 2 + 1 + 'px',
+                      height: Math.random() * 2 + 1 + 'px',
+                      top: Math.random() * 100 + '%',
+                      left: Math.random() * 100 + '%',
+                      animationDelay: Math.random() * 5 + 's',
+                      animationDuration: Math.random() * 3 + 2 + 's'
+                  }} 
+             />
+          ))}
+       </div>
+
+       {/* Ground Line */}
+       <div className="absolute bottom-12 left-10 right-10 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+
+       {/* Flowers */}
+       <div className="absolute bottom-12 flex justify-center gap-16 w-full opacity-60">
+           <div className="relative group/flower">
+               <div className="w-0.5 h-6 bg-emerald-500/40 mx-auto rounded-full origin-bottom animate-sway"></div>
+               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-pink-500/60 animate-pulse-slow text-xs">✿</div>
+           </div>
+           <div className="relative group/flower mt-2">
+               <div className="w-0.5 h-4 bg-emerald-500/40 mx-auto rounded-full origin-bottom animate-sway" style={{ animationDelay: '0.5s' }}></div>
+               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-purple-500/60 animate-pulse-slow text-xs" style={{ animationDelay: '1s' }}>❀</div>
+           </div>
+           <div className="relative group/flower">
+               <div className="w-0.5 h-7 bg-emerald-500/40 mx-auto rounded-full origin-bottom animate-sway" style={{ animationDelay: '1s' }}></div>
+               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-blue-500/60 animate-pulse-slow text-xs" style={{ animationDelay: '2s' }}>✿</div>
+           </div>
+       </div>
+
+       {/* The Cute Ghost */}
+       <div className="relative z-10 animate-float mb-6 transform scale-110">
+           <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_0_25px_rgba(255,255,255,0.15)]">
+               {/* Body */}
+               <path d="M50 15C33.4315 15 20 28.4315 20 45V85L30 78L40 85L50 78L60 85L70 78L80 85V45C80 28.4315 66.5685 15 50 15Z" fill="white" fillOpacity="0.95"/>
+               {/* Eyes */}
+               <ellipse cx="40" cy="45" rx="3.5" ry="5.5" fill="#1e293b" className="animate-blink" />
+               <ellipse cx="60" cy="45" rx="3.5" ry="5.5" fill="#1e293b" className="animate-blink" />
+               {/* Cheeks */}
+               <circle cx="34" cy="53" r="3.5" fill="#f472b6" fillOpacity="0.5" />
+               <circle cx="66" cy="53" r="3.5" fill="#f472b6" fillOpacity="0.5" />
+               {/* Mouth */}
+               <path d="M47 56Q50 59 53 56" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"/>
+           </svg>
+           {/* Shadow */}
+           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-14 h-2.5 bg-black/30 rounded-full blur-md animate-shadow"></div>
+       </div>
+
+       <div className="text-center z-10 px-6 relative">
+           <p className="text-slate-200 font-bold text-sm mb-1 tracking-tight">It's quiet in here...</p>
+           <p className="text-slate-500 text-xs font-medium">No tasks scheduled for today.</p>
+           
+           <button 
+             onClick={() => document.getElementById('quick-add-input')?.focus()}
+             className="mt-5 text-[10px] font-bold uppercase tracking-widest text-pink-500 hover:text-pink-400 hover:bg-pink-500/10 transition-all bg-pink-500/5 px-4 py-2 rounded-full border border-pink-500/20 hover:border-pink-500/40 hover:scale-105 active:scale-95"
+            >
+               Create Task
+           </button>
+       </div>
+
+       <style>{`
+         @keyframes float {
+           0%, 100% { transform: translateY(0px); }
+           50% { transform: translateY(-12px); }
+         }
+         @keyframes shadow {
+           0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.3; }
+           50% { transform: translateX(-50%) scale(0.7); opacity: 0.15; }
+         }
+         @keyframes sway {
+           0%, 100% { transform: rotate(-8deg); }
+           50% { transform: rotate(8deg); }
+         }
+         @keyframes blink {
+           0%, 48%, 52%, 100% { transform: scaleY(1); }
+           50% { transform: scaleY(0.1); }
+         }
+         @keyframes twinkle {
+            0%, 100% { opacity: 0.2; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.5); }
+         }
+         .animate-float { animation: float 4s ease-in-out infinite; }
+         .animate-shadow { animation: shadow 4s ease-in-out infinite; }
+         .animate-sway { animation: sway 4s ease-in-out infinite; }
+         .animate-blink { animation: blink 4s infinite; transform-box: fill-box; transform-origin: center; }
+         .animate-pulse-slow { animation: twinkle 3s ease-in-out infinite; }
+         .animate-twinkle { animation: twinkle 3s ease-in-out infinite; }
+       `}</style>
+    </div>
+  );
+};
+
 // Internal Component: Study Vitals (EKG Graph)
 const StudyVitals = () => {
   const { tasks } = useTasks();
@@ -286,6 +387,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     <form onSubmit={handleQuickAdd} className="flex gap-3 mb-6 group/input">
                         <div className="flex-1 relative">
                             <input 
+                                id="quick-add-input"
                                 type="text" 
                                 value={newTaskText} 
                                 onChange={(e) => setNewTaskText(e.target.value)} 
@@ -307,12 +409,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
 
                     <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2 max-h-[400px]">
                         {todaysTasks.length === 0 ? (
-                            <div className="h-full flex flex-col items-center justify-center text-slate-400 dark:text-slate-500 gap-4 opacity-60 min-h-[200px]">
-                                <div className="w-16 h-16 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center">
-                                    <CheckSquare size={32} strokeWidth={1.5} />
-                                </div>
-                                <p className="text-sm font-medium">All caught up for today.</p>
-                            </div>
+                            <GhostEmptyState />
                         ) : (
                             todaysTasks.map(task => (
                                 <div key={task.id} className={`group flex items-center gap-4 p-4 rounded-2xl border transition-all duration-300 ${task.completed ? 'bg-slate-50 dark:bg-white/5 border-transparent opacity-50' : 'bg-white dark:bg-white/[0.02] border-slate-100 dark:border-white/5 hover:bg-slate-50 dark:hover:bg-white/[0.05] hover:border-slate-200 dark:hover:border-white/10'}`}>
