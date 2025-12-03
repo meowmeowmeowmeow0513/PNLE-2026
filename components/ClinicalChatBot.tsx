@@ -1,20 +1,19 @@
-
 import React, { useState, useRef, useEffect } from 'react';
-import { GoogleGenAI, Chat } from "@google/genai";
 import { 
   MessageCircleQuestion, 
-  X, 
   Send, 
   Stethoscope, 
   Loader2, 
   Minimize2, 
-  GraduationCap 
+  GraduationCap,
+  AlertCircle
 } from 'lucide-react';
 
 interface Message {
   id: string;
   role: 'user' | 'model';
   text: string;
+  isError?: boolean;
 }
 
 const ClinicalChatBot: React.FC = () => {
@@ -30,32 +29,6 @@ const ClinicalChatBot: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Ref to persist the chat session across renders
-  const chatSessionRef = useRef<Chat | null>(null);
-
-  // Initialize Gemini Chat Session
-  useEffect(() => {
-    if (!chatSessionRef.current) {
-      try {
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-        chatSessionRef.current = ai.chats.create({
-          model: 'gemini-2.5-flash',
-          config: {
-            systemInstruction: `You are a strict but encouraging Clinical Nursing Instructor for PNLE candidates.
-            1. If the student asks a test question or for a direct answer, DO NOT give it. Instead, ask guiding questions like "What is the priority assessment here?" or "Apply the ABCs (Airway, Breathing, Circulation)."
-            2. Use high-yield Mnemonics (e.g., MONA, BUBBLE-HE, ADPIE) to explain concepts whenever relevant.
-            3. Keep responses concise (under 4 sentences) unless explicitly asked to elaborate.
-            4. Be professional, academic, but supportive. Use phrases like "Batch Spirit" or "Future RN".
-            5. If the student is stressed, offer brief encouragement.`,
-            temperature: 0.7, // Balance between creative teaching and factual accuracy
-          },
-        });
-      } catch (error) {
-        console.error("Failed to initialize Gemini:", error);
-      }
-    }
-  }, []);
-
   // Auto-scroll to bottom
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -69,35 +42,64 @@ const ClinicalChatBot: React.FC = () => {
     e?.preventDefault();
     if (!inputValue.trim() || isLoading) return;
 
+    console.log("ChatBot: Sending message...", inputValue);
+
     const userMsg: Message = {
       id: Date.now().toString(),
       role: 'user',
       text: inputValue.trim()
     };
 
+    // Optimistic UI Update
     setMessages(prev => [...prev, userMsg]);
     setInputValue('');
     setIsLoading(true);
 
     try {
-      if (chatSessionRef.current) {
-        const result = await chatSessionRef.current.sendMessage({ message: userMsg.text });
-        const responseText = result.text;
-        
-        const botMsg: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'model',
-          text: responseText || "I'm having trouble connecting to the nurses' station. Please try again."
-        };
-        setMessages(prev => [...prev, botMsg]);
+      // Call the Vercel API Route
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ 
+          messages: [...messages, userMsg].map(m => ({ 
+             role: m.role, 
+             text: m.text 
+          })) 
+        }),
+      });
+
+      console.log("ChatBot: Response status:", response.status);
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Server error: ${response.status}`);
       }
-    } catch (error) {
-      console.error("Chat error:", error);
-      setMessages(prev => [...prev, {
+
+      const data = await response.json();
+      
+      if (!data.text) {
+        throw new Error("Empty response from Instructor.");
+      }
+
+      const botMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'model',
+        text: data.text
+      };
+      setMessages(prev => [...prev, botMsg]);
+
+    } catch (error: any) {
+      console.error("ChatBot Error:", error);
+      
+      const errorMsg: Message = {
         id: Date.now().toString(),
         role: 'model',
-        text: "Clinical Error: Unable to process request. Please check your connection."
-      }]);
+        text: `Connection Error: ${error.message}. Please try again later.`,
+        isError: true
+      };
+      setMessages(prev => [...prev, errorMsg]);
     } finally {
       setIsLoading(false);
     }
@@ -159,19 +161,23 @@ const ClinicalChatBot: React.FC = () => {
                   
                   {/* Avatar */}
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 mt-1 ${
-                    msg.role === 'user' 
-                      ? 'bg-slate-700 text-slate-300' 
-                      : 'bg-pink-600 text-white'
+                    msg.isError 
+                      ? 'bg-red-500/20 text-red-500'
+                      : msg.role === 'user' 
+                        ? 'bg-slate-700 text-slate-300' 
+                        : 'bg-pink-600 text-white'
                   }`}>
-                    {msg.role === 'user' ? <div className="text-xs font-bold">YOU</div> : <GraduationCap size={16} />}
+                    {msg.isError ? <AlertCircle size={16} /> : msg.role === 'user' ? <div className="text-xs font-bold">YOU</div> : <GraduationCap size={16} />}
                   </div>
 
                   {/* Bubble */}
                   <div
                     className={`p-3 rounded-2xl text-sm leading-relaxed ${
-                      msg.role === 'user'
-                        ? 'bg-pink-600 text-white rounded-tr-none'
-                        : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'
+                      msg.isError
+                        ? 'bg-red-900/20 border border-red-500/50 text-red-200'
+                        : msg.role === 'user'
+                          ? 'bg-pink-600 text-white rounded-tr-none'
+                          : 'bg-slate-800 text-slate-200 rounded-tl-none border border-slate-700'
                     }`}
                   >
                     {msg.text}
