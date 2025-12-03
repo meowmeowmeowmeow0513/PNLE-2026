@@ -15,79 +15,85 @@ interface DashboardProps {
   onNavigate: (item: NavigationItem) => void;
 }
 
-// Internal Component: Cute Ghost Empty State
+// Internal Component: Cute Ghost Empty State (Light/Dark Mode Compatible & Addicting)
 const GhostEmptyState = () => {
   return (
-    <div className="h-full min-h-[300px] flex flex-col items-center justify-center relative overflow-hidden rounded-2xl bg-[#0B1121] border border-white/5 group select-none">
-       {/* Background Stars */}
-       <div className="absolute inset-0 overflow-hidden opacity-50">
-          {[...Array(6)].map((_, i) => (
-             <div key={i} className="absolute bg-white rounded-full opacity-20 animate-twinkle" 
+    <div className="h-full min-h-[320px] flex flex-col items-center justify-center relative overflow-hidden rounded-2xl bg-slate-50/50 dark:bg-[#0B1121] border border-slate-200 dark:border-white/5 group select-none transition-all duration-500 hover:shadow-lg dark:hover:shadow-pink-900/5 hover:border-pink-200 dark:hover:border-pink-500/20">
+       
+       {/* Background Particles (Stars in Dark, Dust in Light) */}
+       <div className="absolute inset-0 overflow-hidden">
+          {[...Array(8)].map((_, i) => (
+             <div key={i} className="absolute rounded-full animate-twinkle bg-slate-400/30 dark:bg-white/20" 
                   style={{
-                      width: Math.random() * 2 + 1 + 'px',
-                      height: Math.random() * 2 + 1 + 'px',
+                      width: Math.random() * 3 + 2 + 'px',
+                      height: Math.random() * 3 + 2 + 'px',
                       top: Math.random() * 100 + '%',
                       left: Math.random() * 100 + '%',
                       animationDelay: Math.random() * 5 + 's',
-                      animationDuration: Math.random() * 3 + 2 + 's'
+                      animationDuration: Math.random() * 3 + 3 + 's'
                   }} 
              />
           ))}
        </div>
 
        {/* Ground Line */}
-       <div className="absolute bottom-12 left-10 right-10 h-px bg-gradient-to-r from-transparent via-white/10 to-transparent"></div>
+       <div className="absolute bottom-12 left-10 right-10 h-px bg-gradient-to-r from-transparent via-slate-300/50 dark:via-white/10 to-transparent"></div>
 
-       {/* Flowers */}
+       {/* Flowers - Theme Aware */}
        <div className="absolute bottom-12 flex justify-center gap-16 w-full opacity-60">
            <div className="relative group/flower">
                <div className="w-0.5 h-6 bg-emerald-500/40 mx-auto rounded-full origin-bottom animate-sway"></div>
-               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-pink-500/60 animate-pulse-slow text-xs">✿</div>
+               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-pink-500/60 dark:text-pink-500/60 animate-pulse-slow text-xs origin-center hover:scale-125 transition-transform">✿</div>
            </div>
            <div className="relative group/flower mt-2">
                <div className="w-0.5 h-4 bg-emerald-500/40 mx-auto rounded-full origin-bottom animate-sway" style={{ animationDelay: '0.5s' }}></div>
-               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-purple-500/60 animate-pulse-slow text-xs" style={{ animationDelay: '1s' }}>❀</div>
+               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-purple-500/60 dark:text-purple-500/60 animate-pulse-slow text-xs origin-center hover:scale-125 transition-transform" style={{ animationDelay: '1s' }}>❀</div>
            </div>
            <div className="relative group/flower">
                <div className="w-0.5 h-7 bg-emerald-500/40 mx-auto rounded-full origin-bottom animate-sway" style={{ animationDelay: '1s' }}></div>
-               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-blue-500/60 animate-pulse-slow text-xs" style={{ animationDelay: '2s' }}>✿</div>
+               <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 text-blue-500/60 dark:text-blue-500/60 animate-pulse-slow text-xs origin-center hover:scale-125 transition-transform" style={{ animationDelay: '2s' }}>✿</div>
            </div>
        </div>
 
        {/* The Cute Ghost */}
-       <div className="relative z-10 animate-float mb-6 transform scale-110">
-           <svg width="80" height="80" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-[0_0_25px_rgba(255,255,255,0.15)]">
+       <div className="relative z-10 animate-float mb-6 transform transition-all duration-500 group-hover:scale-110 group-hover:-translate-y-4 cursor-pointer">
+           <svg width="100" height="100" viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg" className="drop-shadow-xl dark:drop-shadow-[0_0_25px_rgba(255,255,255,0.15)]">
                {/* Body */}
-               <path d="M50 15C33.4315 15 20 28.4315 20 45V85L30 78L40 85L50 78L60 85L70 78L80 85V45C80 28.4315 66.5685 15 50 15Z" fill="white" fillOpacity="0.95"/>
-               {/* Eyes */}
-               <ellipse cx="40" cy="45" rx="3.5" ry="5.5" fill="#1e293b" className="animate-blink" />
-               <ellipse cx="60" cy="45" rx="3.5" ry="5.5" fill="#1e293b" className="animate-blink" />
+               <path d="M50 15C33.4315 15 20 28.4315 20 45V85L30 78L40 85L50 78L60 85L70 78L80 85V45C80 28.4315 66.5685 15 50 15Z" 
+                     className="fill-white dark:fill-white/95 transition-colors" />
+               
+               {/* Eyes - Interactive */}
+               <ellipse cx="38" cy="45" rx="3.5" ry="5.5" className="fill-slate-800 animate-blink" />
+               <ellipse cx="62" cy="45" rx="3.5" ry="5.5" className="fill-slate-800 animate-blink" style={{ animationDelay: '0.1s' }} />
+               
                {/* Cheeks */}
-               <circle cx="34" cy="53" r="3.5" fill="#f472b6" fillOpacity="0.5" />
-               <circle cx="66" cy="53" r="3.5" fill="#f472b6" fillOpacity="0.5" />
-               {/* Mouth */}
-               <path d="M47 56Q50 59 53 56" stroke="#1e293b" strokeWidth="2.5" strokeLinecap="round" opacity="0.6"/>
+               <circle cx="32" cy="53" r="3.5" className="fill-pink-300 dark:fill-pink-400 opacity-50" />
+               <circle cx="68" cy="53" r="3.5" className="fill-pink-300 dark:fill-pink-400 opacity-50" />
+               
+               {/* Mouth - Reacts to Hover */}
+               <circle cx="50" cy="56" r="2" className="fill-slate-800 opacity-60 transition-transform origin-center group-hover:scale-[1.8]" />
            </svg>
+           
            {/* Shadow */}
-           <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 w-14 h-2.5 bg-black/30 rounded-full blur-md animate-shadow"></div>
+           <div className="absolute -bottom-6 left-1/2 -translate-x-1/2 w-16 h-3 bg-slate-900/10 dark:bg-black/40 rounded-full blur-md animate-shadow group-hover:scale-75 group-hover:opacity-10 transition-all duration-500"></div>
        </div>
 
        <div className="text-center z-10 px-6 relative">
-           <p className="text-slate-200 font-bold text-sm mb-1 tracking-tight">It's quiet in here...</p>
-           <p className="text-slate-500 text-xs font-medium">No tasks scheduled for today.</p>
+           <p className="text-slate-600 dark:text-slate-200 font-bold text-sm mb-1 tracking-tight transition-colors">It's quiet in here...</p>
+           <p className="text-slate-400 dark:text-slate-500 text-xs font-medium transition-colors">No tasks scheduled for today.</p>
            
            <button 
              onClick={() => document.getElementById('quick-add-input')?.focus()}
-             className="mt-5 text-[10px] font-bold uppercase tracking-widest text-pink-500 hover:text-pink-400 hover:bg-pink-500/10 transition-all bg-pink-500/5 px-4 py-2 rounded-full border border-pink-500/20 hover:border-pink-500/40 hover:scale-105 active:scale-95"
+             className="mt-6 text-[10px] font-bold uppercase tracking-widest text-pink-500 hover:text-white hover:bg-pink-500 bg-white dark:bg-pink-500/5 px-6 py-2.5 rounded-full border border-pink-200 dark:border-pink-500/20 transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-pink-500/30"
             >
-               Create Task
+               Create First Task
            </button>
        </div>
 
        <style>{`
          @keyframes float {
            0%, 100% { transform: translateY(0px); }
-           50% { transform: translateY(-12px); }
+           50% { transform: translateY(-10px); }
          }
          @keyframes shadow {
            0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.3; }
