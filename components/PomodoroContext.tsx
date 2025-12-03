@@ -11,6 +11,7 @@ interface PomodoroContextType {
   customTime: number;
   isMuted: boolean;
   focusTask: string;
+  focusTaskId: string | null;
   isPlayingNoise: boolean;
   isAlarmRinging: boolean;
   showBreakModal: boolean;
@@ -21,6 +22,7 @@ interface PomodoroContextType {
   setCustomTimeValue: (minutes: number) => void;
   toggleMute: () => void;
   setFocusTask: (task: string) => void;
+  setFocusTaskId: (id: string | null) => void;
   toggleBrownNoise: () => void;
   stopAlarm: () => void;
   setShowBreakModal: (show: boolean) => void;
@@ -49,7 +51,10 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   const [isActive, setIsActive] = useState(false);
   const [customTime, setCustomTime] = useState(25);
   const [isMuted, setIsMuted] = useState(false);
+  
+  // Task Integration
   const [focusTask, setFocusTask] = useState('');
+  const [focusTaskId, setFocusTaskId] = useState<string | null>(null);
   
   const [isPlayingNoise, setIsPlayingNoise] = useState(false);
   const [isAlarmRinging, setIsAlarmRinging] = useState(false);
@@ -98,8 +103,10 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
         noiseGainNodeRef.current.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + fadeTime);
         setTimeout(() => {
             if (brownNoiseSourceRef.current) {
-                brownNoiseSourceRef.current.stop();
-                brownNoiseSourceRef.current.disconnect();
+                try {
+                  brownNoiseSourceRef.current.stop();
+                  brownNoiseSourceRef.current.disconnect();
+                } catch (e) {}
             }
         }, fadeTime * 1000);
       }
@@ -150,7 +157,9 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   const playAlarmTone = () => {
     if (isMuted) return;
     const ctx = getAudioContext();
-    stopAlarm(); // Stop existing
+    
+    // Do not restart if already ringing
+    if (isAlarmRinging) return;
 
     const masterGain = ctx.createGain();
     masterGain.gain.setValueAtTime(0.1, ctx.currentTime);
@@ -176,6 +185,7 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
         osc.connect(lfoGain);
         lfoGain.connect(masterGain);
         
+        // LOOP the oscillator indefinitely until stopAlarm is called
         osc.start();
         oscillators.push(osc);
     });
@@ -185,18 +195,18 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   };
 
   const stopAlarm = () => {
+    if (!isAlarmRinging) return;
+
     alarmOscillatorsRef.current.forEach(osc => {
         try { osc.stop(); osc.disconnect(); } catch(e){}
     });
     alarmOscillatorsRef.current = [];
+    
     if (alarmGainNodeRef.current) {
-        // Fade out
-        const ctx = getAudioContext();
-        alarmGainNodeRef.current.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.5);
-        setTimeout(() => {
-           alarmGainNodeRef.current?.disconnect(); 
-           alarmGainNodeRef.current = null;
-        }, 500);
+        try {
+            alarmGainNodeRef.current.disconnect(); 
+        } catch(e) {}
+        alarmGainNodeRef.current = null;
     }
     setIsAlarmRinging(false);
   };
@@ -272,17 +282,16 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   useEffect(() => {
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current);
-      stopAlarm();
-      if (brownNoiseSourceRef.current) brownNoiseSourceRef.current.stop();
-      if (audioCtxRef.current) audioCtxRef.current.close();
+      // We don't auto-stop brown noise on unmount to keep vibes unless explicit
+      if (audioCtxRef.current) audioCtxRef.current.suspend();
     };
   }, []);
 
   const value = {
-    mode, timeLeft, initialTime, isActive, customTime, isMuted, focusTask,
+    mode, timeLeft, initialTime, isActive, customTime, isMuted, focusTask, focusTaskId,
     isPlayingNoise, isAlarmRinging, showBreakModal, pipWindow,
     toggleTimer, resetTimer, switchMode, setCustomTimeValue,
-    toggleMute, setFocusTask, toggleBrownNoise, stopAlarm, setShowBreakModal, setPipWindow
+    toggleMute, setFocusTask, setFocusTaskId, toggleBrownNoise, stopAlarm, setShowBreakModal, setPipWindow
   };
 
   return (
