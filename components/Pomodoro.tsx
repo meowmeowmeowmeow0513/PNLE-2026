@@ -1,6 +1,5 @@
-
-import React, { useRef } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Settings, Waves, ExternalLink, Pencil } from 'lucide-react';
+import React, { useRef, useEffect } from 'react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Waves, Pencil, Coffee, Zap, Brain } from 'lucide-react';
 import { usePomodoro, TimerMode } from './PomodoroContext';
 
 const Pomodoro: React.FC = () => {
@@ -19,37 +18,11 @@ const Pomodoro: React.FC = () => {
     setCustomTimeValue,
     toggleMute,
     setFocusTask,
-    toggleBrownNoise
+    toggleBrownNoise,
+    showBreakModal,
+    setShowBreakModal,
+    stopAlarm
   } = usePomodoro();
-
-  // For PiP Logic triggering
-  const togglePiP = async () => {
-     if (!('documentPictureInPicture' in window)) {
-        alert("PiP not supported in this browser.");
-        return;
-     }
-     // We just trigger the FloatingTimer logic by making sure we navigate away or use a global handler.
-     // Since FloatingTimer only shows when NOT on Pomodoro page, we can't easily trigger it *while* staying here 
-     // unless we duplicate logic. For now, let's just alert user to navigate away for floating timer 
-     // OR we can rely on the FloatingTimer component to handle it if we adjust logic.
-     alert("Navigate to another tab (e.g. Dashboard) to activate the Floating Timer automatically!");
-  };
-
-  const modes: { id: TimerMode; label: string }[] = [
-    { id: 'pomodoro', label: 'Pomodoro' },
-    { id: 'shortBreak', label: 'Short Break' },
-    { id: 'longBreak', label: 'Long Break' },
-  ];
-
-  // Circle animation calculation
-  const progressDeg = (timeLeft / initialTime) * 360;
-
-  const handleCustomChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = parseInt(e.target.value);
-    if (!isNaN(val) && val > 0 && val <= 180) {
-      setCustomTimeValue(val);
-    }
-  };
 
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
@@ -57,150 +30,228 @@ const Pomodoro: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  return (
-    <div className="flex flex-col items-center justify-center min-h-[calc(100vh-140px)] py-4 gap-8">
-      
-      {/* 1. Main Timer Card */}
-      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl p-8 w-full max-w-xl border border-slate-100 dark:border-slate-700 relative overflow-hidden transition-colors duration-300">
-        
-        {/* Top Header Controls */}
-        <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2">
-                <button 
-                    onClick={toggleBrownNoise}
-                    className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-bold transition-all ${
-                        isPlayingNoise 
-                        ? 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 ring-2 ring-amber-500/20' 
-                        : 'bg-slate-100 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
-                    }`}
-                >
-                    <Waves size={14} className={isPlayingNoise ? 'animate-pulse' : ''} />
-                    {isPlayingNoise ? 'Noise On' : 'Brown Noise'}
-                </button>
-            </div>
-            
-            <div className="flex items-center gap-3">
-                <button 
-                    onClick={toggleMute}
-                    className="p-2 text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-full transition-colors"
-                >
-                    {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
-                </button>
-            </div>
-        </div>
+  // --- THEME ENGINE ---
+  const getTheme = () => {
+    switch (mode) {
+      case 'pomodoro':
+        return {
+          bg: 'bg-gradient-to-br from-slate-900 via-navy-900 to-pink-900',
+          accent: 'text-pink-400',
+          ring: 'stroke-pink-500',
+          button: 'bg-pink-500 hover:bg-pink-600',
+          icon: <Brain size={20} />
+        };
+      case 'shortBreak':
+        return {
+          bg: 'bg-gradient-to-br from-teal-900 via-emerald-900 to-cyan-900',
+          accent: 'text-teal-400',
+          ring: 'stroke-teal-400',
+          button: 'bg-teal-500 hover:bg-teal-600',
+          icon: <Coffee size={20} />
+        };
+      case 'longBreak':
+        return {
+          bg: 'bg-gradient-to-br from-indigo-900 via-purple-900 to-violet-900',
+          accent: 'text-indigo-400',
+          ring: 'stroke-indigo-400',
+          button: 'bg-indigo-500 hover:bg-indigo-600',
+          icon: <Zap size={20} />
+        };
+      default:
+        return {
+          bg: 'bg-slate-900',
+          accent: 'text-white',
+          ring: 'stroke-white',
+          button: 'bg-slate-500',
+          icon: <Brain size={20} />
+        };
+    }
+  };
 
-        {/* Focus Input Anchor */}
-        <div className="mb-10 text-center relative group">
-            <p className="text-xs uppercase tracking-widest text-slate-400 font-bold mb-2">I am currently focusing on</p>
-            <div className="relative inline-block max-w-full">
+  const theme = getTheme();
+
+  // --- CIRCULAR PROGRESS LOGIC ---
+  const radius = 120;
+  const circumference = 2 * Math.PI * radius;
+  const progress = timeLeft / initialTime;
+  const dashOffset = circumference * (1 - progress);
+
+  return (
+    <div className={`w-full min-h-[calc(100vh-140px)] rounded-[3rem] shadow-2xl overflow-hidden relative flex flex-col items-center justify-center p-6 transition-colors duration-1000 ease-in-out ${theme.bg}`}>
+      
+      {/* Ambient Glows */}
+      <div className="absolute top-0 left-0 w-full h-full overflow-hidden pointer-events-none">
+        <div className={`absolute top-10 left-10 w-64 h-64 rounded-full blur-[100px] opacity-20 bg-white mix-blend-overlay`}></div>
+        <div className={`absolute bottom-10 right-10 w-96 h-96 rounded-full blur-[120px] opacity-20 bg-black mix-blend-multiply`}></div>
+      </div>
+
+      {/* --- CONTENT CONTAINER --- */}
+      <div className="relative z-10 w-full max-w-4xl grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        
+        {/* LEFT: TIMER & CONTROLS */}
+        <div className="flex flex-col items-center">
+            
+            {/* Focus Input */}
+            <div className="mb-8 w-full max-w-sm relative group">
                 <input 
-                    type="text" 
+                    type="text"
                     value={focusTask}
                     onChange={(e) => setFocusTask(e.target.value)}
-                    placeholder="Click to set task..."
-                    className="text-center text-xl md:text-2xl font-bold bg-transparent text-slate-800 dark:text-white placeholder-slate-300 dark:placeholder-slate-600 focus:outline-none border-b-2 border-transparent focus:border-pink-500 transition-all w-full min-w-[200px]"
+                    placeholder="What is your main focus?"
+                    className="w-full bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl py-4 px-12 text-center text-white placeholder-white/50 font-medium text-lg focus:outline-none focus:ring-2 focus:ring-white/30 transition-all"
                 />
-                <Pencil size={14} className="absolute -right-6 top-1/2 -translate-y-1/2 text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity" />
+                <Pencil className="absolute left-4 top-1/2 -translate-y-1/2 text-white/50" size={18} />
             </div>
-        </div>
 
-        {/* Conic Gradient Timer Visual */}
-        <div className="relative flex justify-center mb-10">
-            {/* Outer Ring Container */}
-            <div 
-                className="relative w-72 h-72 rounded-full flex items-center justify-center shadow-inner bg-slate-50 dark:bg-slate-700/30 transition-all"
-                style={{
-                    background: `conic-gradient(#ec4899 ${progressDeg}deg, transparent 0deg)`
-                }}
-            >
-                {/* Inner Circle (Hollow Effect) */}
-                <div className="absolute w-[92%] h-[92%] bg-white dark:bg-slate-800 rounded-full flex flex-col items-center justify-center shadow-sm z-10 transition-colors">
-                     <span className="text-7xl font-bold text-slate-800 dark:text-white font-mono tracking-tighter tabular-nums">
+            {/* SVG Timer Ring */}
+            <div className="relative mb-10 group cursor-pointer" onClick={toggleTimer}>
+                <svg width="300" height="300" className="transform -rotate-90">
+                    {/* Background Ring */}
+                    <circle 
+                        cx="150" cy="150" r={radius} 
+                        fill="transparent" 
+                        stroke="rgba(255,255,255,0.1)" 
+                        strokeWidth="12" 
+                    />
+                    {/* Progress Ring */}
+                    <circle 
+                        cx="150" cy="150" r={radius} 
+                        fill="transparent" 
+                        className={`transition-all duration-1000 ease-linear ${theme.ring} drop-shadow-[0_0_15px_rgba(255,255,255,0.3)]`}
+                        strokeWidth="12"
+                        strokeLinecap="round"
+                        strokeDasharray={circumference}
+                        strokeDashoffset={dashOffset}
+                    />
+                </svg>
+                
+                {/* Timer Text */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+                    <span className="text-7xl font-bold font-mono tracking-tighter drop-shadow-lg">
                         {formatTime(timeLeft)}
-                     </span>
-                     <span className="text-pink-500 font-bold uppercase tracking-widest text-sm mt-2">
-                        {isActive ? 'Focusing' : 'Paused'}
-                     </span>
+                    </span>
+                    <div className="flex items-center gap-2 mt-2 opacity-80 uppercase tracking-widest text-sm font-semibold">
+                        {theme.icon}
+                        <span>{isActive ? 'Running' : 'Paused'}</span>
+                    </div>
                 </div>
             </div>
-        </div>
 
-        {/* Mode Tabs */}
-        <div className="flex justify-center mb-8 gap-2">
-            {modes.map((m) => (
-                <button
-                key={m.id}
-                onClick={() => switchMode(m.id)}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all uppercase tracking-wide ${
-                    mode === m.id
-                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md transform scale-105'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
+            {/* Main Action Buttons */}
+            <div className="flex items-center gap-6">
+                <button 
+                    onClick={resetTimer}
+                    className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all active:scale-95 border border-white/10"
                 >
-                {m.label}
+                    <RotateCcw size={24} />
                 </button>
-            ))}
-             <button
-                onClick={() => switchMode('custom')}
-                className={`px-4 py-2 rounded-full text-xs font-bold transition-all uppercase tracking-wide ${
-                    mode === 'custom'
-                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-md transform scale-105'
-                    : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-600'
-                }`}
+
+                <button 
+                    onClick={toggleTimer}
+                    className={`h-20 w-20 rounded-[2rem] flex items-center justify-center text-white shadow-2xl transition-all hover:scale-105 active:scale-95 ${theme.button} shadow-lg`}
                 >
-                Custom
-            </button>
+                    {isActive ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1"/>}
+                </button>
+
+                <button 
+                    onClick={toggleMute}
+                    className="p-4 rounded-full bg-white/10 hover:bg-white/20 text-white backdrop-blur-sm transition-all active:scale-95 border border-white/10"
+                >
+                    {isMuted ? <VolumeX size={24} /> : <Volume2 size={24} />}
+                </button>
+            </div>
+
+            {/* Mode Switcher Pills */}
+            <div className="flex gap-3 mt-10 bg-black/20 p-2 rounded-2xl backdrop-blur-sm border border-white/5">
+                {[
+                  { id: 'pomodoro', label: 'Focus' },
+                  { id: 'shortBreak', label: 'Short Break' },
+                  { id: 'longBreak', label: 'Long Break' }
+                ].map((m) => (
+                   <button
+                     key={m.id}
+                     onClick={() => switchMode(m.id as TimerMode)}
+                     className={`px-4 py-2 rounded-xl text-sm font-bold transition-all ${
+                        mode === m.id 
+                        ? 'bg-white text-slate-900 shadow-md' 
+                        : 'text-white/60 hover:text-white hover:bg-white/10'
+                     }`}
+                   >
+                     {m.label}
+                   </button>
+                ))}
+            </div>
+            
+            <div className="mt-6">
+                 <button 
+                    onClick={toggleBrownNoise}
+                    className={`flex items-center gap-2 px-6 py-3 rounded-full font-bold transition-all border ${
+                        isPlayingNoise 
+                        ? 'bg-amber-500/20 border-amber-500 text-amber-200' 
+                        : 'bg-transparent border-white/10 text-white/60 hover:bg-white/5'
+                    }`}
+                 >
+                    <Waves size={18} className={isPlayingNoise ? 'animate-bounce' : ''} />
+                    {isPlayingNoise ? 'Brown Noise Active' : 'Enable Brown Noise'}
+                 </button>
+            </div>
+
         </div>
 
-        {/* Custom Input */}
-        {mode === 'custom' && (
-           <div className="flex justify-center items-center gap-2 mb-6 animate-fade-in">
-             <label className="text-sm font-medium text-slate-500">Duration (mins):</label>
-             <input 
-               type="number" 
-               min="1" 
-               max="180" 
-               value={customTime} 
-               onChange={handleCustomChange}
-               className="w-16 p-1.5 border border-slate-300 dark:border-slate-600 rounded-lg text-center font-bold bg-white dark:bg-slate-900 text-slate-900 dark:text-white focus:ring-2 focus:ring-pink-500 outline-none"
-             />
-           </div>
-        )}
-
-        {/* Main Controls */}
-        <div className="flex items-center justify-center gap-6">
-            <button
-                onClick={resetTimer}
-                className="p-4 rounded-2xl bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:hover:bg-slate-600 transition-all hover:scale-105"
-                title="Reset Timer"
+        {/* RIGHT: VIDEO PLACEHOLDER */}
+        <div className="h-full flex flex-col justify-center">
+            <div 
+                id="video-placeholder" 
+                className="w-full aspect-video bg-black/40 backdrop-blur-xl rounded-3xl overflow-hidden border border-white/10 shadow-2xl relative group"
             >
-                <RotateCcw size={24} />
-            </button>
-
-            <button
-                onClick={toggleTimer}
-                className={`w-20 h-20 rounded-2xl shadow-xl flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 ${
-                    isActive 
-                    ? 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-white' 
-                    : 'bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-pink-500/30'
-                }`}
-            >
-                {isActive ? <Pause size={36} fill="currentColor" /> : <Play size={36} fill="currentColor" className="ml-1" />}
-            </button>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-white/30 pointer-events-none">
+                    <div className="p-4 rounded-full bg-white/5 mb-4 group-hover:scale-110 transition-transform">
+                        <Play size={32} fill="currentColor" />
+                    </div>
+                    <span className="font-medium tracking-wide">YouTube Player Loading...</span>
+                </div>
+                {/* GlobalYoutubePlayer portals here */}
+            </div>
+            <div className="mt-6 p-6 bg-white/5 border border-white/10 rounded-2xl text-white/80 backdrop-blur-sm">
+                <h4 className="font-bold text-white mb-2 flex items-center gap-2">
+                    <Zap size={16} className="text-yellow-400" /> Pro Tip
+                </h4>
+                <p className="text-sm leading-relaxed opacity-80">
+                   When the timer ends, an alarm will sound. Click the button in the popup to stop it and start your break. Keep this tab open for background audio.
+                </p>
+            </div>
         </div>
 
       </div>
 
-      {/* 2. Video Player Placeholder */}
-      <div 
-        id="video-placeholder" 
-        className="w-full max-w-xl aspect-video bg-slate-200 dark:bg-slate-800/50 rounded-2xl overflow-hidden shadow-inner border border-slate-200 dark:border-slate-700 relative group"
-      >
-           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 pointer-events-none group-hover:opacity-0 transition-opacity z-0">
-               <span className="text-sm font-medium">Loading Playlist...</span>
-           </div>
-           {/* The GlobalYoutubePlayer will portal into here */}
-      </div>
+      {/* --- GLASSMORPHISM BREAK MODAL --- */}
+      {showBreakModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+            <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-fade-in" />
+            
+            <div className="relative bg-white/10 backdrop-blur-xl border border-white/20 p-8 rounded-[2rem] shadow-2xl max-w-md w-full text-center animate-in zoom-in duration-300">
+                <div className="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner animate-pulse">
+                    <Coffee size={40} className="text-white" />
+                </div>
+                
+                <h2 className="text-3xl font-black text-white mb-2 tracking-tight">Time's Up!</h2>
+                <p className="text-white/80 text-lg mb-8 font-medium">
+                    You crushed that session. Take a breath, you've earned a break.
+                </p>
+
+                <button 
+                    onClick={() => {
+                        stopAlarm();
+                        setShowBreakModal(false);
+                        switchMode(mode === 'pomodoro' ? 'shortBreak' : 'pomodoro');
+                    }}
+                    className="w-full py-4 rounded-xl bg-white text-slate-900 font-black text-lg hover:scale-[1.02] active:scale-95 transition-all shadow-xl"
+                >
+                    Stop Alarm & {mode === 'pomodoro' ? 'Start Break' : 'Start Focus'}
+                </button>
+            </div>
+        </div>
+      )}
 
     </div>
   );
