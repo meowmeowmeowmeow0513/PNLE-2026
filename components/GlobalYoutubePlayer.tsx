@@ -63,7 +63,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
           position: 'fixed',
           bottom: '1.5rem',
           right: '1.5rem',
-          width: isMiniExpanded ? '320px' : '200px',
+          width: isMiniExpanded ? '300px' : '200px',
           height: 'auto', // Allow content to dictate height
           borderRadius: '1rem',
           zIndex: 100, // Always on top when floating
@@ -91,8 +91,8 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
       ref={containerRef}
       style={style}
       className={`
-        overflow-hidden bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl 
-        border border-slate-200 dark:border-slate-700
+        overflow-hidden bg-white/95 dark:bg-[#0B1120]/95 backdrop-blur-xl 
+        border border-slate-200 dark:border-slate-800
       `}
     >
       {/* 
@@ -100,7 +100,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
          Only visible when NOT in Pomodoro Mode
       */}
       {!isPomodoroMode && (
-        <div className="flex items-center justify-between px-4 py-3 bg-slate-50/80 dark:bg-slate-800/80 border-b border-slate-100 dark:border-slate-700/50">
+        <div className="flex items-center justify-between px-4 py-2 bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800/50">
            <div className="flex items-center gap-2">
               <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`}></div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
@@ -124,10 +124,10 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
           Only visible when NOT in Pomodoro Mode AND Expanded
       */}
       {!isPomodoroMode && isMiniExpanded && (
-        <div className="p-4 border-b border-slate-100 dark:border-slate-700/50">
+        <div className="p-4 border-b border-slate-100 dark:border-slate-800/50">
              {/* Timer */}
              <div className="flex items-center justify-between mb-3">
-                <span className={`font-mono text-3xl font-black tracking-tighter ${
+                <span className={`font-mono text-2xl font-black tracking-tighter ${
                     isActive ? 'text-pink-500 dark:text-pink-400' : 'text-slate-700 dark:text-white'
                 }`}>
                     {formatTime(timeLeft)}
@@ -136,16 +136,16 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                 <div className="flex items-center gap-2">
                     <button 
                         onClick={toggleTimer}
-                        className="w-10 h-10 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 transition-transform active:scale-95"
+                        className="w-8 h-8 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 transition-transform active:scale-95"
                     >
-                        {isActive ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" className="ml-0.5" />}
+                        {isActive ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
                     </button>
                     {!isActive && (
                         <button 
                             onClick={resetTimer}
                             className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-colors"
                         >
-                            <RotateCcw size={14} />
+                            <RotateCcw size={12} />
                         </button>
                     )}
                 </div>
