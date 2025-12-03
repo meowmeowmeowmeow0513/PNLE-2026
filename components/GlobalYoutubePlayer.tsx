@@ -1,161 +1,230 @@
+
 import React, { useEffect, useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { NavigationItem } from '../types';
 import { usePomodoro } from './PomodoroContext';
-import { Pause, Play, RotateCcw, ChevronUp, ChevronDown, Maximize2 } from 'lucide-react';
+import { Pause, Play, RotateCcw, ChevronUp, ChevronDown, Maximize2, Move, ExternalLink } from 'lucide-react';
 
 interface GlobalYoutubePlayerProps {
   activeItem: NavigationItem;
 }
 
 const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem }) => {
-  const { timeLeft, isActive, toggleTimer, resetTimer, mode, focusTask } = usePomodoro();
+  const { timeLeft, isActive, toggleTimer, resetTimer, mode, focusTask, pipWindow, setPipWindow } = usePomodoro();
   
-  const [style, setStyle] = useState<React.CSSProperties>({
-    position: 'fixed',
-    bottom: '1.5rem',
-    right: '1.5rem',
-    width: '320px',
-    height: 'auto',
-    borderRadius: '1rem',
-    zIndex: 50,
-  });
+  // DRAG STATE
+  const [position, setPosition] = useState({ x: window.innerWidth - 340, y: window.innerHeight - 300 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStart = useRef({ x: 0, y: 0 });
 
+  // WIDGET STATE
   const [isMiniExpanded, setIsMiniExpanded] = useState(true);
   const [isPomodoroMode, setIsPomodoroMode] = useState(false);
   
-  // Ref for the player container
+  // REFS
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Format helper
+  // HELPER: Format Time
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // --- PICTURE IN PICTURE LOGIC ---
+  const togglePiP = async () => {
+    if (pipWindow) {
+      pipWindow.close();
+      setPipWindow(null);
+      return;
+    }
+
+    // Check if API is available
+    if (!('documentPictureInPicture' in window)) {
+      alert("Your browser doesn't support the 'Keep on Top' window feature yet. Try Chrome or Edge!");
+      return;
+    }
+
+    try {
+      const dpip = (window as any).documentPictureInPicture;
+      const win = await dpip.requestWindow({
+        width: 320,
+        height: 400,
+      });
+
+      // Copy Styles to new Window
+      [...document.styleSheets].forEach((styleSheet) => {
+        try {
+          const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+          const style = document.createElement('style');
+          style.textContent = cssRules;
+          win.document.head.appendChild(style);
+        } catch (e) {
+          const link = document.createElement('link');
+          link.rel = 'stylesheet';
+          link.type = styleSheet.type;
+          link.media = styleSheet.media.mediaText;
+          if (styleSheet.href) {
+             link.href = styleSheet.href;
+          }
+          win.document.head.appendChild(link);
+        }
+      });
+
+      // Handle Close
+      win.addEventListener('pagehide', () => {
+        setPipWindow(null);
+      });
+
+      setPipWindow(win);
+    } catch (err) {
+      console.error("Failed to open PiP window:", err);
+    }
+  };
+
+  // --- DRAG HANDLERS ---
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (isPomodoroMode || pipWindow) return; // Disable drag in focused mode or PiP
+    setIsDragging(true);
+    dragStart.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+  };
+
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      if (!isDragging) return;
+      setPosition({
+        x: e.clientX - dragStart.current.x,
+        y: e.clientY - dragStart.current.y
+      });
+    };
+    const handleMouseUp = () => setIsDragging(false);
+
+    if (isDragging) {
+      window.addEventListener('mousemove', handleMouseMove);
+      window.addEventListener('mouseup', handleMouseUp);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+  }, [isDragging]);
+
+  // --- POSITIONING LOGIC ---
   useEffect(() => {
     let animationFrameId: number;
 
-    const updatePosition = () => {
+    const updateLayout = () => {
       const anchor = document.getElementById('video-anchor');
       
-      if (activeItem === 'Pomodoro Timer' && anchor) {
-        // --- POMODORO MODE (Snaps to anchor) ---
+      if (activeItem === 'Pomodoro Timer' && anchor && !pipWindow) {
         setIsPomodoroMode(true);
-        const rect = anchor.getBoundingClientRect();
-        
-        setStyle({
-          position: 'fixed',
-          top: `${rect.top}px`,
-          left: `${rect.left}px`,
-          width: `${rect.width}px`,
-          height: `${rect.height}px`,
-          borderRadius: '1.5rem', // Match the rounded-3xl of the placeholder
-          zIndex: 40, // Below modals but above base content if needed
-          boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-        });
+        // If in Pomodoro Mode, snap to anchor via standard CSS (managed by classnames below)
       } else {
-        // --- MINI MODE (Floating Widget) ---
         setIsPomodoroMode(false);
-        
-        setStyle({
-          position: 'fixed',
-          bottom: '1.5rem',
-          right: '1.5rem',
-          width: isMiniExpanded ? '300px' : '200px',
-          height: 'auto', // Allow content to dictate height
-          borderRadius: '1rem',
-          zIndex: 100, // Always on top when floating
-          boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05)',
-          transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-        });
       }
-
-      animationFrameId = requestAnimationFrame(updatePosition);
+      animationFrameId = requestAnimationFrame(updateLayout);
     };
 
-    updatePosition();
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true); // Capture scroll to update anchor pos
+    updateLayout();
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [activeItem, pipWindow]);
 
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
-    };
-  }, [activeItem, isMiniExpanded]);
-
-  return (
+  // --- RENDER CONTENT ---
+  const PlayerContent = (
     <div 
       ref={containerRef}
-      style={style}
+      style={!isPomodoroMode && !pipWindow ? {
+          position: 'fixed',
+          left: `${position.x}px`,
+          top: `${position.y}px`,
+          width: isMiniExpanded ? '320px' : '220px',
+          zIndex: 100,
+          boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+      } : { 
+          width: '100%', 
+          height: '100%',
+          display: 'flex',
+          flexDirection: 'column'
+      }}
       className={`
-        overflow-hidden bg-white/95 dark:bg-[#0B1120]/95 backdrop-blur-xl 
-        border border-slate-200 dark:border-slate-800
+        overflow-hidden transition-all duration-300 ease-out
+        ${isPomodoroMode && !pipWindow 
+            ? 'absolute inset-0 rounded-3xl' // Snap to anchor
+            : 'bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-2xl' // Floating style
+        }
+        ${pipWindow ? 'h-full w-full' : ''}
       `}
     >
-      {/* 
-         MINI PLAYER HEADER 
-         Only visible when NOT in Pomodoro Mode
-      */}
-      {!isPomodoroMode && (
-        <div className="flex items-center justify-between px-4 py-2 bg-slate-50/80 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800/50">
+      {/* HEADER: Visible only in Mini/PiP Mode */}
+      {(!isPomodoroMode || pipWindow) && (
+        <div 
+          onMouseDown={handleMouseDown}
+          className={`flex items-center justify-between px-4 py-3 bg-slate-50/80 dark:bg-slate-950/50 border-b border-slate-100 dark:border-slate-800/50 cursor-grab active:cursor-grabbing select-none`}
+        >
            <div className="flex items-center gap-2">
-              <div className={`w-2 h-2 rounded-full ${isActive ? 'bg-green-500 animate-pulse' : 'bg-slate-400'}`}></div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <div className={`w-2.5 h-2.5 rounded-full ${isActive ? 'bg-pink-500 animate-pulse' : 'bg-slate-400'}`}></div>
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 {mode === 'pomodoro' ? 'Focus' : 'Break'}
               </span>
            </div>
            <div className="flex items-center gap-2">
-               {/* Expand/Collapse Button */}
-               <button 
-                 onClick={() => setIsMiniExpanded(!isMiniExpanded)}
-                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-               >
-                 {isMiniExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-               </button>
+               {!pipWindow && (
+                  <>
+                    <button 
+                        onClick={togglePiP}
+                        className="text-slate-400 hover:text-pink-500 transition-colors"
+                        title="Pop Out (Keep on Top)"
+                    >
+                        <ExternalLink size={14} />
+                    </button>
+                    <button 
+                        onClick={() => setIsMiniExpanded(!isMiniExpanded)}
+                        className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                    >
+                        {isMiniExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                    </button>
+                  </>
+               )}
            </div>
         </div>
       )}
 
-      {/* 
-          MINI PLAYER CONTROLS (Timer & Task)
-          Only visible when NOT in Pomodoro Mode AND Expanded
-      */}
-      {!isPomodoroMode && isMiniExpanded && (
-        <div className="p-4 border-b border-slate-100 dark:border-slate-800/50">
-             {/* Timer */}
-             <div className="flex items-center justify-between mb-3">
-                <span className={`font-mono text-2xl font-black tracking-tighter ${
+      {/* CONTROLS: Timer & Task Info */}
+      {((!isPomodoroMode && isMiniExpanded) || pipWindow) && (
+        <div className="p-5 border-b border-slate-100 dark:border-slate-800/50 bg-white dark:bg-slate-900">
+             {/* Big Timer */}
+             <div className="flex items-center justify-between mb-4">
+                <span className={`font-mono text-4xl font-black tracking-tighter ${
                     isActive ? 'text-pink-500 dark:text-pink-400' : 'text-slate-700 dark:text-white'
                 }`}>
                     {formatTime(timeLeft)}
                 </span>
                 
-                <div className="flex items-center gap-2">
-                    <button 
-                        onClick={toggleTimer}
-                        className="w-8 h-8 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/20 transition-transform active:scale-95"
-                    >
-                        {isActive ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
-                    </button>
+                <div className="flex items-center gap-3">
                     {!isActive && (
                         <button 
                             onClick={resetTimer}
-                            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-colors"
+                            className="w-10 h-10 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 hover:text-slate-700 dark:hover:text-white flex items-center justify-center transition-colors"
                         >
-                            <RotateCcw size={12} />
+                            <RotateCcw size={16} />
                         </button>
                     )}
+                    <button 
+                        onClick={toggleTimer}
+                        className="w-12 h-12 rounded-full bg-pink-500 hover:bg-pink-600 text-white flex items-center justify-center shadow-lg shadow-pink-500/30 transition-transform active:scale-95"
+                    >
+                        {isActive ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
+                    </button>
                 </div>
             </div>
 
             {/* Current Task */}
             {focusTask && (
-                <div>
-                    <p className="text-[10px] text-slate-400 uppercase font-bold mb-0.5">Focusing On</p>
-                    <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
+                <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-2.5 border border-slate-100 dark:border-slate-700/50">
+                    <p className="text-[10px] text-slate-400 uppercase font-bold mb-0.5 flex items-center gap-1">
+                        <Maximize2 size={10} /> Focusing On
+                    </p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
                         {focusTask}
                     </p>
                 </div>
@@ -163,17 +232,9 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
         </div>
       )}
 
-      {/* 
-          YOUTUBE IFRAME CONTAINER 
-          This is the permanent home of the IFrame.
-          When in Mini Mode, it behaves like a small video embed.
-          When in Pomodoro Mode, it fills the anchor area.
-      */}
+      {/* VIDEO CONTAINER */}
       <div 
-        className={`
-          relative w-full bg-black transition-all duration-500
-          ${isPomodoroMode ? 'h-full rounded-3xl' : (isMiniExpanded ? 'aspect-video' : 'h-0')}
-        `}
+        className={`relative bg-black transition-all duration-500 flex-1 ${!isMiniExpanded && !isPomodoroMode && !pipWindow ? 'h-0' : 'min-h-[180px]'}`}
       >
         <iframe 
           width="100%" 
@@ -187,13 +248,38 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
           className="w-full h-full object-cover"
         />
         
-        {/* Helper overlay for dragging if needed, currently just acts as click blocker for header */}
-        {!isPomodoroMode && (
-            <div className="absolute top-0 left-0 w-full h-8 bg-transparent pointer-events-none" />
+        {/* Drag Overlay (Transparent) */}
+        {!isPomodoroMode && !pipWindow && (
+            <div 
+                className="absolute top-0 left-0 w-full h-8 bg-transparent z-10 cursor-grab active:cursor-grabbing"
+                onMouseDown={handleMouseDown}
+            />
         )}
       </div>
     </div>
   );
+
+  // --- RENDER LOGIC ---
+  // 1. If PiP is active, Portal to the new window.
+  if (pipWindow) {
+    return createPortal(
+        <div className="h-screen w-screen bg-slate-900 text-white flex flex-col">
+            {PlayerContent}
+        </div>, 
+        pipWindow.document.body
+    );
+  }
+
+  // 2. If Pomodoro Mode (and no PiP), Portal to the anchor element inside Pomodoro.tsx
+  if (isPomodoroMode) {
+      const anchor = document.getElementById('video-anchor');
+      if (anchor) {
+          return createPortal(PlayerContent, anchor);
+      }
+  }
+
+  // 3. Otherwise, render as a fixed floating widget in the main App
+  return PlayerContent;
 };
 
 export default GlobalYoutubePlayer;
