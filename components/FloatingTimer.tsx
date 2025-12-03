@@ -1,7 +1,6 @@
-
 import React, { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import { Pause, Play, Timer, ExternalLink, X } from 'lucide-react';
+import { Pause, Play, Maximize2, X, Timer } from 'lucide-react';
 import { usePomodoro } from './PomodoroContext';
 import { NavigationItem } from '../types';
 
@@ -22,7 +21,6 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ activeItem }) => {
     };
   }, [pipWindow]);
 
-  // Logic to handle Document Picture-in-Picture
   const togglePiP = async () => {
     if (pipWindow) {
       pipWindow.close();
@@ -31,7 +29,7 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ activeItem }) => {
     }
 
     if (!('documentPictureInPicture' in window)) {
-      alert("Your browser doesn't support the Document Picture-in-Picture API. Try Chrome or Edge.");
+      alert("Your browser doesn't support the Document Picture-in-Picture API.");
       return;
     }
 
@@ -39,36 +37,39 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ activeItem }) => {
       // @ts-ignore
       const win = await window.documentPictureInPicture.requestWindow({
         width: 320,
-        height: 120,
+        height: 100,
       });
 
-      // CRITICAL: Copy all style sheets (Tailwind, Fonts) to the new window
+      // --- CRITICAL: Copy All Stylesheets ---
       [...document.styleSheets].forEach((styleSheet) => {
         try {
           if (styleSheet.href) {
+            // Link tags (Tailwind CDN)
             const link = document.createElement('link');
             link.rel = 'stylesheet';
+            link.type = 'text/css';
             link.href = styleSheet.href;
             win.document.head.appendChild(link);
           } else {
-            const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+            // Internal styles
+            const cssRules = [...styleSheet.cssRules].map(rule => rule.cssText).join('');
             const style = document.createElement('style');
             style.textContent = cssRules;
             win.document.head.appendChild(style);
           }
         } catch (e) {
-          console.log("Could not copy stylesheet", e);
+          console.warn("Could not copy stylesheet:", e);
         }
       });
-      
-      // Force dark mode class if present on main window
+
+      // Ensure Dark Mode persists if active
       if (document.documentElement.classList.contains('dark')) {
-          win.document.documentElement.classList.add('dark');
+        win.document.documentElement.classList.add('dark');
       }
 
-      win.document.body.className = "bg-navy-900 dark:bg-slate-900 overflow-hidden flex items-center justify-center";
+      // Basic Body Reset for PiP
+      win.document.body.className = "bg-slate-900 overflow-hidden flex items-center justify-center p-0 m-0 h-full w-full";
 
-      // Handle closing of PiP window
       win.addEventListener('pagehide', () => {
         setPipWindow(null);
       });
@@ -79,7 +80,6 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ activeItem }) => {
     }
   };
 
-  // Condition: Show ONLY if active AND NOT on Pomodoro page
   if (!isActive || activeItem === 'Pomodoro Timer') {
     return null;
   }
@@ -90,61 +90,68 @@ const FloatingTimer: React.FC<FloatingTimerProps> = ({ activeItem }) => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // The content of the timer
+  // Determine glow color based on mode
+  const getGlowColor = () => {
+    if (mode === 'pomodoro') return 'border-pink-500 shadow-pink-500/30';
+    if (mode === 'shortBreak') return 'border-teal-400 shadow-teal-400/30';
+    return 'border-indigo-500 shadow-indigo-500/30';
+  };
+
   const TimerContent = (
-    <div className={`flex items-center gap-4 p-3 pr-5 bg-navy-900 text-white dark:bg-slate-800 dark:text-white rounded-full shadow-2xl border border-white/10 dark:border-slate-600 transition-all ${!pipWindow ? 'hover:scale-105' : ''}`}>
-      
-      {/* Icon / Mode Indicator */}
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
-          mode === 'shortBreak' || mode === 'longBreak' ? 'bg-green-500' : 'bg-pink-500'
-      } shadow-lg shadow-pink-500/20`}>
-          <Timer size={24} className="text-white" />
+    <div className={`
+      flex items-center gap-4 px-4 py-2.5 rounded-full 
+      bg-black/90 backdrop-blur-md text-white 
+      border-2 ${getGlowColor()} shadow-lg 
+      transition-all duration-300 hover:scale-105
+    `}>
+      {/* Dynamic Icon */}
+      <div className={`p-2 rounded-full ${mode === 'pomodoro' ? 'bg-pink-600' : 'bg-teal-600'} animate-pulse`}>
+         <Timer size={16} className="text-white" />
       </div>
 
-      <div className="flex flex-col min-w-[70px]">
-          <span className="text-[10px] opacity-70 uppercase tracking-widest font-bold">
-              {mode === 'pomodoro' ? 'Focus' : 'Break'}
-          </span>
-          <span className="font-mono font-bold text-2xl leading-none tracking-tight">
-              {formatTime(timeLeft)}
-          </span>
+      <div className="flex flex-col">
+        <span className="font-mono text-2xl font-bold leading-none tracking-tight">
+          {formatTime(timeLeft)}
+        </span>
+        <span className="text-[9px] uppercase tracking-widest font-bold opacity-70">
+          {mode === 'pomodoro' ? 'Focusing' : 'Break'}
+        </span>
       </div>
 
-      <div className="flex items-center gap-1 border-l border-white/10 pl-3 ml-1">
+      <div className="h-6 w-[1px] bg-white/20 mx-1"></div>
+
+      <div className="flex items-center gap-1">
         <button 
           onClick={toggleTimer}
-          className="p-2.5 rounded-full hover:bg-white/10 transition-colors active:scale-95"
-          title={isActive ? "Pause" : "Resume"}
+          className="p-2 hover:bg-white/20 rounded-full transition-colors active:scale-95"
         >
-          {isActive ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" />}
+          {isActive ? <Pause size={18} fill="currentColor" /> : <Play size={18} fill="currentColor" />}
         </button>
-        
+
         {!pipWindow && (
           <button 
             onClick={togglePiP}
-            className="p-2.5 rounded-full hover:bg-white/10 transition-colors text-slate-300 hover:text-white active:scale-95"
-            title="Pop out player"
+            className="p-2 hover:bg-white/20 rounded-full transition-colors active:scale-95"
+            title="Open Mini Player"
           >
-            <ExternalLink size={18} />
+            <Maximize2 size={16} />
           </button>
         )}
       </div>
     </div>
   );
 
-  // If PiP window is active, render into it using Portal
   if (pipWindow) {
     return ReactDOM.createPortal(
-      <div className="flex items-center justify-center h-full w-full">
+      <div className="w-full h-full flex items-center justify-center">
         {TimerContent}
       </div>,
       pipWindow.document.body
     );
   }
 
-  // Otherwise render fixed floating widget in main window
   return (
-    <div className="fixed bottom-8 right-8 z-50 animate-fade-in origin-bottom-right">
+    <div className="fixed bottom-6 right-6 z-[100] animate-fade-in origin-bottom-right">
       {TimerContent}
     </div>
   );
