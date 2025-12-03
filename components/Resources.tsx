@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Globe, X, Link as LinkIcon, Send, Check, Loader2 } from 'lucide-react';
+import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Globe, X, Link as LinkIcon, Send, Check, Loader2, AlertCircle } from 'lucide-react';
 import { ResourceLink } from '../types';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -23,7 +23,8 @@ const Resources: React.FC = () => {
 
   // Request Form State
   const [requestForm, setRequestForm] = useState({ title: '', url: '', type: 'Website' });
-  const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success'>('idle');
+  const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const resources: EnhancedResource[] = [
     {
@@ -107,17 +108,24 @@ const Resources: React.FC = () => {
     if (!requestForm.title.trim() || !requestForm.url.trim()) return;
 
     setRequestStatus('loading');
+    setErrorMessage('');
     
     try {
-        // Save to Firebase Firestore
-        await addDoc(collection(db, 'resource_requests'), {
+        if (!currentUser) {
+            throw new Error("You must be logged in to submit requests.");
+        }
+
+        // Write to user's subcollection to bypass root-level security restrictions
+        const userRequestsRef = collection(db, 'users', currentUser.uid, 'resource_requests');
+
+        await addDoc(userRequestsRef, {
             title: requestForm.title,
             url: requestForm.url,
             type: requestForm.type,
-            requestedBy: currentUser?.email || 'Anonymous',
-            userId: currentUser?.uid || 'unknown',
+            requestedBy: currentUser.email || 'Anonymous',
+            userId: currentUser.uid,
             createdAt: new Date().toISOString(),
-            status: 'pending' // pending, approved, rejected
+            status: 'pending'
         });
 
         setRequestStatus('success');
@@ -129,10 +137,10 @@ const Resources: React.FC = () => {
             setRequestForm({ title: '', url: '', type: 'Website' });
         }, 1500);
 
-    } catch (error) {
+    } catch (error: any) {
         console.error("Error submitting resource request:", error);
-        alert("Failed to send request. Please check your connection.");
-        setRequestStatus('idle');
+        setRequestStatus('error');
+        setErrorMessage(error.message || "Failed to send request.");
     }
   };
 
@@ -360,6 +368,14 @@ const Resources: React.FC = () => {
                 </div>
             ) : (
                 <form onSubmit={handleRequestSubmit} className="space-y-4">
+                    {/* Error Message */}
+                    {requestStatus === 'error' && (
+                        <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-2">
+                            <AlertCircle size={16} className="text-red-500 shrink-0 mt-0.5" />
+                            <p className="text-xs text-red-600 dark:text-red-400 font-medium">{errorMessage}</p>
+                        </div>
+                    )}
+
                     <div>
                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Resource Title</label>
                         <input 
