@@ -12,7 +12,6 @@ import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
 import GlobalYoutubePlayer from './components/GlobalYoutubePlayer'; // Enhanced Persistent Player
-import ClinicalChatBot from './components/ClinicalChatBot'; // New Chatbot Component
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
 import { PomodoroProvider } from './components/PomodoroContext'; 
@@ -134,9 +133,6 @@ const App: React.FC = () => {
                 and the floating mini-player widget. It is never unmounted.
             */}
             <GlobalYoutubePlayer activeItem={activeItem} />
-            
-            {/* Clinical Instructor Chatbot (Floating Widget) */}
-            <ClinicalChatBot />
           </div>
         </div>
       </TaskProvider>
