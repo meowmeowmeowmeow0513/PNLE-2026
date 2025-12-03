@@ -1,3 +1,4 @@
+
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
 
 export type TimerMode = 'pomodoro' | 'shortBreak' | 'longBreak' | 'custom';
@@ -13,6 +14,7 @@ interface PomodoroContextType {
   isPlayingNoise: boolean;
   isAlarmRinging: boolean;
   showBreakModal: boolean;
+  pipWindow: Window | null;
   toggleTimer: () => void;
   resetTimer: () => void;
   switchMode: (mode: TimerMode) => void;
@@ -22,6 +24,7 @@ interface PomodoroContextType {
   toggleBrownNoise: () => void;
   stopAlarm: () => void;
   setShowBreakModal: (show: boolean) => void;
+  setPipWindow: (win: Window | null) => void;
 }
 
 const PomodoroContext = createContext<PomodoroContextType | undefined>(undefined);
@@ -52,6 +55,9 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
   const [isPlayingNoise, setIsPlayingNoise] = useState(false);
   const [isAlarmRinging, setIsAlarmRinging] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
+  
+  // PiP State
+  const [pipWindow, setPipWindow] = useState<Window | null>(null);
 
   // Refs
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -217,9 +223,7 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     setInitialTime(minutes * 60);
   };
 
-  // CLAMPING LOGIC ADDED HERE
   const setCustomTimeValue = (minutes: number) => {
-    // Clamp between 1 and 180 minutes (3 hours max)
     const clamped = Math.min(180, Math.max(1, Math.floor(minutes)));
     setCustomTime(clamped);
     if (mode === 'custom') {
@@ -252,6 +256,7 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     isPlayingNoise,
     isAlarmRinging,
     showBreakModal,
+    pipWindow,
     toggleTimer,
     resetTimer,
     switchMode,
@@ -260,7 +265,8 @@ export const PomodoroProvider: React.FC<PomodoroProviderProps> = ({ children }) 
     setFocusTask,
     toggleBrownNoise,
     stopAlarm,
-    setShowBreakModal
+    setShowBreakModal,
+    setPipWindow
   };
 
   return (
