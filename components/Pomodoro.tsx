@@ -56,33 +56,32 @@ const Pomodoro: React.FC = () => {
   };
 
   // --- THEME ENGINE ---
-  // STRICT SEPARATION: Dark = Cyberpunk/Neon, Light = Clean/Paper
   const getTheme = () => {
     if (isDark) {
-        // DARK MODE
+        // DARK MODE: Deep Space Neon
         switch (mode) {
             case 'pomodoro': return { 
-                ringColor: '#ec4899', // Pink
-                ringGlow: 'drop-shadow(0 0 12px rgba(236, 72, 153, 0.5))',
+                ringColor: '#ec4899', // Pink-500
+                ringGlow: 'drop-shadow(0 0 16px rgba(236, 72, 153, 0.4))',
                 trackColor: 'rgba(255,255,255,0.05)',
                 textColor: 'text-white',
-                badgeBg: 'bg-pink-500/10 text-pink-400 border border-pink-500/20',
+                badgeBg: 'bg-pink-500/10 text-pink-400 border border-pink-500/20 shadow-[0_0_15px_-5px_rgba(236,72,153,0.3)]',
                 icon: <Brain size={18} /> 
             };
             case 'shortBreak': return { 
-                ringColor: '#10b981', // Emerald
-                ringGlow: 'drop-shadow(0 0 12px rgba(16, 185, 129, 0.5))',
+                ringColor: '#10b981', // Emerald-500
+                ringGlow: 'drop-shadow(0 0 16px rgba(16, 185, 129, 0.4))',
                 trackColor: 'rgba(255,255,255,0.05)',
                 textColor: 'text-white',
-                badgeBg: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20',
+                badgeBg: 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shadow-[0_0_15px_-5px_rgba(16,185,129,0.3)]',
                 icon: <Coffee size={18} /> 
             };
             case 'longBreak': return { 
-                ringColor: '#8b5cf6', // Violet
-                ringGlow: 'drop-shadow(0 0 12px rgba(139, 92, 246, 0.5))',
+                ringColor: '#8b5cf6', // Violet-500
+                ringGlow: 'drop-shadow(0 0 16px rgba(139, 92, 246, 0.4))',
                 trackColor: 'rgba(255,255,255,0.05)',
                 textColor: 'text-white',
-                badgeBg: 'bg-violet-500/10 text-violet-400 border border-violet-500/20',
+                badgeBg: 'bg-violet-500/10 text-violet-400 border border-violet-500/20 shadow-[0_0_15px_-5px_rgba(139,92,246,0.3)]',
                 icon: <Zap size={18} /> 
             };
             default: return { 
@@ -95,28 +94,28 @@ const Pomodoro: React.FC = () => {
             };
         }
     } else {
-        // LIGHT MODE (Zen/Minimal)
+        // LIGHT MODE: Clean Paper
         switch (mode) {
             case 'pomodoro': return { 
-                ringColor: '#db2777', // Pink 600
+                ringColor: '#db2777', 
                 ringGlow: 'none',
-                trackColor: '#f1f5f9', // Slate 100
+                trackColor: '#e2e8f0',
                 textColor: 'text-slate-800',
                 badgeBg: 'bg-pink-50 text-pink-600 border border-pink-100',
                 icon: <Brain size={18} /> 
             };
             case 'shortBreak': return { 
-                ringColor: '#059669', // Emerald 600
+                ringColor: '#059669',
                 ringGlow: 'none',
-                trackColor: '#f1f5f9',
+                trackColor: '#e2e8f0',
                 textColor: 'text-slate-800',
                 badgeBg: 'bg-emerald-50 text-emerald-600 border border-emerald-100',
                 icon: <Coffee size={18} /> 
             };
             case 'longBreak': return { 
-                ringColor: '#7c3aed', // Violet 600
+                ringColor: '#7c3aed',
                 ringGlow: 'none',
-                trackColor: '#f1f5f9',
+                trackColor: '#e2e8f0',
                 textColor: 'text-slate-800',
                 badgeBg: 'bg-violet-50 text-violet-600 border border-violet-100',
                 icon: <Zap size={18} /> 
@@ -124,7 +123,7 @@ const Pomodoro: React.FC = () => {
             default: return { 
                 ringColor: '#64748b', 
                 ringGlow: 'none', 
-                trackColor: '#f1f5f9',
+                trackColor: '#e2e8f0',
                 textColor: 'text-slate-800',
                 badgeBg: 'bg-slate-100 text-slate-600',
                 icon: <Settings size={18} /> 
@@ -135,7 +134,7 @@ const Pomodoro: React.FC = () => {
 
   const theme = getTheme();
 
-  // --- POP OUT LOGIC ---
+  // --- POP OUT LOGIC (Updated for reliability) ---
   const handlePopOut = async () => {
     if (pipWindow) {
       pipWindow.close();
@@ -149,26 +148,29 @@ const Pomodoro: React.FC = () => {
 
     try {
       const dpip = (window as any).documentPictureInPicture;
-      const win = await dpip.requestWindow({ width: 320, height: 400 });
+      const win = await dpip.requestWindow({ width: 340, height: 420 });
 
-      // Copy Styles
+      // CRITICAL: Copy all styles to ensure the pop-up looks exactly like the app
       [...document.styleSheets].forEach((styleSheet) => {
         try {
-          const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
-          const style = document.createElement('style');
-          style.textContent = cssRules;
-          win.document.head.appendChild(style);
+          if (styleSheet.href) {
+             const link = win.document.createElement('link');
+             link.rel = 'stylesheet';
+             link.href = styleSheet.href;
+             win.document.head.appendChild(link);
+          } else {
+             const cssRules = [...styleSheet.cssRules].map((rule: any) => rule.cssText).join('');
+             const style = win.document.createElement('style');
+             style.textContent = cssRules;
+             win.document.head.appendChild(style);
+          }
         } catch (e) {
-          const link = document.createElement('link');
-          link.rel = 'stylesheet';
-          link.type = styleSheet.type;
-          if (styleSheet.href) link.href = styleSheet.href;
-          win.document.head.appendChild(link);
+          console.warn("Could not copy stylesheet", e);
         }
       });
       
-      // Force PiP body class
-      win.document.body.className = isDark ? 'dark bg-slate-950' : 'bg-white';
+      // Force PiP body class to match current theme
+      win.document.body.className = isDark ? 'dark bg-[#0B1120]' : 'bg-white';
 
       win.addEventListener('pagehide', () => setPipWindow(null));
       setPipWindow(win);
@@ -191,39 +193,36 @@ const Pomodoro: React.FC = () => {
         {/* --- LEFT COLUMN: TIMER --- */}
         <div className="flex flex-col items-center justify-center relative animate-fade-in">
             
-            {/* Pop Out Button - Floating Top Right of Timer */}
+            {/* Pop Out Button */}
             {!pipWindow && (
                 <button 
                     onClick={handlePopOut}
-                    className="absolute top-0 right-4 p-2.5 text-slate-400 hover:text-pink-500 bg-white/50 dark:bg-slate-800/50 backdrop-blur-sm rounded-xl border border-transparent hover:border-pink-200 dark:hover:border-pink-900 transition-all z-20"
-                    title="Pop Out Timer (Keep on Top)"
+                    className="absolute top-0 right-4 p-2.5 text-slate-400 hover:text-pink-500 bg-white/50 dark:bg-slate-800/50 backdrop-blur-md rounded-xl border border-transparent hover:border-pink-200 dark:hover:border-pink-900 transition-all z-20 group"
+                    title="Pop Out Timer"
                 >
-                    <Maximize2 size={20} />
+                    <Maximize2 size={20} className="group-hover:scale-110 transition-transform"/>
                 </button>
             )}
 
-            {/* Task Input */}
-            <div className="mb-8 w-full max-w-sm relative z-10">
+            {/* Focus Task Input (Ghost Style) */}
+            <div className="mb-10 w-full max-w-sm relative z-10 group">
                 <input 
                     type="text"
                     value={focusTask}
                     onChange={(e) => setFocusTask(e.target.value)}
-                    placeholder="What are you focusing on?"
-                    className={`w-full bg-transparent border-b-2 py-3 text-center text-xl font-medium transition-all focus:outline-none placeholder-slate-400 dark:placeholder-slate-600
-                        ${isDark 
-                            ? 'border-slate-800 text-white focus:border-pink-500' 
-                            : 'border-slate-200 text-slate-800 focus:border-pink-500'}`}
+                    placeholder="What is your main focus?"
+                    className="w-full bg-transparent border-b-2 py-3 text-center text-xl font-medium transition-all focus:outline-none placeholder-slate-400/50 dark:placeholder-slate-600 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-white focus:border-pink-500 dark:focus:border-pink-500"
                 />
                 <button 
                   onClick={() => setShowTaskDropdown(!showTaskDropdown)}
-                  className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-pink-500 transition-colors"
+                  className="absolute right-0 top-1/2 -translate-y-1/2 p-2 text-slate-400 hover:text-pink-500 transition-colors opacity-0 group-hover:opacity-100"
                 >
                   <ListTodo size={20} />
                 </button>
                 
                 {/* Task Dropdown */}
                 {showTaskDropdown && (
-                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-xl shadow-2xl border border-slate-200 dark:border-slate-700 overflow-hidden z-30 animate-in fade-in zoom-in-95">
+                  <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#0f172a] rounded-xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden z-30 animate-in fade-in zoom-in-95">
                      <div className="max-h-56 overflow-y-auto custom-scrollbar">
                         {todaysTasks.length === 0 ? (
                            <div className="p-4 text-center text-sm text-slate-500">No pending tasks for today.</div>
@@ -246,22 +245,25 @@ const Pomodoro: React.FC = () => {
 
             {/* TIMER DISPLAY */}
             {pipWindow ? (
-                <div className="w-[300px] h-[300px] rounded-full bg-slate-100 dark:bg-slate-900 border-4 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
+                <div className="w-[300px] h-[300px] rounded-full bg-slate-50 dark:bg-[#0f172a] border-2 border-dashed border-slate-200 dark:border-slate-800 flex flex-col items-center justify-center text-slate-400 dark:text-slate-500">
                     <ExternalLink size={48} className="mb-4 opacity-50" />
                     <span className="text-sm font-bold uppercase tracking-widest">Active in Pop-up</span>
-                    <button onClick={handlePopOut} className="mt-4 px-4 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-lg text-xs font-bold shadow-sm">
+                    <button onClick={handlePopOut} className="mt-4 px-5 py-2 bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-full text-xs font-bold shadow-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
                         Bring Back
                     </button>
                 </div>
             ) : (
                 <div className="relative mb-10 group cursor-pointer" onClick={toggleTimer}>
+                    {/* Glow Backing */}
+                    <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-pink-500/5 to-purple-500/5 blur-3xl opacity-50 pointer-events-none"></div>
+
                     <svg width="340" height="340" className="transform -rotate-90 relative z-10">
                         {/* Track */}
                         <circle 
                             cx="170" cy="170" r={radius} 
                             fill="transparent" 
                             stroke={theme.trackColor}
-                            strokeWidth="6" 
+                            strokeWidth="4" 
                         />
                         {/* Progress */}
                         <circle 
@@ -272,16 +274,19 @@ const Pomodoro: React.FC = () => {
                             strokeLinecap="round"
                             strokeDasharray={circumference}
                             strokeDashoffset={dashOffset}
-                            style={{ filter: theme.ringGlow, transition: 'stroke-dashoffset 0.5s linear' }}
+                            style={{ 
+                                filter: theme.ringGlow, 
+                                transition: 'stroke-dashoffset 0.5s linear, stroke 0.3s ease' 
+                            }}
                         />
                     </svg>
                     
                     {/* Center Content */}
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none z-20">
-                        <span className={`text-7xl lg:text-8xl font-mono font-bold tracking-tighter tabular-nums ${theme.textColor}`}>
+                        <span className={`text-7xl lg:text-8xl font-mono font-bold tracking-tighter tabular-nums ${theme.textColor} drop-shadow-sm`}>
                             {formatTime(timeLeft)}
                         </span>
-                        <div className={`flex items-center gap-2 mt-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest transition-colors ${theme.badgeBg}`}>
+                        <div className={`flex items-center gap-2 mt-4 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${theme.badgeBg}`}>
                             {theme.icon}
                             <span>{isActive ? 'Running' : 'Paused'}</span>
                         </div>
@@ -310,23 +315,24 @@ const Pomodoro: React.FC = () => {
             <div className="flex items-center gap-6 z-10">
                 <button 
                     onClick={resetTimer}
-                    className="p-4 rounded-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                    className="p-4 rounded-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:scale-105 active:scale-95"
                 >
                     <RotateCcw size={20} />
                 </button>
 
                 <button 
                     onClick={toggleTimer}
-                    className={`p-6 rounded-full shadow-xl transition-transform hover:scale-105 active:scale-95 text-white ${
-                        isActive ? 'bg-amber-500' : 'bg-pink-600'
+                    className={`p-7 rounded-full shadow-2xl transition-all hover:scale-105 active:scale-95 text-white flex items-center justify-center relative overflow-hidden ${
+                        isActive ? 'bg-amber-500 shadow-amber-500/30' : 'bg-pink-600 shadow-pink-600/30'
                     }`}
                 >
+                    <div className="absolute inset-0 bg-white/20 blur-md opacity-0 hover:opacity-100 transition-opacity"></div>
                     {isActive ? <Pause size={32} fill="currentColor" /> : <Play size={32} fill="currentColor" className="ml-1"/>}
                 </button>
 
                 <button 
                     onClick={toggleMute}
-                    className="p-4 rounded-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+                    className="p-4 rounded-full bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400 shadow-sm border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-all hover:scale-105 active:scale-95"
                 >
                     {isMuted ? <VolumeX size={20} /> : <Volume2 size={20} />}
                 </button>
@@ -343,9 +349,9 @@ const Pomodoro: React.FC = () => {
                    <button
                      key={m.id}
                      onClick={() => switchMode(m.id as TimerMode)}
-                     className={`px-4 py-2 rounded-lg text-xs font-bold transition-all border ${
+                     className={`px-4 py-2 rounded-xl text-xs font-bold transition-all border ${
                         mode === m.id 
-                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 shadow-sm' 
+                        ? 'bg-white dark:bg-slate-800 text-slate-900 dark:text-white border-slate-200 dark:border-slate-700 shadow-sm scale-105' 
                         : 'border-transparent text-slate-500 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
                      }`}
                    >
@@ -370,10 +376,6 @@ const Pomodoro: React.FC = () => {
 
         {/* --- RIGHT COLUMN: VIDEO PLAYER ANCHOR --- */}
         <div className="flex flex-col h-full justify-center relative">
-             {/* 
-                VIDEO ANCHOR DIV
-                The GlobalYoutubePlayer will detect this div's position and overlay the iframe on top of it.
-             */}
              <div className="relative group w-full aspect-video">
                  {/* Placeholder / Backdrop */}
                  <div 
@@ -386,7 +388,7 @@ const Pomodoro: React.FC = () => {
                  </div>
              </div>
 
-             <div className="mt-8 bg-white dark:bg-slate-800 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm">
+             <div className="mt-8 bg-white dark:bg-slate-800/50 p-6 rounded-2xl border border-slate-100 dark:border-slate-700 shadow-sm backdrop-blur-sm">
                  <div className="flex items-center gap-2 mb-2">
                     <Zap size={16} className="text-yellow-500 fill-current" />
                     <h3 className="font-bold text-slate-800 dark:text-white text-sm">Pro Tip</h3>
@@ -401,17 +403,20 @@ const Pomodoro: React.FC = () => {
 
       </div>
 
-      {/* --- BREAK MODAL --- */}
+      {/* --- BREAK MODAL (High-End Notification Style) --- */}
       {showBreakModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             <div className="absolute inset-0 bg-black/60 backdrop-blur-md animate-fade-in" />
-            <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center animate-in zoom-in duration-300">
-                <div className="w-20 h-20 bg-pink-50 dark:bg-pink-900/30 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="relative bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-800 p-8 rounded-3xl shadow-2xl max-w-sm w-full text-center animate-in zoom-in duration-300 overflow-hidden">
+                {/* Background Glow */}
+                <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500"></div>
+                
+                <div className="w-20 h-20 bg-pink-50 dark:bg-pink-900/20 rounded-full flex items-center justify-center mx-auto mb-6">
                     <Coffee size={32} className="text-pink-600 dark:text-pink-400 animate-bounce" />
                 </div>
                 <h2 className="text-2xl font-black text-slate-900 dark:text-white mb-2">Time's Up!</h2>
                 <p className="text-slate-500 dark:text-slate-400 text-sm mb-6">
-                    Good job! Take a moment to reset.
+                    Good job! Take a moment to reset your mind.
                 </p>
                 <div className="flex flex-col gap-3">
                     <button 
@@ -420,7 +425,7 @@ const Pomodoro: React.FC = () => {
                             setShowBreakModal(false);
                             switchMode(mode === 'pomodoro' ? 'shortBreak' : 'pomodoro');
                         }}
-                        className="w-full py-3 rounded-xl bg-pink-600 text-white font-bold shadow-lg hover:scale-[1.02] transition-transform"
+                        className="w-full py-3.5 rounded-xl bg-pink-600 text-white font-bold shadow-lg shadow-pink-500/25 hover:scale-[1.02] transition-transform"
                     >
                         {mode === 'pomodoro' ? 'Start Break' : 'Start Focus'}
                     </button>
@@ -429,7 +434,7 @@ const Pomodoro: React.FC = () => {
                             stopAlarm();
                             setShowBreakModal(false);
                         }}
-                        className="text-slate-400 text-xs py-2 hover:text-slate-600 dark:hover:text-white"
+                        className="text-slate-400 text-xs py-2 hover:text-slate-600 dark:hover:text-white transition-colors"
                     >
                         Dismiss
                     </button>
