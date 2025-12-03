@@ -22,18 +22,23 @@ const MnemonicWidget: React.FC = () => {
         return;
     }
 
-    // If we already have data, just expand
-    if (explanation) {
+    // If we already have data (and it wasn't an error), just expand
+    if (explanation && !explanation.startsWith("Error")) {
         setIsExpanded(true);
         return;
     }
 
     setIsExpanded(true);
     setLoading(true);
+    setExplanation(null);
 
     try {
-        // Direct Client-Side Call to fix preview connection issues
-        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        const apiKey = process.env.API_KEY;
+        if (!apiKey) {
+            throw new Error("API Key is missing. Please check your configuration.");
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
         
         const systemInstruction = `You are a top-tier Clinical Nursing Instructor helping a student master a specific medical mnemonic.
     
@@ -53,8 +58,9 @@ const MnemonicWidget: React.FC = () => {
           Provide a clinical deep dive.
         `;
 
+        // Switch to gemini-2.5-flash for better speed and stability in UI widgets
         const response = await ai.models.generateContent({
-          model: 'gemini-3-pro-preview', 
+          model: 'gemini-2.5-flash', 
           contents: prompt,
           config: {
             systemInstruction: systemInstruction,
@@ -65,11 +71,22 @@ const MnemonicWidget: React.FC = () => {
         if (response.text) {
              setExplanation(response.text);
         } else {
-             throw new Error("Empty response");
+             throw new Error("Received empty response from the AI model.");
         }
-    } catch (error) {
-        console.error(error);
-        setExplanation("Unable to contact the Clinical Instructor at this moment. Please check your connection and try again.");
+    } catch (error: any) {
+        console.error("Deep Dive Error:", error);
+        // Provide a user-friendly error message while logging the detail
+        let userMessage = "Unable to load instructor notes.";
+        
+        if (error.message?.includes("API Key")) {
+            userMessage = "System Error: API Key is missing.";
+        } else if (error.message?.includes("404") || error.message?.includes("not found")) {
+            userMessage = "Connection Error: AI Model unavailable.";
+        } else if (error.message?.includes("Failed to fetch")) {
+             userMessage = "Network Error: Please check your internet connection.";
+        }
+
+        setExplanation(`Error: ${userMessage} (${error.message || "Unknown"})`);
     } finally {
         setLoading(false);
     }
