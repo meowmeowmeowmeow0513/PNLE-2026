@@ -15,7 +15,6 @@ export interface Task {
   priority: TaskPriority;
   userId: string;
   createdAt: number;
-  // Legacy support for dashboard compatibility if needed, though we should transition to start/end
   date?: string; 
 }
 
@@ -41,6 +40,7 @@ export interface UserFolder {
   color: string;
   parentId: string | null;
   createdAt: string;
+  path?: string; // Optional for flattened structures
 }
 
 export interface UserFile {
@@ -57,7 +57,7 @@ export interface UserFile {
 
 export interface ExamRow {
   topic: string;
-  content: string[]; // Bullet points
+  content: string[];
   weight: string;
   itemCount: number;
 }
@@ -75,11 +75,40 @@ export interface ExamTopic {
   parts: ExamPart[];
 }
 
+// --- GAMIFICATION / CAREER SIMULATION TYPES ---
+
+export type BennerRank = 'Novice' | 'Advanced Beginner' | 'Competent' | 'Proficient' | 'Expert';
+
+export type MissionActionType = 'complete_task' | 'finish_pomodoro' | 'login' | 'add_resource' | 'perfect_day';
+
+export interface Mission {
+  id: string;
+  label: string;
+  description?: string;
+  target: number;
+  current: number;
+  xpReward: number; // "Clinical Hours"
+  isCompleted: boolean;
+  isClaimed: boolean;
+  type: 'daily' | 'weekly';
+  actionType: MissionActionType;
+  icon?: string;
+}
+
 export interface UserGamificationStats {
+  // Legacy Streak Data
   currentStreak: number;
   bestStreak: number;
   lastStudyDate: string; // YYYY-MM-DD
-  streakFreezes: number; // "Duty Leaves"
+  streakFreezes: number;
   lastFreezeUsedDate: string | null;
   totalSessions: number;
+
+  // New Career Simulation Data
+  totalXP: number; // Represents "Clinical Hours"
+  level?: number; 
+  dailyMissions: Mission[];
+  weeklyMissions: Mission[];
+  lastMissionReset: string; // YYYY-MM-DD
+  lastWeeklyReset: string; // YYYY-MM-DD (Start of week)
 }

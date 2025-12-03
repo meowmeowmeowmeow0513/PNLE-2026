@@ -45,47 +45,53 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
   };
 
   return (
-    <div className="flex items-center justify-center animate-fade-in">
-      <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-700 transition-colors">
+    <div className="min-h-screen bg-[#020617] relative overflow-hidden flex flex-col items-center justify-center p-4 font-sans text-white selection:bg-pink-500/30">
+      
+      {/* --- BACKGROUND EFFECTS --- */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-pink-500/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+
+      {/* --- CARD --- */}
+      <div className="relative z-10 w-full max-w-[420px] bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-500">
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-pink-50 dark:bg-pink-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-500 dark:text-pink-400">
-              <KeyRound size={32} />
+            <div className="w-16 h-16 bg-pink-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-pink-500/20 text-pink-500">
+              <KeyRound size={28} />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+            <h2 className="text-xl font-bold text-white">
               Forgot Password?
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">
+            <p className="text-slate-400 mt-2 text-xs font-medium">
               No worries, we'll send you reset instructions.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 p-3 rounded-lg text-sm flex items-center gap-2">
-                <AlertCircle size={16} className="flex-shrink-0" />
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs flex items-center gap-2">
+                <AlertCircle size={14} className="flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
             
             {message && (
-              <div className="bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-300 p-3 rounded-lg text-sm flex items-center gap-2">
-                <CheckCircle size={16} className="flex-shrink-0" />
+              <div className="bg-green-500/10 border border-green-500/20 text-green-400 p-3 rounded-xl text-xs flex items-center gap-2">
+                <CheckCircle size={14} className="flex-shrink-0" />
                 <span>{message}</span>
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <label className="text-xs font-bold text-slate-300 ml-1 uppercase tracking-wider">Email Address</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 group-focus-within:text-pink-500 transition-colors">
                   <Mail size={18} />
                 </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all"
+                  className="block w-full pl-10 pr-4 py-3 border border-white/10 rounded-xl bg-black/20 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 transition-all text-sm"
                   placeholder="student@gmail.com"
                   required
                 />
@@ -95,7 +101,7 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl shadow-lg shadow-pink-500/25 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 bg-pink-500 hover:bg-pink-600 text-white font-bold rounded-xl shadow-lg shadow-pink-500/25 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
             >
               {loading ? <Loader size={18} className="animate-spin" /> : 'Reset Password'}
             </button>
@@ -104,13 +110,12 @@ const ForgotPassword: React.FC<ForgotPasswordProps> = ({ onBack }) => {
           <div className="mt-8 text-center">
              <button 
                 onClick={onBack}
-                className="text-sm font-bold text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200 flex items-center justify-center gap-2 mx-auto transition-colors"
+                className="text-xs font-bold text-slate-400 hover:text-white flex items-center justify-center gap-2 mx-auto transition-colors"
              >
                 <ArrowLeft size={16} />
                 Back to Login
              </button>
           </div>
-        </div>
       </div>
     </div>
   );

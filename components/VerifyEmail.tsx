@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../AuthContext';
+import { auth } from '../firebase'; 
 import { Send, RefreshCw, LogOut, CheckCircle, Clock } from 'lucide-react';
 
 const VerifyEmail: React.FC = () => {
@@ -34,10 +35,19 @@ const VerifyEmail: React.FC = () => {
   const handleCheckVerification = async () => {
     setChecking(true);
     try {
-      await reloadUser(); // Reloads the user from Firebase to update emailVerified status
-      // If verified, App.tsx will automatically redirect to Dashboard
+      // 1. Force reload the user from Firebase
+      await reloadUser();
+      
+      // 2. Check the live status directly
+      if (auth.currentUser?.emailVerified) {
+         setMessage('Verified! Entering app...');
+         return;
+      }
+
+      setMessage('Email not verified yet. Please check your inbox.');
     } catch (error) {
       console.error("Error reloading user", error);
+      setMessage('Error checking status. Please try again.');
     } finally {
       setChecking(false);
     }
@@ -69,7 +79,9 @@ const VerifyEmail: React.FC = () => {
         </p>
         
         {message && (
-          <div className="mb-4 p-2 bg-green-50 text-green-600 text-xs rounded-lg font-medium">
+          <div className={`mb-4 p-2 text-xs rounded-lg font-medium ${
+              message.includes('Verified') ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-600'
+          }`}>
             {message}
           </div>
         )}
@@ -92,13 +104,15 @@ const VerifyEmail: React.FC = () => {
             {cooldown > 0 ? `Resend Email in ${cooldown}s` : 'Resend Verification Link'}
           </button>
           
-          <button
-            onClick={() => logout()}
-            className="w-full py-2 px-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-medium transition-colors flex items-center justify-center gap-2 mt-2"
-          >
-            <LogOut size={14} />
-            Sign Out
-          </button>
+          <div className="border-t border-slate-100 dark:border-slate-700 pt-3 mt-4">
+             <button
+                onClick={() => logout()}
+                className="w-full py-2 px-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+              >
+                <LogOut size={14} />
+                Sign Out / Back to Login
+              </button>
+          </div>
         </div>
       </div>
     </div>

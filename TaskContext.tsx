@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, ReactNode } from
 import { db } from './firebase';
 import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
-import { useStreakSystem } from './hooks/useStreakSystem';
+import { useGamification } from './hooks/useGamification';
 import { Task, TaskCategory, TaskPriority } from './types';
 
 interface TaskContextType {
@@ -27,7 +27,7 @@ export const useTasks = () => {
 
 export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
-  const { completeDailyTask } = useStreakSystem();
+  const { trackAction } = useGamification();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -47,7 +47,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const fetchedTasks = snapshot.docs.map(doc => {
         const data = doc.data();
-        // Fallback for legacy data structure (pure date string) to start/end
         const hasIso = data.start && data.end;
         const fallbackStart = !hasIso && data.date ? `${data.date}T09:00:00` : new Date().toISOString();
         const fallbackEnd = !hasIso && data.date ? `${data.date}T10:00:00` : new Date().toISOString();
@@ -55,11 +54,9 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         return {
           id: doc.id,
           ...data,
-          // Ensure start/end exist even for old records
           start: data.start || fallbackStart,
           end: data.end || fallbackEnd,
           allDay: data.allDay ?? false,
-          // Sync legacy date field for Dashboard compatibility
           date: data.start ? data.start.split('T')[0] : data.date
         };
       }) as Task[];
@@ -74,9 +71,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!currentUser) return;
 
     try {
-      // Legacy support: extract YYYY-MM-DD from start ISO string for Dashboard
       const legacyDate = newTask.start.split('T')[0];
-
       await addDoc(collection(db, 'users', currentUser.uid, 'tasks'), {
         ...newTask,
         completed: false,
@@ -91,16 +86,12 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const updateTask = async (id: string, updates: Partial<Task>) => {
     if (!currentUser) return;
-
     try {
       const taskRef = doc(db, 'users', currentUser.uid, 'tasks', id);
-      
-      // If updating time, sync legacy date field
       let finalUpdates: any = { ...updates };
       if (updates.start) {
         finalUpdates.date = updates.start.split('T')[0];
       }
-
       await updateDoc(taskRef, finalUpdates);
     } catch (error) {
       console.error("Error updating task:", error);
@@ -109,18 +100,13 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const toggleTask = async (id: string, currentStatus: boolean) => {
     if (!currentUser) return;
-    
     const newStatus = !currentStatus;
-
     try {
       const taskRef = doc(db, 'users', currentUser.uid, 'tasks', id);
-      await updateDoc(taskRef, {
-        completed: newStatus
-      });
-
-      // CRITICAL: Update Streak if completed
+      await updateDoc(taskRef, { completed: newStatus });
+      // GAMIFICATION TRIGGER
       if (newStatus === true) {
-        await completeDailyTask();
+        await trackAction('complete_task');
       }
     } catch (error) {
       console.error("Error toggling task:", error);
@@ -129,7 +115,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const deleteTask = async (id: string) => {
     if (!currentUser) return;
-
     try {
       await deleteDoc(doc(db, 'users', currentUser.uid, 'tasks', id));
     } catch (error) {

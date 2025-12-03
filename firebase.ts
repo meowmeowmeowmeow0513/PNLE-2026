@@ -12,9 +12,13 @@ const firebaseConfig = {
   appId: "1:1071728959090:web:7dd4e75be1118f2c1ceceb"
 };
 
+// Initialize Firebase (Modular)
 const app = initializeApp(firebaseConfig);
+
+// Initialize Services
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-// Initialize Storage with the specific custom bucket
 export const storage = getStorage(app, "gs://pnle-review-companion.firebasestorage.app");
 export const googleProvider = new GoogleAuthProvider();
+
+export default app;

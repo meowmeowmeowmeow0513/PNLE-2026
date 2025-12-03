@@ -1,22 +1,24 @@
 import React, { useContext, useState, useEffect, ReactNode } from "react";
 import { auth, googleProvider, db } from "./firebase";
-import {
-  createUserWithEmailAndPassword,
-  signInWithEmailAndPassword,
-  signInWithPopup,
-  signOut,
+import { 
+  User, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  signInWithPopup, 
+  signOut, 
+  sendPasswordResetEmail, 
   onAuthStateChanged,
-  sendEmailVerification,
-  sendPasswordResetEmail,
   updateProfile,
-  deleteUser,
-  User,
+  sendEmailVerification,
   UserCredential
 } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
+type OnboardingStatus = 'loading' | 'pending' | 'completed';
+
 interface AuthContextType {
   currentUser: User | null;
+  onboardingStatus: OnboardingStatus;
   signup: (email: string, password: string) => Promise<void>;
   login: (email: string, password: string) => Promise<UserCredential>;
   googleLogin: () => Promise<UserCredential>;
@@ -26,7 +28,9 @@ interface AuthContextType {
   reloadUser: () => Promise<void>;
   updateUserProfile: (name: string, photoURL: string | null) => Promise<void>;
   deleteUserAccount: () => Promise<void>;
+  completeOnboarding: () => Promise<void>;
   loading: boolean;
+  userVersion: number; // Exposed to force re-renders if needed
 }
 
 const AuthContext = React.createContext<AuthContextType | undefined>(undefined);
@@ -46,6 +50,8 @@ interface AuthProviderProps {
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [onboardingStatus, setOnboardingStatus] = useState<OnboardingStatus>('loading');
+  const [userVersion, setUserVersion] = useState(0);
 
   // Helper to sync Auth user to Firestore
   async function syncUserToFirestore(user: User) {
@@ -59,21 +65,37 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         displayName: user.displayName || "",
         photoURL: user.photoURL || null,
         createdAt: new Date().toISOString(),
+        hasCompletedOnboarding: false // Default to false
       });
+      return false; // Onboarding not done
+    } else {
+        // Check if onboarding is done
+        return userSnap.data().hasCompletedOnboarding === true;
     }
   }
 
+  async function checkOnboardingStatus(user: User) {
+      try {
+          const isDone = await syncUserToFirestore(user);
+          setOnboardingStatus(isDone ? 'completed' : 'pending');
+      } catch (e) {
+          console.error("Error checking onboarding status", e);
+          setOnboardingStatus('pending'); 
+      }
+  }
+
   async function signup(email: string, password: string) {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    const user = userCredential.user;
+    const result = await createUserWithEmailAndPassword(auth, email, password);
+    const user = result.user;
     
-    // Create Firestore document immediately upon registration
+    // Create Firestore doc immediately
     await setDoc(doc(db, "users", user.uid), {
       uid: user.uid,
       email: user.email,
-      displayName: "", // Initial name empty
+      displayName: "",
       photoURL: null,
-      createdAt: new Date().toISOString()
+      createdAt: new Date().toISOString(),
+      hasCompletedOnboarding: false
     });
 
     await sendEmailVerification(user);
@@ -81,19 +103,18 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   async function login(email: string, password: string) {
     const result = await signInWithEmailAndPassword(auth, email, password);
-    // Ensure Firestore doc exists (syncs if missing)
-    await syncUserToFirestore(result.user);
+    // Onboarding check handled in onAuthStateChanged
     return result;
   }
 
   async function googleLogin() {
     const result = await signInWithPopup(auth, googleProvider);
-    // Ensure Firestore doc exists (syncs if missing)
-    await syncUserToFirestore(result.user);
+    // Onboarding check handled in onAuthStateChanged
     return result;
   }
 
   function logout() {
+    setOnboardingStatus('loading');
     return signOut(auth);
   }
 
@@ -102,47 +123,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   async function resendVerificationEmail() {
-    if (currentUser) {
-      await sendEmailVerification(currentUser);
+    if (auth.currentUser) {
+      await sendEmailVerification(auth.currentUser);
     }
   }
 
   async function reloadUser() {
-    if (currentUser) {
-      await currentUser.reload();
-      // Force update state by creating a new object ref
-      setCurrentUser({ ...currentUser });
+    if (auth.currentUser) {
+      await auth.currentUser.reload();
+      // Force React to re-render context consumers by updating a version counter.
+      // We do NOT spread the user object ({...user}) because it strips prototype methods like getIdToken, causing crashes.
+      setUserVersion(prev => prev + 1);
+      // Trigger a shallow update to currentUser if needed, though usually the reference is the same.
+      setCurrentUser(auth.currentUser); 
+      
+      // Re-check onboarding in case it changed
+      await checkOnboardingStatus(auth.currentUser);
     }
   }
 
   async function updateUserProfile(name: string, photoURL: string | null) {
-    if (currentUser) {
-      // 1. Update Firebase Auth Profile
-      await updateProfile(currentUser, {
+    if (auth.currentUser) {
+      await updateProfile(auth.currentUser, {
         displayName: name,
         photoURL: photoURL
       });
 
-      // 2. Update Firestore Document
-      const userRef = doc(db, "users", currentUser.uid);
+      const userRef = doc(db, "users", auth.currentUser.uid);
       await updateDoc(userRef, {
         displayName: name,
         photoURL: photoURL
       });
 
-      // 3. Reload local state
       await reloadUser();
     }
   }
 
   async function deleteUserAccount() {
-    if (currentUser) {
+    if (auth.currentUser) {
+      const user = auth.currentUser;
       try {
-        // 1. Delete Firestore Document
-        await deleteDoc(doc(db, "users", currentUser.uid));
-        
-        // 2. Delete Auth User
-        await deleteUser(currentUser);
+        await deleteDoc(doc(db, "users", user.uid));
+        await user.delete();
       } catch (error) {
         console.error("Error deleting account:", error);
         throw error;
@@ -150,17 +172,29 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
+  async function completeOnboarding() {
+      setOnboardingStatus('completed');
+  }
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
+      if (user) {
+          await checkOnboardingStatus(user);
+      } else {
+          setOnboardingStatus('loading');
+      }
       setLoading(false);
     });
 
     return unsubscribe;
   }, []);
 
+  // Construct the value object. Including userVersion ensures this object is new
+  // whenever reloadUser is called, forcing consumers to re-render.
   const value = {
     currentUser,
+    onboardingStatus,
     signup,
     login,
     googleLogin,
@@ -170,7 +204,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     reloadUser,
     updateUserProfile,
     deleteUserAccount,
-    loading
+    completeOnboarding,
+    loading,
+    userVersion
   };
 
   return (

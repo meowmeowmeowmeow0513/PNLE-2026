@@ -7,18 +7,20 @@ import { format } from 'date-fns';
 interface FolderCardProps {
   folder: UserFolder;
   onNavigate: (id: string, name: string) => void;
-  onRename: (id: string, currentName: string) => void;
+  onEdit: (folder: UserFolder) => void;
   onMove: (id: string) => void;
   onDelete: (id: string) => void;
   onDragOver: (e: React.DragEvent, id: string) => void;
   onDragLeave: (e: React.DragEvent) => void;
   onDrop: (e: React.DragEvent, id: string) => void;
+  onDragStart: (e: React.DragEvent, folder: UserFolder) => void;
   isDragOver: boolean;
 }
 
 const FolderCard: React.FC<FolderCardProps> = ({ 
-    folder, onNavigate, onRename, onMove, onDelete, 
-    onDragOver, onDragLeave, onDrop, isDragOver 
+    folder, onNavigate, onEdit, onMove, onDelete, 
+    onDragOver, onDragLeave, onDrop, onDragStart,
+    isDragOver 
 }) => {
   const [showMenu, setShowMenu] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -43,6 +45,8 @@ const FolderCard: React.FC<FolderCardProps> = ({
 
   return (
     <div 
+        draggable
+        onDragStart={(e) => onDragStart(e, folder)}
         onDoubleClick={() => onNavigate(folder.id, folder.name)}
         onDragOver={(e) => onDragOver(e, folder.id)}
         onDragLeave={onDragLeave}
@@ -75,8 +79,8 @@ const FolderCard: React.FC<FolderCardProps> = ({
         {/* Menu */}
         {showMenu && (
             <div ref={menuRef} className="absolute right-2 top-8 z-20 w-40 bg-white dark:bg-slate-800 rounded-lg shadow-xl border border-slate-100 dark:border-slate-600 py-1 animate-fade-in origin-top-right" onClick={e => e.stopPropagation()}>
-                <button onClick={() => { setShowMenu(false); onRename(folder.id, folder.name); }} className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
-                    <Edit2 size={14} /> Rename
+                <button onClick={() => { setShowMenu(false); onEdit(folder); }} className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <Edit2 size={14} /> Edit Folder
                 </button>
                 <button onClick={() => { setShowMenu(false); onMove(folder.id); }} className="w-full text-left px-3 py-2 text-xs flex items-center gap-2 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700">
                     <FolderInput size={14} /> Move to...

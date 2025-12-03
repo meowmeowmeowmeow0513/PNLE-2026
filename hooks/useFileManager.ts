@@ -141,6 +141,17 @@ export const useFileManager = (userId: string | undefined) => {
       throw error;
     }
   };
+  
+  const updateFolder = async (folderId: string, name: string, color: string) => {
+    if (!userId) return;
+    try {
+      const folderRef = doc(db, 'users', userId, 'folders', folderId);
+      await updateDoc(folderRef, { name, color });
+    } catch (error) {
+      console.error("Error updating folder:", error);
+      throw error;
+    }
+  };
 
   const uploadFile = async (file: File, userNotes: string = '') => {
     if (!userId) throw new Error("User not authenticated");
@@ -274,6 +285,7 @@ export const useFileManager = (userId: string | undefined) => {
     navigateToFolder,
     navigateUp,
     createFolder,
+    updateFolder,
     uploadFile,
     moveItem,
     renameItem,

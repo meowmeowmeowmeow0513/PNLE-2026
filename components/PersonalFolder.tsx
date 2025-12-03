@@ -10,13 +10,13 @@ import FolderCard from './FolderCard';
 import { 
   Folder, Upload, FileText, X, Loader, FolderPlus, Home, ChevronRight
 } from 'lucide-react';
-import { UserFile } from '../types';
+import { UserFile, UserFolder } from '../types';
 
 const PersonalFolder: React.FC = () => {
   const { currentUser } = useAuth();
   const { 
     sortedFolders, sortedFiles, allFolders, breadcrumbs, currentFolderId,
-    navigateToFolder, navigateUp, createFolder, uploadFile, moveItem, renameItem, deleteFile, deleteFolder,
+    navigateToFolder, navigateUp, createFolder, updateFolder, uploadFile, moveItem, renameItem, deleteFile, deleteFolder,
     uploading, loading, sortBy, setSortBy 
   } = useFileManager(currentUser?.uid);
   
@@ -24,6 +24,10 @@ const PersonalFolder: React.FC = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
+  
+  // Folder Edit State
+  const [folderToEdit, setFolderToEdit] = useState<UserFolder | null>(null);
+
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [userNote, setUserNote] = useState('');
   const [previewFile, setPreviewFile] = useState<UserFile | null>(null);
@@ -31,8 +35,8 @@ const PersonalFolder: React.FC = () => {
   // Item Action States
   const [itemToMove, setItemToMove] = useState<{id: string, type: 'file' | 'folder'} | null>(null);
 
-  // Drag and Drop State
-  const [draggedFile, setDraggedFile] = useState<UserFile | null>(null);
+  // Drag and Drop State (Generic)
+  const [draggedItem, setDraggedItem] = useState<{ id: string, type: 'file' | 'folder', folderId: string | null } | null>(null);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -57,10 +61,10 @@ const PersonalFolder: React.FC = () => {
     }
   };
 
-  const handleRename = async (id: string, currentName: string, type: 'file' | 'folder') => {
-      const newName = prompt(`Rename ${type}:`, currentName);
+  const handleRenameFile = async (id: string, currentName: string) => {
+      const newName = prompt(`Rename file:`, currentName);
       if (newName && newName !== currentName) {
-          await renameItem(id, newName, type);
+          await renameItem(id, newName, 'file');
       }
   };
 
@@ -76,15 +80,22 @@ const PersonalFolder: React.FC = () => {
   };
 
   // --- Drag & Drop Handlers ---
-  const handleDragStart = (e: React.DragEvent, file: UserFile) => {
-    setDraggedFile(file);
+  const handleDragStart = (e: React.DragEvent, item: { id: string, type: 'file' | 'folder', folderId: string | null }) => {
+    setDraggedItem(item);
     e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', file.id);
+    e.dataTransfer.setData('text/plain', JSON.stringify(item));
   };
 
   const handleDragOver = (e: React.DragEvent, folderId: string | null) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
+    
+    // Don't highlight if dragging over itself or parent (already there)
+    if (draggedItem) {
+        if (draggedItem.id === folderId) return; // Can't drop on self
+        if (draggedItem.folderId === folderId) return; // Already here
+    }
+
     if (folderId !== dragOverFolderId) {
         setDragOverFolderId(folderId);
     }
@@ -99,17 +110,40 @@ const PersonalFolder: React.FC = () => {
     e.preventDefault();
     setDragOverFolderId(null);
 
-    if (draggedFile && draggedFile.folderId !== targetFolderId) {
-        // Prevent moving file to the folder it's already in
-        if (draggedFile.folderId === targetFolderId) return;
+    if (!draggedItem) return;
 
-        try {
-            await moveItem(draggedFile.id, targetFolderId, 'file');
-        } catch (error) {
-            console.error("Failed to move file", error);
+    // 1. Basic Validation: Don't move to same location or into self
+    if (draggedItem.folderId === targetFolderId) return;
+    if (draggedItem.id === targetFolderId) return;
+
+    // 2. Folder-Specific Validation: No dropping into self or descendants (loops)
+    if (draggedItem.type === 'folder') {
+        // Check descendants by tracing up from targetFolderId
+        let current = allFolders.find(f => f.id === targetFolderId);
+        let loopDetected = false;
+        
+        while (current) {
+            if (current.id === draggedItem.id) {
+                loopDetected = true;
+                break;
+            }
+            // Move up
+            current = allFolders.find(f => f.id === current?.parentId);
+        }
+
+        if (loopDetected) {
+            alert("Cannot move a folder into its own subfolder.");
+            setDraggedItem(null);
+            return;
         }
     }
-    setDraggedFile(null);
+
+    try {
+        await moveItem(draggedItem.id, targetFolderId, draggedItem.type);
+    } catch (error) {
+        console.error("Failed to move item", error);
+    }
+    setDraggedItem(null);
   };
 
   return (
@@ -123,7 +157,7 @@ const PersonalFolder: React.FC = () => {
         </div>
         <div className="flex gap-3">
             <button
-                onClick={() => setIsFolderModalOpen(true)}
+                onClick={() => { setFolderToEdit(null); setIsFolderModalOpen(true); }}
                 className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white px-4 py-2.5 rounded-xl font-medium shadow-sm transition-all"
             >
                 <FolderPlus size={18} className="text-pink-500" />
@@ -145,7 +179,7 @@ const PersonalFolder: React.FC = () => {
         {/* Droppable Breadcrumbs */}
         <div className="flex items-center overflow-x-auto px-2 py-1 scrollbar-hide">
              {breadcrumbs.map((crumb, index) => {
-                 const isTarget = dragOverFolderId === crumb.id && draggedFile?.folderId !== crumb.id;
+                 const isTarget = dragOverFolderId === crumb.id && draggedItem?.folderId !== crumb.id && draggedItem?.id !== crumb.id;
                  return (
                     <div key={index} className="flex items-center text-sm">
                         {index > 0 && <ChevronRight size={14} className="text-slate-400 mx-1" />}
@@ -202,7 +236,7 @@ const PersonalFolder: React.FC = () => {
       ) : (
         <div className="space-y-8">
             
-            {/* Folders Section (Droppable) */}
+            {/* Folders Section (Draggable & Droppable) */}
             {sortedFolders.length > 0 && (
                 <div>
                     <h3 className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-3 pl-1">Folders</h3>
@@ -212,12 +246,13 @@ const PersonalFolder: React.FC = () => {
                                 key={folder.id}
                                 folder={folder}
                                 onNavigate={navigateToFolder}
-                                onRename={(id, name) => handleRename(id, name, 'folder')}
+                                onEdit={(f) => { setFolderToEdit(f); setIsFolderModalOpen(true); }}
                                 onMove={(id) => handleMoveClick(id, 'folder')}
                                 onDelete={deleteFolder}
                                 onDragOver={handleDragOver}
                                 onDragLeave={handleDragLeave}
                                 onDrop={handleDrop}
+                                onDragStart={(e, f) => handleDragStart(e, { id: f.id, type: 'folder', folderId: f.parentId })}
                                 isDragOver={dragOverFolderId === folder.id}
                            />
                         ))}
@@ -236,9 +271,9 @@ const PersonalFolder: React.FC = () => {
                             file={file} 
                             onPreview={(f) => setPreviewFile(f)}
                             onDelete={deleteFile}
-                            onRename={(id, name) => handleRename(id, name, 'file')}
+                            onRename={(id, name) => handleRenameFile(id, name)}
                             onMove={(id) => handleMoveClick(id, 'file')}
-                            onDragStart={handleDragStart}
+                            onDragStart={(e, f) => handleDragStart(e, { id: f.id, type: 'file', folderId: f.folderId || null })}
                         />
                     ))}
                     </div>
@@ -307,11 +342,18 @@ const PersonalFolder: React.FC = () => {
         </div>
       )}
 
-      {/* New Folder Modal */}
+      {/* New/Edit Folder Modal */}
       {isFolderModalOpen && (
         <FolderModal 
-            onClose={() => setIsFolderModalOpen(false)} 
-            onCreate={createFolder} 
+            onClose={() => { setIsFolderModalOpen(false); setFolderToEdit(null); }} 
+            onSave={async (name, color) => {
+                if (folderToEdit) {
+                    await updateFolder(folderToEdit.id, name, color);
+                } else {
+                    await createFolder(name, color);
+                }
+            }}
+            initialData={folderToEdit ? { name: folderToEdit.name, color: folderToEdit.color } : undefined}
         />
       )}
 

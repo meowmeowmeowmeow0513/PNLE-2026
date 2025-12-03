@@ -3,9 +3,87 @@ import React, { useMemo, useState } from 'react';
 import { Lightbulb, BookOpen, Sparkles, ChevronDown, ChevronUp, AlertTriangle, Loader2 } from 'lucide-react';
 import { mnemonics } from '../data/mnemonicData';
 import { GoogleGenAI } from "@google/genai";
-import ReactMarkdown from 'react-markdown';
 
-const MnemonicWidget: React.FC = () => {
+// Lightweight Markdown Parser to avoid build dependency issues
+const SimpleMarkdown = ({ text }: { text: string }) => {
+  if (!text) return null;
+
+  // Split by newlines to handle paragraphs and lists
+  const lines = text.split('\n');
+  
+  return (
+    <div className="space-y-3">
+      {lines.map((line, index) => {
+        const trimmed = line.trim();
+        if (!trimmed) return null;
+
+        // 1. Handle Bullet Points
+        if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+          const content = trimmed.substring(2);
+          return (
+            <div key={index} className="flex gap-2 pl-2">
+              <span className="text-pink-400 font-bold">•</span>
+              <p className="text-slate-600 dark:text-slate-300 text-sm">
+                {parseBold(content)}
+              </p>
+            </div>
+          );
+        }
+
+        // 2. Handle Numbered Lists (1. )
+        if (/^\d+\.\s/.test(trimmed)) {
+          const content = trimmed.replace(/^\d+\.\s/, '');
+          return (
+             <div key={index} className="flex gap-2 pl-2">
+                <span className="text-pink-400 font-bold text-xs mt-0.5">{trimmed.match(/^\d+\./)?.[0]}</span>
+                <p className="text-slate-600 dark:text-slate-300 text-sm">
+                    {parseBold(content)}
+                </p>
+             </div>
+          );
+        }
+
+        // 3. Handle Standard Paragraphs
+        return (
+          <p key={index} className="text-slate-600 dark:text-slate-300 text-sm leading-relaxed">
+            {parseBold(trimmed)}
+          </p>
+        );
+      })}
+    </div>
+  );
+};
+
+// Helper to parse **bold** text
+const parseBold = (text: string) => {
+  const parts = text.split(/(\*\*.*?\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      // Remove asterisks
+      const clean = part.slice(2, -2);
+      // Check if it's a Header style (Clinical Application, etc)
+      const isHeader = clean.includes(':') || clean.length < 30;
+      
+      return (
+        <span 
+          key={i} 
+          className={isHeader 
+            ? "text-pink-600 dark:text-pink-400 font-bold text-xs uppercase tracking-wider block mt-4 mb-1" 
+            : "font-bold text-slate-800 dark:text-slate-200"}
+        >
+          {clean}
+        </span>
+      );
+    }
+    return part;
+  });
+};
+
+interface MnemonicWidgetProps {
+    className?: string;
+}
+
+const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [explanation, setExplanation] = useState<string | null>(null);
@@ -36,20 +114,20 @@ const MnemonicWidget: React.FC = () => {
     try {
         const apiKey = process.env.API_KEY;
         if (!apiKey) {
-            throw new Error("API Key is missing. Please check your configuration.");
+            throw new Error("API Key is missing.");
         }
 
         const ai = new GoogleGenAI({ apiKey });
         
         const systemInstruction = `You are a top-tier Clinical Nursing Instructor helping a student master a specific medical mnemonic.
     
-        Structure your response with these exact sections (do not use markdown headers like # or ##, just bold labels):
-        1. **Clinical Application:** Explain *when* and *why* we use this assessment or intervention in a hospital setting.
-        2. **Memory Hook:** Give a clever trick, visualization, or rhyme to make it stick forever.
-        3. **Board Exam Alert:** Identify one common trick question, 'Red Flag', or priority nursing action related to this topic that appears on the PNLE/NCLEX.
+        Structure your response with these exact sections:
+        1. **Clinical Application:** Explain *when* and *why* we use this assessment or intervention.
+        2. **Memory Hook:** Give a clever trick, visualization, or rhyme.
+        3. **Board Exam Alert:** Identify one common trick question or priority nursing action.
 
         Tone: Professional, high-yield, and concise (max 250 words total).
-        Format: Markdown. Use **bold** for headers. Bullet points for lists.`;
+        Format: Use **bold** for headers. Use bullet points for lists.`;
 
         const prompt = `
           Mnemonic: ${todayMnemonic.code}
@@ -113,10 +191,10 @@ const MnemonicWidget: React.FC = () => {
                    'bg-emerald-600 hover:bg-emerald-700';
 
   return (
-    <div className={`rounded-2xl shadow-sm border transition-all duration-300 hover:shadow-md overflow-hidden flex flex-col ${colors}`}>
+    <div className={`rounded-2xl shadow-sm border transition-all duration-300 hover:shadow-md overflow-hidden flex flex-col ${colors} ${className || ''}`}>
       
       {/* Main Content Area */}
-      <div className="p-6 pb-4">
+      <div className="p-6 pb-4 flex-1">
         <div className="flex items-start justify-between mb-4">
             <div className="flex items-center gap-2">
             <div className="p-2 bg-white/60 dark:bg-black/20 rounded-lg">
@@ -176,34 +254,12 @@ const MnemonicWidget: React.FC = () => {
                               </span>
                           </div>
 
-                          {/* Markdown Content */}
-                          <div className="text-slate-700 dark:text-slate-200">
-                             {explanation?.startsWith("Error") ? (
-                                <p className="text-red-500 text-sm font-medium">{explanation}</p>
-                             ) : (
-                                <ReactMarkdown
-                                    components={{
-                                        // Custom styling for Bold Headers
-                                        strong: ({node, ...props}) => (
-                                            <span className="text-pink-600 dark:text-pink-400 font-bold text-xs uppercase tracking-wider mb-2 block mt-5 first:mt-0" {...props} />
-                                        ),
-                                        // Paragraphs
-                                        p: ({node, ...props}) => (
-                                            <p className="text-slate-600 dark:text-slate-300 text-sm mb-3 leading-relaxed" {...props} />
-                                        ),
-                                        // Lists
-                                        ul: ({node, ...props}) => (
-                                            <ul className="list-disc pl-5 space-y-1 text-sm text-slate-600 dark:text-slate-300 mb-4" {...props} />
-                                        ),
-                                        li: ({node, ...props}) => (
-                                            <li className="pl-1 marker:text-pink-400" {...props} />
-                                        ),
-                                    }}
-                                >
-                                    {explanation || ""}
-                                </ReactMarkdown>
-                             )}
-                          </div>
+                          {/* Render Parsed Content */}
+                          {explanation?.startsWith("Error") ? (
+                              <p className="text-red-500 text-sm font-medium">{explanation}</p>
+                          ) : (
+                              <SimpleMarkdown text={explanation || ""} />
+                          )}
                       </div>
                   </div>
               )}
@@ -211,7 +267,7 @@ const MnemonicWidget: React.FC = () => {
       )}
 
       {/* Footer Actions */}
-      <div className="p-4 pt-2 flex items-center justify-between">
+      <div className="p-4 pt-2 flex items-center justify-between mt-auto">
          <p className="text-[10px] opacity-60 font-medium italic pl-2">
             Day {new Date().getDate()} / 31
          </p>

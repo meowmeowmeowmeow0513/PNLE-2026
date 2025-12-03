@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -11,26 +10,30 @@ import Planner from './components/Planner';
 import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
-import GlobalYoutubePlayer from './components/GlobalYoutubePlayer'; // Enhanced Persistent Player
+import LandingPage from './components/LandingPage';
+import OnboardingFlow from './components/OnboardingFlow';
+import GlobalYoutubePlayer from './components/GlobalYoutubePlayer'; 
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
 import { PomodoroProvider } from './components/PomodoroContext'; 
 import { TaskProvider } from './TaskContext';
-import { Loader } from 'lucide-react';
+import { Loader, LogOut } from 'lucide-react';
 
 const App: React.FC = () => {
-  const { currentUser, loading } = useAuth();
+  const { currentUser, loading, onboardingStatus, logout } = useAuth();
   const [activeItem, setActiveItem] = useState<NavigationItem>('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [authView, setAuthView] = useState<'auth' | 'forgot'>('auth');
+  
+  // Routing State for Unauthenticated Users
+  const [publicView, setPublicView] = useState<'landing' | 'login' | 'forgot'>('landing');
 
-  // Theme Management
+  // Theme Management (Default to Dark for Nebulearn Aesthetic)
   const [isDark, setIsDark] = useState(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('pnle_theme');
       return saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
     }
-    return false;
+    return true; // Default to dark
   });
 
   useEffect(() => {
@@ -64,76 +67,117 @@ const App: React.FC = () => {
     }
   };
 
-  // 1. Loading State
+  // 1. Loading State (Global Auth)
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#F3F4F6] dark:bg-slate-900 transition-colors">
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617] text-white gap-4 font-sans">
         <Loader className="animate-spin text-pink-500" size={48} />
+        <p className="text-slate-500 text-sm font-medium">Loading Application...</p>
+        <button 
+          onClick={() => logout()}
+          className="mt-8 text-xs text-slate-600 hover:text-slate-400 underline flex items-center gap-1 transition-colors"
+        >
+           <LogOut size={12} /> Stuck? Emergency Sign Out
+        </button>
       </div>
     );
   }
 
-  // 2. Auth Wall - If no user, show Auth Page
+  // 2. Auth Wall
   if (!currentUser) {
-    return (
-      <div className="min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors p-4">
-        {/* Simple Header for Auth Page */}
-        <div className="max-w-md mx-auto mb-8 pt-10 text-center">
-             <div className="inline-flex items-center justify-center p-3 bg-pink-500 rounded-2xl shadow-lg mb-4">
-                 <span className="text-white font-bold text-2xl">RN</span>
-             </div>
-             <h1 className="text-2xl font-bold text-slate-800 dark:text-white">PNLE Review Companion</h1>
-             <p className="text-slate-500 dark:text-slate-400">Your journey to the license starts here.</p>
-        </div>
-        
-        {authView === 'auth' ? (
-            <SignUp onForgotPassword={() => setAuthView('forgot')} />
-        ) : (
-            <ForgotPassword onBack={() => setAuthView('auth')} />
-        )}
-      </div>
-    );
+    if (publicView === 'landing') return <LandingPage onGetStarted={() => setPublicView('login')} />;
+    if (publicView === 'login') return <SignUp onForgotPassword={() => setPublicView('forgot')} onBack={() => setPublicView('landing')} />;
+    if (publicView === 'forgot') return <ForgotPassword onBack={() => setPublicView('login')} />;
   }
 
-  // 3. Verification Wall - Intercept Unverified Users
-  if (!currentUser.emailVerified) {
+  // 3. Verification Wall
+  if (currentUser && !currentUser.emailVerified) {
     return <VerifyEmail />;
   }
 
-  // 4. Authenticated App Layout (Wrapped in PomodoroProvider AND TaskProvider)
+  // 4. Onboarding Wall
+  if (onboardingStatus === 'pending') {
+      return <OnboardingFlow />;
+  }
+  
+  if (onboardingStatus !== 'completed') {
+     return (
+      <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617] gap-4 font-sans">
+        <Loader className="animate-spin text-pink-500" size={48} />
+        <p className="text-slate-400 text-sm">Preparing Dashboard...</p>
+        <button onClick={() => logout()} className="mt-8 text-xs text-slate-500 underline"><LogOut size={12} /> Cancel</button>
+      </div>
+    );
+  }
+
+  // 5. Authenticated App Layout (Nebulearn Structure)
   return (
     <PomodoroProvider>
       <TaskProvider>
-        <div className="flex min-h-screen bg-[#F3F4F6] dark:bg-slate-900 transition-colors duration-300">
-          {/* Sidebar */}
-          <Sidebar 
-            activeItem={activeItem} 
-            onNavigate={setActiveItem}
-            isOpen={sidebarOpen}
-            onClose={() => setSidebarOpen(false)}
-          />
+        {/* INJECTED STYLES FOR AURORA ANIMATION */}
+        <style>{`
+          @keyframes aurora {
+            0% { transform: translate(0px, 0px) scale(1); opacity: 0.4; }
+            33% { transform: translate(30px, -50px) scale(1.1); opacity: 0.6; }
+            66% { transform: translate(-20px, 20px) scale(0.9); opacity: 0.4; }
+            100% { transform: translate(0px, 0px) scale(1); opacity: 0.4; }
+          }
+          .animate-aurora {
+            animation: aurora 15s infinite ease-in-out;
+          }
+          .animate-aurora-delayed {
+            animation: aurora 20s infinite ease-in-out reverse;
+          }
+        `}</style>
 
-          {/* Main Content Area */}
-          <div className="flex-1 flex flex-col lg:ml-64 transition-all duration-300 relative">
+        {/* GLOBAL FONT ENFORCEMENT */}
+        <div className={`relative flex h-screen font-sans selection:bg-pink-500/30 overflow-hidden transition-colors duration-500 text-slate-900 dark:text-white`}>
+          
+          {/* --- COSMIC VOID BACKGROUND SYSTEM --- */}
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+             {/* Dark Mode: Nebula Gradient + Noise + AURORA BLOBS */}
+             <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] transition-opacity duration-700 ease-in-out ${isDark ? 'opacity-100' : 'opacity-0'}`}>
+                {/* Aurora Blobs */}
+                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-purple-900/20 rounded-full blur-[120px] animate-aurora"></div>
+                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-pink-900/10 rounded-full blur-[120px] animate-aurora-delayed"></div>
+                
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+             </div>
+             {/* Light Mode: Clean Flat */}
+             <div className={`absolute inset-0 bg-[#f8fafc] transition-opacity duration-700 ease-in-out ${isDark ? 'opacity-0' : 'opacity-100'}`}></div>
+          </div>
+          
+          {/* Sidebar (Fixed Width, z-20 to sit above background) */}
+          <div className="relative z-20 h-full">
+            <Sidebar 
+              activeItem={activeItem} 
+              onNavigate={setActiveItem}
+              isOpen={sidebarOpen}
+              onClose={() => setSidebarOpen(false)}
+            />
+          </div>
+
+          {/* Main Content (Flex Column, z-10) */}
+          <div className="flex-1 flex flex-col h-screen relative min-w-0 z-10">
+            {/* Sticky Header */}
             <TopBar 
+              title={activeItem}
               onMenuClick={() => setSidebarOpen(true)} 
               isDark={isDark}
               toggleTheme={toggleTheme}
             />
             
-            <main className="flex-1 p-4 lg:p-8 overflow-x-hidden">
-              <div className="max-w-7xl mx-auto h-full">
+            {/* Scrollable Content Area */}
+            <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth custom-scrollbar relative">
+              <div className="max-w-7xl mx-auto pb-20">
                 {renderContent()}
               </div>
             </main>
 
-            {/* 
-                PERSISTENT PLAYER
-                This component now handles BOTH the main video view (via overlay snapping)
-                and the floating mini-player widget. It is never unmounted.
-            */}
+            {/* Floating Player (Fixed Z-Index) */}
             <GlobalYoutubePlayer activeItem={activeItem} />
           </div>
+
         </div>
       </TaskProvider>
     </PomodoroProvider>

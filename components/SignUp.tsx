@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
-import { UserPlus, LogIn, Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
+import { UserPlus, LogIn, Mail, Lock, ArrowRight, AlertCircle, ArrowLeft, BookOpen, Sparkles } from 'lucide-react';
 
 interface SignUpProps {
   onForgotPassword: () => void;
+  onBack: () => void;
 }
 
-const SignUp: React.FC<SignUpProps> = ({ onForgotPassword }) => {
+const SignUp: React.FC<SignUpProps> = ({ onForgotPassword, onBack }) => {
   const { signup, login, googleLogin } = useAuth();
   
   const [isLogin, setIsLogin] = useState(false); // Toggle between Login and Signup
@@ -34,11 +35,7 @@ const SignUp: React.FC<SignUpProps> = ({ onForgotPassword }) => {
         await login(cleanEmail, password);
       } else {
         // --- SIGN UP FLOW ---
-        // signup() in AuthContext now handles creating user AND sending the email.
         await signup(cleanEmail, password);
-        // We do NOT navigate manually. 
-        // Once signup completes, currentUser is set in Context.
-        // App.tsx detects (!currentUser.emailVerified) and switches screen to VerifyEmail.
       }
     } catch (err: any) {
       console.error(err);
@@ -64,7 +61,6 @@ const SignUp: React.FC<SignUpProps> = ({ onForgotPassword }) => {
     setLoading(true);
     try {
       await googleLogin();
-      // Google accounts are verified by definition
     } catch (err: any) {
       console.error("Google Login Error:", err);
       if (err.code === 'auth/popup-closed-by-user') {
@@ -77,40 +73,56 @@ const SignUp: React.FC<SignUpProps> = ({ onForgotPassword }) => {
   };
 
   return (
-    <div className="flex items-center justify-center">
-      <div className="w-full max-w-md">
-        <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-100 dark:border-slate-700 transition-colors">
+    <div className="min-h-screen bg-[#020617] relative overflow-hidden flex flex-col items-center justify-center p-4 font-sans text-white selection:bg-pink-500/30">
+      
+      {/* --- BACKGROUND EFFECTS --- */}
+      <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-pink-500/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute bottom-0 right-1/4 w-[600px] h-[600px] bg-purple-500/10 rounded-full blur-[128px] pointer-events-none" />
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+
+      {/* --- HEADER --- */}
+      <div className="relative z-10 text-center mb-8 animate-in fade-in slide-in-from-top-4 duration-700">
+        <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center shadow-lg shadow-pink-500/20 mx-auto mb-4 transform rotate-3 hover:rotate-6 transition-transform">
+           <BookOpen size={28} className="text-white" />
+        </div>
+        <h1 className="text-2xl font-bold text-white mb-1 tracking-tight">PNLE Review Companion</h1>
+        <p className="text-slate-400 text-sm">Your journey to the license starts here.</p>
+      </div>
+
+      {/* --- CARD --- */}
+      <div className="relative z-10 w-full max-w-[420px] bg-slate-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-8 shadow-2xl animate-in zoom-in-95 duration-500">
+          
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-pink-50 dark:bg-pink-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-pink-500 dark:text-pink-400">
-              {isLogin ? <LogIn size={32} /> : <UserPlus size={32} />}
+            <div className="w-16 h-16 bg-pink-500/10 rounded-full flex items-center justify-center mx-auto mb-4 border border-pink-500/20 text-pink-500">
+              {isLogin ? <LogIn size={28} /> : <UserPlus size={28} />}
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 dark:text-white">
+            <h2 className="text-xl font-bold text-white">
               {isLogin ? 'Welcome Back' : 'Join Batch Crescere'}
             </h2>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 text-sm">
+            <p className="text-slate-400 mt-2 text-xs font-medium">
               {isLogin ? 'Sign in to continue your review.' : 'Create your account to track your progress.'}
             </p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {error && (
-              <div className="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-300 p-3 rounded-lg text-sm flex items-center gap-2 break-words text-left">
-                <AlertCircle size={16} className="flex-shrink-0" />
+              <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-3 rounded-xl text-xs flex items-center gap-2 break-words text-left">
+                <AlertCircle size={14} className="flex-shrink-0" />
                 <span>{error}</span>
               </div>
             )}
 
             <div className="space-y-1.5">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Email Address</label>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <label className="text-xs font-bold text-slate-300 ml-1 uppercase tracking-wider">Email Address</label>
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 group-focus-within:text-pink-500 transition-colors">
                   <Mail size={18} />
                 </div>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all"
+                  className="block w-full pl-10 pr-4 py-3 border border-white/10 rounded-xl bg-black/20 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 transition-all text-sm"
                   placeholder="student@gmail.com"
                   required
                 />
@@ -119,26 +131,26 @@ const SignUp: React.FC<SignUpProps> = ({ onForgotPassword }) => {
 
             <div className="space-y-1.5">
               <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 ml-1">Password</label>
+                <label className="text-xs font-bold text-slate-300 ml-1 uppercase tracking-wider">Password</label>
                 {isLogin && (
                     <button 
                         type="button"
                         onClick={onForgotPassword}
-                        className="text-xs font-medium text-pink-500 hover:text-pink-600 dark:hover:text-pink-400 transition-colors"
+                        className="text-xs font-bold text-pink-500 hover:text-pink-400 transition-colors"
                     >
-                        Forgot Password?
+                        Forgot?
                     </button>
                 )}
               </div>
-              <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+              <div className="relative group">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-500 group-focus-within:text-pink-500 transition-colors">
                   <Lock size={18} />
                 </div>
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-10 pr-4 py-3 border border-slate-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/20 focus:border-pink-500 transition-all"
+                  className="block w-full pl-10 pr-4 py-3 border border-white/10 rounded-xl bg-black/20 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-pink-500/50 focus:border-pink-500 transition-all text-sm"
                   placeholder="••••••••"
                   required
                   minLength={6}
@@ -149,7 +161,7 @@ const SignUp: React.FC<SignUpProps> = ({ onForgotPassword }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full py-3.5 px-4 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold rounded-xl shadow-lg shadow-pink-500/25 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full py-3.5 px-4 bg-gradient-to-r from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white font-bold rounded-xl shadow-lg shadow-pink-500/25 transition-all transform active:scale-[0.98] flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed mt-2"
             >
               {loading ? (
                  <span className="flex items-center gap-2">Processing...</span>
@@ -158,40 +170,51 @@ const SignUp: React.FC<SignUpProps> = ({ onForgotPassword }) => {
             </button>
           </form>
 
-          <div className="relative my-8">
+          <div className="relative my-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-slate-200 dark:border-slate-700"></div>
+              <div className="w-full border-t border-white/10"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white dark:bg-slate-800 text-slate-500 dark:text-slate-400">Or continue with</span>
+            <div className="relative flex justify-center text-xs uppercase tracking-widest font-bold">
+              <span className="px-2 bg-[#0d1321] text-slate-500 rounded">Or continue with</span>
             </div>
           </div>
 
           <button
             onClick={handleGoogleLogin}
             disabled={loading}
-            className="w-full py-3.5 px-4 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-600 text-slate-700 dark:text-white font-medium rounded-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-70"
+            className="w-full py-3 px-4 bg-white hover:bg-slate-100 text-slate-900 font-bold rounded-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 disabled:opacity-70"
           >
             <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google" className="w-5 h-5" />
             <span>Sign in with Google</span>
           </button>
 
-          <div className="mt-8 text-center">
-             <p className="text-sm text-slate-600 dark:text-slate-400">
-                {isLogin ? "Don't have an account yet?" : "Already have an account?"}{' '}
+          <div className="mt-6 text-center">
+             <p className="text-xs text-slate-400">
+                {isLogin ? "Don't have an account?" : "Already have an account?"}{' '}
                 <button 
                   onClick={() => {
                     setIsLogin(!isLogin);
                     setError(null);
                   }}
-                  className="font-bold text-pink-500 hover:text-pink-600 dark:hover:text-pink-400 transition-colors"
+                  className="font-bold text-pink-500 hover:text-pink-400 transition-colors ml-1"
                 >
                     {isLogin ? 'Sign Up' : 'Log In'}
                 </button>
              </p>
           </div>
-        </div>
       </div>
+
+      {/* --- FOOTER LINK --- */}
+      <div className="relative z-10 mt-8">
+        <button 
+            onClick={onBack} 
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-white transition-colors"
+        >
+            <ArrowLeft size={16} />
+            Back to Home
+        </button>
+      </div>
+
     </div>
   );
 };
