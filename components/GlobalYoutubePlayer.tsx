@@ -4,8 +4,8 @@ import { createPortal } from 'react-dom';
 import { NavigationItem } from '../types';
 import { usePomodoro } from './PomodoroContext';
 import { 
-    Pause, Play, RotateCcw, Maximize2, X, Music, 
-    ChevronUp, ChevronDown, GripHorizontal 
+    Pause, Play, RotateCcw, Music, 
+    ChevronUp, ChevronDown
 } from 'lucide-react';
 
 interface GlobalYoutubePlayerProps {
@@ -14,7 +14,7 @@ interface GlobalYoutubePlayerProps {
 
 const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem }) => {
   const { 
-    timeLeft, initialTime, isActive, mode, pipWindow, 
+    timeLeft, isActive, mode, pipWindow, 
     toggleTimer, resetTimer, setPipWindow 
   } = usePomodoro();
   
@@ -23,7 +23,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
   const [isMiniExpanded, setIsMiniExpanded] = useState(true);
 
-  // Widget Position (for Floating Mode)
+  // Widget Position (Floating Mode)
   const [position, setPosition] = useState({ x: window.innerWidth - 340, y: window.innerHeight - 100 });
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef({ x: 0, y: 0 });
@@ -36,25 +36,24 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
         
         if (isPomoPage && anchorEl) {
             const rect = anchorEl.getBoundingClientRect();
-            // Only anchor if the element is actually layout-ed
+            // Check if visible
             if (rect.width > 0 && rect.height > 0) {
                 setAnchorRect(rect);
                 setIsAnchored(true);
                 return;
             }
         }
+        
         setIsAnchored(false);
         setAnchorRect(null);
-        // Default widget position if not anchoring
+        // Reset to corner if logic requires, but keeping last position is often friendlier
         if (isPomoPage) {
-             // Reset widget to corner if we leave anchored mode
-             setPosition({ x: window.innerWidth - 340, y: window.innerHeight - 100 });
+           setPosition({ x: window.innerWidth - 340, y: window.innerHeight - 100 });
         }
     };
 
-    // Check immediately and on loop to catch layout shifts
     checkAnchor();
-    const interval = setInterval(checkAnchor, 500);
+    const interval = setInterval(checkAnchor, 200); // Fast poll for smooth snap
     window.addEventListener('resize', checkAnchor);
     window.addEventListener('scroll', checkAnchor);
 
@@ -65,6 +64,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
     };
   }, [activeItem]);
 
+
   // -- PIP HANDLER --
   useEffect(() => {
     const handleOpenPiP = async () => {
@@ -74,16 +74,15 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
         }
 
         if (!('documentPictureInPicture' in window)) {
-            alert("Picture-in-Picture API not supported.");
+            alert("PiP not supported in this browser.");
             return;
         }
 
         try {
             const dpip = (window as any).documentPictureInPicture;
-            // Request a small square window
             const win = await dpip.requestWindow({ width: 300, height: 350 });
-            
-            // CRITICAL: Copy Styles
+
+            // CRITICAL: Copy All Stylesheets for perfect look
             [...document.styleSheets].forEach((styleSheet) => {
                 try {
                     if (styleSheet.href) {
@@ -93,25 +92,27 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                         win.document.head.appendChild(link);
                     } else if (styleSheet.cssRules) {
                         const style = win.document.createElement('style');
-                        [...styleSheet.cssRules].forEach(rule => {
+                        [...styleSheet.cssRules].forEach((rule: any) => {
                             style.textContent += rule.cssText;
                         });
                         win.document.head.appendChild(style);
                     }
                 } catch (e) {
-                    // Ignore CORS errors for external stylesheets
+                    // console.warn("CORS blocked stylesheet copy", e);
                 }
             });
 
-            // Force Dark Mode Body
-            win.document.body.className = "bg-[#0B1120] text-white overflow-hidden flex flex-col items-center justify-center";
+            // Match Theme Class
+            const isDark = document.documentElement.classList.contains('dark');
+            win.document.body.className = isDark 
+                ? "bg-[#0B1120] text-white flex flex-col items-center justify-center h-full overflow-hidden" 
+                : "bg-white text-slate-900 flex flex-col items-center justify-center h-full overflow-hidden";
             
-            // Listen for close
             win.addEventListener('pagehide', () => setPipWindow(null));
             setPipWindow(win);
 
         } catch (err) {
-            console.error("Failed to open PiP", err);
+            console.error("PiP Error:", err);
         }
     };
 
@@ -120,7 +121,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
   }, [pipWindow, setPipWindow]);
 
 
-  // -- DRAGGING LOGIC (For Floating Widget) --
+  // -- DRAG LOGIC --
   const handleMouseDown = (e: React.MouseEvent) => {
     if (isAnchored) return;
     e.preventDefault();
@@ -134,13 +135,13 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
       let newX = e.clientX - dragStart.current.x;
       let newY = e.clientY - dragStart.current.y;
       
-      // Constraints
       const maxX = window.innerWidth - 320;
       const maxY = window.innerHeight - 50;
-      newX = Math.max(0, Math.min(maxX, newX));
-      newY = Math.max(0, Math.min(maxY, newY));
-
-      setPosition({ x: newX, y: newY });
+      
+      setPosition({ 
+          x: Math.max(0, Math.min(maxX, newX)), 
+          y: Math.max(0, Math.min(maxY, newY)) 
+      });
     };
     const handleMouseUp = () => setIsDragging(false);
 
@@ -155,44 +156,41 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
   }, [isDragging]);
 
 
-  // -- RENDER: PIP CONTENT (React Portal) --
+  // -- PIP CONTENT (React Portal) --
   const PiPContent = pipWindow ? createPortal(
-    <div className="flex flex-col items-center justify-center w-full h-full p-6 select-none relative">
+    <div className="relative w-full h-full flex flex-col items-center justify-center p-6 select-none">
          {/* Background Glow */}
-         <div className="absolute inset-0 bg-gradient-to-br from-pink-500/10 to-blue-500/10"></div>
+         <div className="absolute inset-0 bg-gradient-to-br from-pink-500/5 to-blue-500/5 pointer-events-none"></div>
          
-         <div className="relative z-10 text-center">
-             <div className="text-6xl font-mono font-bold tracking-tighter text-white mb-4 drop-shadow-xl">
-                 {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{Math.floor(timeLeft % 60).toString().padStart(2, '0')}
-             </div>
-             
-             <div className="flex items-center justify-center gap-4">
-                 <button 
-                    onClick={toggleTimer}
-                    className={`p-4 rounded-full text-white shadow-lg transition-transform hover:scale-105 active:scale-95 ${isActive ? 'bg-amber-500' : 'bg-pink-600'}`}
-                 >
-                    {isActive ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
-                 </button>
-                 
-                 <button 
-                    onClick={resetTimer}
-                    className="p-3 rounded-full bg-white/10 text-slate-300 hover:bg-white/20 transition-colors"
-                 >
-                    <RotateCcw size={20} />
-                 </button>
-             </div>
-             
-             <p className="mt-4 text-[10px] uppercase font-bold tracking-widest text-slate-400">
-                 {mode === 'pomodoro' ? 'Focus Session' : 'Break Time'}
-             </p>
+         <div className="text-5xl font-mono font-bold tracking-tighter mb-6 relative z-10">
+             {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{Math.floor(timeLeft % 60).toString().padStart(2, '0')}
          </div>
+         
+         <div className="flex items-center gap-4 relative z-10">
+             <button 
+                onClick={toggleTimer}
+                className={`p-4 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 text-white ${isActive ? 'bg-amber-500' : 'bg-pink-600'}`}
+             >
+                {isActive ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
+             </button>
+             
+             <button 
+                onClick={resetTimer}
+                className="p-3 rounded-full bg-slate-100 dark:bg-white/10 text-slate-500 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-white/20 transition-colors"
+             >
+                <RotateCcw size={20} />
+             </button>
+         </div>
+         
+         <p className="mt-6 text-[10px] uppercase font-bold tracking-widest text-slate-400 dark:text-slate-500">
+             {mode === 'pomodoro' ? 'Focus Mode' : 'Break Time'}
+         </p>
     </div>,
     pipWindow.document.body
   ) : null;
 
 
-  // -- RENDER: MAIN PLAYER CONTAINER --
-  // We determine style based on Anchored vs Floating
+  // -- RENDER STYLE LOGIC --
   const containerStyle: React.CSSProperties = isAnchored && anchorRect
     ? {
         position: 'fixed',
@@ -200,20 +198,20 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
         left: anchorRect.left,
         width: anchorRect.width,
         height: anchorRect.height,
-        borderRadius: '1.5rem', // Match rounded-3xl of anchor
         zIndex: 10,
+        borderRadius: '1.5rem',
         boxShadow: 'none',
-        transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)', // Smooth Apple-like spring
+        transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)', // Apple-style spring
       }
     : {
         position: 'fixed',
-        top: position.y, // Bottom Right
+        top: position.y,
         left: position.x,
-        width: isMiniExpanded ? 320 : 180,
+        width: isMiniExpanded ? 320 : 160,
         height: isMiniExpanded ? 200 : 48,
+        zIndex: 50,
         borderRadius: '16px',
-        zIndex: 50, // Always on top when floating
-        boxShadow: '0 20px 50px -10px rgba(0,0,0,0.5)',
+        boxShadow: '0 20px 40px -10px rgba(0,0,0,0.3)',
         transition: isDragging ? 'none' : 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
       };
 
@@ -222,10 +220,10 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
       <div 
         style={containerStyle}
         className={`overflow-hidden flex flex-col bg-black border border-white/10 ${
-            !isAnchored ? 'backdrop-blur-xl bg-[#0B1120]/90' : ''
+            !isAnchored ? 'bg-slate-900/95 backdrop-blur-xl border-slate-700/50' : ''
         }`}
       >
-        {/* -- Floating Header (Drag Handle) -- */}
+        {/* -- Floating Header -- */}
         {!isAnchored && (
             <div 
                 onMouseDown={handleMouseDown}
@@ -235,8 +233,6 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                     <Music size={12} className="text-pink-500" />
                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Now Playing</span>
                 </div>
-                
-                {/* Expand/Collapse */}
                 <button 
                     onClick={() => setIsMiniExpanded(!isMiniExpanded)}
                     className="text-slate-500 hover:text-white transition-colors"
@@ -246,7 +242,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
             </div>
         )}
 
-        {/* -- Iframe Container -- */}
+        {/* -- Iframe -- */}
         <div className="flex-1 relative bg-black">
              <iframe 
                 width="100%" 
@@ -257,15 +253,19 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
                 allowFullScreen
                 className="w-full h-full object-cover"
-                style={{ opacity: (!isAnchored && !isMiniExpanded) ? 0 : 1, transition: 'opacity 0.3s' }}
+                style={{ 
+                    opacity: (!isAnchored && !isMiniExpanded) ? 0 : 1, 
+                    pointerEvents: (!isAnchored && !isMiniExpanded) ? 'none' : 'auto',
+                    transition: 'opacity 0.3s' 
+                }}
             />
-            {/* Drag Guard (prevents iframe mouse capture during drag) */}
+            {/* Drag Guard Overlay */}
             {isDragging && <div className="absolute inset-0 z-50 bg-transparent"></div>}
         </div>
 
-        {/* -- Mini Controls (Only visible when expanded & floating) -- */}
+        {/* -- Mini Controls -- */}
         {!isAnchored && isMiniExpanded && (
-            <div className="h-10 flex items-center justify-between px-4 bg-[#0B1120] border-t border-white/10">
+            <div className="h-12 flex items-center justify-between px-4 bg-slate-900 border-t border-white/10">
                  <div className="text-[10px] text-slate-400 font-mono truncate max-w-[150px]">
                     Lofi Girl - Study Beats
                  </div>
