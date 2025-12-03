@@ -1,5 +1,6 @@
+
 import React, { useState } from 'react';
-import { Play, Pause, RotateCcw, Volume2, VolumeX, Waves, Pencil, Coffee, Zap, Brain, Settings, ListTodo, ChevronDown } from 'lucide-react';
+import { Play, Pause, RotateCcw, Volume2, VolumeX, Waves, Pencil, Coffee, Zap, Brain, Settings, ListTodo, ChevronDown, ExternalLink } from 'lucide-react';
 import { usePomodoro, TimerMode } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
 import { isSameDay } from 'date-fns';
@@ -14,6 +15,7 @@ const Pomodoro: React.FC = () => {
     isMuted,
     focusTask,
     isPlayingNoise,
+    pipWindow,
     toggleTimer, 
     resetTimer, 
     switchMode, 
@@ -23,7 +25,8 @@ const Pomodoro: React.FC = () => {
     toggleBrownNoise,
     showBreakModal,
     setShowBreakModal,
-    stopAlarm
+    stopAlarm,
+    setPipWindow
   } = usePomodoro();
 
   const { tasks } = useTasks();
@@ -42,24 +45,73 @@ const Pomodoro: React.FC = () => {
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // --- THEME ENGINE (Restored Deep Dark & Sleek Light) ---
+  const togglePiP = async () => {
+      if (pipWindow) {
+        pipWindow.close();
+        setPipWindow(null);
+        return;
+      }
+  
+      // Check if API is available
+      if (!('documentPictureInPicture' in window)) {
+        alert("Your browser doesn't support the 'Keep on Top' window feature yet. Try Chrome or Edge!");
+        return;
+      }
+  
+      try {
+        const dpip = (window as any).documentPictureInPicture;
+        const win = await dpip.requestWindow({
+          width: 320,
+          height: 400,
+        });
+  
+        // Copy Styles to new Window
+        [...document.styleSheets].forEach((styleSheet) => {
+          try {
+            const cssRules = [...styleSheet.cssRules].map((rule) => rule.cssText).join('');
+            const style = document.createElement('style');
+            style.textContent = cssRules;
+            win.document.head.appendChild(style);
+          } catch (e) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet';
+            link.type = styleSheet.type;
+            link.media = styleSheet.media.mediaText;
+            if (styleSheet.href) {
+                link.href = styleSheet.href;
+            }
+            win.document.head.appendChild(link);
+          }
+        });
+  
+        // Handle Close
+        win.addEventListener('pagehide', () => {
+          setPipWindow(null);
+        });
+  
+        setPipWindow(win);
+      } catch (err) {
+        console.error("Failed to open PiP window:", err);
+      }
+    };
+
+  // --- THEME ENGINE ---
   const getTheme = () => {
     switch (mode) {
       case 'pomodoro':
         return {
-          // Dark: Deep Navy/Slate | Light: Pure White
-          bg: 'bg-white dark:bg-[#0B1120] border-slate-200 dark:border-slate-800 shadow-2xl shadow-pink-500/5 dark:shadow-none',
+          bg: 'bg-white dark:bg-[#020617] border-slate-200 dark:border-slate-800 shadow-2xl shadow-pink-500/5 dark:shadow-none',
           accent: 'text-pink-600 dark:text-pink-400',
           ring: 'stroke-pink-500',
           button: 'bg-gradient-to-br from-pink-500 to-pink-600 hover:from-pink-600 hover:to-pink-700 text-white shadow-pink-500/30',
           icon: <Brain size={20} className="text-pink-500 dark:text-pink-400" />,
           text: 'text-slate-800 dark:text-white',
           subtext: 'text-slate-500 dark:text-slate-400',
-          inputBg: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400'
+          inputBg: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400'
         };
       case 'shortBreak':
         return {
-          bg: 'bg-white dark:bg-[#0B1120] border-teal-200 dark:border-teal-900/30 shadow-2xl shadow-teal-500/5 dark:shadow-none',
+          bg: 'bg-white dark:bg-[#020617] border-teal-200 dark:border-teal-900/30 shadow-2xl shadow-teal-500/5 dark:shadow-none',
           accent: 'text-teal-600 dark:text-teal-400',
           ring: 'stroke-teal-500',
           button: 'bg-gradient-to-br from-teal-500 to-teal-600 hover:from-teal-600 hover:to-teal-700 text-white shadow-teal-500/30',
@@ -70,7 +122,7 @@ const Pomodoro: React.FC = () => {
         };
       case 'longBreak':
         return {
-          bg: 'bg-white dark:bg-[#0B1120] border-indigo-200 dark:border-indigo-900/30 shadow-2xl shadow-indigo-500/5 dark:shadow-none',
+          bg: 'bg-white dark:bg-[#020617] border-indigo-200 dark:border-indigo-900/30 shadow-2xl shadow-indigo-500/5 dark:shadow-none',
           accent: 'text-indigo-600 dark:text-indigo-400',
           ring: 'stroke-indigo-500',
           button: 'bg-gradient-to-br from-indigo-500 to-indigo-600 hover:from-indigo-600 hover:to-indigo-700 text-white shadow-indigo-500/30',
@@ -81,14 +133,14 @@ const Pomodoro: React.FC = () => {
         };
       case 'custom':
         return {
-          bg: 'bg-white dark:bg-[#0B1120] border-slate-200 dark:border-slate-800 shadow-2xl shadow-slate-500/5 dark:shadow-none',
+          bg: 'bg-white dark:bg-[#020617] border-slate-200 dark:border-slate-800 shadow-2xl shadow-slate-500/5 dark:shadow-none',
           accent: 'text-slate-600 dark:text-slate-300',
           ring: 'stroke-slate-500 dark:stroke-slate-400',
           button: 'bg-slate-600 hover:bg-slate-700 dark:bg-slate-700 dark:hover:bg-slate-600 text-white shadow-slate-500/30',
           icon: <Settings size={20} className="text-slate-500 dark:text-slate-400" />,
           text: 'text-slate-800 dark:text-white',
           subtext: 'text-slate-500 dark:text-slate-400',
-          inputBg: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400'
+          inputBg: 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white placeholder-slate-400'
         };
       default:
         return {
@@ -115,7 +167,7 @@ const Pomodoro: React.FC = () => {
   return (
     <div className={`w-full min-h-[calc(100vh-140px)] rounded-[2.5rem] relative flex flex-col items-center justify-center p-6 lg:p-12 transition-all duration-500 ease-in-out border ${theme.bg}`}>
       
-      {/* Background Ambience (Dark Mode Deep Glow) */}
+      {/* Background Ambience */}
       <div className="absolute inset-0 overflow-hidden rounded-[2.5rem] pointer-events-none">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-gradient-to-br from-white/20 to-transparent dark:from-white/5 blur-3xl rounded-full opacity-50"></div>
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-gradient-to-tl from-pink-500/10 to-transparent blur-3xl rounded-full opacity-30"></div>
@@ -181,30 +233,30 @@ const Pomodoro: React.FC = () => {
 
             {/* SVG Timer Ring */}
             <div className="relative mb-8 group cursor-pointer select-none" onClick={toggleTimer}>
-                <svg width="300" height="300" className="transform -rotate-90 filter drop-shadow-lg">
+                <svg width="320" height="320" className="transform -rotate-90 filter drop-shadow-lg">
                     {/* Background Ring */}
                     <circle 
-                        cx="150" cy="150" r={radius} 
+                        cx="160" cy="160" r={radius} 
                         fill="transparent" 
                         stroke="currentColor"
                         className="opacity-10 text-slate-400 dark:text-slate-600"
-                        strokeWidth="6" 
+                        strokeWidth="8" 
                     />
                     {/* Progress Ring */}
                     <circle 
-                        cx="150" cy="150" r={radius} 
+                        cx="160" cy="160" r={radius} 
                         fill="transparent" 
                         className={`transition-all duration-1000 ease-linear ${theme.ring}`}
-                        strokeWidth="6"
+                        strokeWidth="8"
                         strokeLinecap="round"
                         strokeDasharray={circumference}
                         strokeDashoffset={dashOffset}
                     />
                 </svg>
                 
-                {/* Timer Text (REDUCED SIZE) */}
+                {/* Timer Text (SIZE ADJUSTED TO 7XL as requested) */}
                 <div className={`absolute inset-0 flex flex-col items-center justify-center ${theme.text}`}>
-                    <span className="text-6xl lg:text-7xl font-black font-mono tracking-tighter tabular-nums selection:bg-transparent">
+                    <span className="text-7xl font-bold font-mono tracking-tighter tabular-nums selection:bg-transparent">
                         {formatTime(timeLeft)}
                     </span>
                     <div className="flex items-center gap-2 mt-2 uppercase tracking-widest text-xs font-bold opacity-60">
@@ -223,7 +275,6 @@ const Pomodoro: React.FC = () => {
                           <span className="text-xs font-bold text-slate-900 dark:text-white">{customTime} min</span>
                       </div>
                       
-                      {/* Slider Control */}
                       <input 
                         type="range" 
                         min="1" 
@@ -233,7 +284,6 @@ const Pomodoro: React.FC = () => {
                         className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-slate-600 dark:accent-white mb-4"
                       />
 
-                      {/* Manual Input Group */}
                       <div className="flex items-center gap-2">
                         <button 
                           onClick={() => setCustomTimeValue(Math.max(1, customTime - 5))}
@@ -254,7 +304,6 @@ const Pomodoro: React.FC = () => {
                           className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-white font-bold transition-colors"
                         >+</button>
                       </div>
-                      <p className="text-[10px] text-center mt-2 text-slate-400">Min: 1m • Max: 180m</p>
                   </div>
                </div>
             )}
@@ -323,32 +372,43 @@ const Pomodoro: React.FC = () => {
 
         </div>
 
-        {/* RIGHT: VIDEO ANCHOR */}
+        {/* RIGHT: VIDEO ANCHOR & TIPS */}
         <div className="h-full flex flex-col justify-center animate-fade-in-up delay-100">
             {/* 
-                THE ANCHOR: This div is empty but occupies the space.
-                GlobalYoutubePlayer.tsx will measure this div's position and overlay the video on top of it.
+                THE ANCHOR: The GlobalYoutubePlayer will Portal into this div 
+                when we are on this page.
             */}
             <div 
                 id="video-anchor" 
                 className="w-full aspect-video bg-slate-100 dark:bg-slate-900/50 rounded-3xl border border-slate-200 dark:border-slate-800 border-dashed relative overflow-hidden"
             >
-               {/* Placeholder content just in case the player hasn't snapped yet */}
-               <div className="absolute inset-0 flex items-center justify-center text-slate-300 dark:text-slate-700">
+               {/* Content shown only when player is floating elsewhere (rare edge case with portal) */}
+               <div className="absolute inset-0 flex items-center justify-center text-slate-300 dark:text-slate-700 pointer-events-none">
                   <div className="text-center">
                     <Brain size={40} className="mx-auto mb-2 opacity-50" />
-                    <span className="font-bold tracking-widest text-xs uppercase">Video Player Anchor</span>
+                    <span className="font-bold tracking-widest text-xs uppercase">Video Player Zone</span>
                   </div>
                </div>
             </div>
 
             <div className="mt-8 p-6 bg-white dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
-                <h4 className="font-bold text-slate-900 dark:text-white mb-2 flex items-center gap-2">
-                    <Zap size={16} className="text-yellow-500 fill-yellow-500" /> Pro Tip
-                </h4>
+                <div className="flex items-center justify-between mb-2">
+                    <h4 className="font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                        <Zap size={16} className="text-yellow-500 fill-yellow-500" /> Pro Tip
+                    </h4>
+                    
+                    {/* Pop Out Button */}
+                    <button 
+                        onClick={togglePiP}
+                        className="text-xs font-bold text-pink-500 hover:text-pink-600 dark:hover:text-pink-400 flex items-center gap-1 transition-colors"
+                    >
+                        <ExternalLink size={12} />
+                        {pipWindow ? 'Close Pop-Out' : 'Pop Out Timer'}
+                    </button>
+                </div>
+                
                 <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-400">
-                   When you switch tabs, the music player will seamlessly transform into a 
-                   <span className="font-bold text-slate-800 dark:text-white"> Floating Widget</span> so your flow stays uninterrupted.
+                   Click <span className="font-bold text-slate-800 dark:text-white">Pop Out Timer</span> to create a floating window that stays on top of other apps (like the Windows Clock), keeping your video and timer visible while you study.
                 </p>
             </div>
         </div>
