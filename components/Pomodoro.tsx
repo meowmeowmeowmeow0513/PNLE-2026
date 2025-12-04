@@ -20,8 +20,15 @@ const Pomodoro: React.FC = () => {
   const [showTaskDropdown, setShowTaskDropdown] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   
-  // Custom Timer Form State
+  // Custom Timer Form State (Initialize with values from timerSettings if custom, or default)
   const [customForm, setCustomForm] = useState<TimerSettings>({ focus: 25 * 60, shortBreak: 5 * 60, longBreak: 20 * 60 });
+
+  // Update local form state when opening modal to match current custom settings
+  useEffect(() => {
+      if (isCustomModalOpen && activePreset === 'custom') {
+          setCustomForm(timerSettings);
+      }
+  }, [isCustomModalOpen, activePreset, timerSettings]);
 
   // --- AUTOMATIC TASK SYNC ---
   // Syncs the "Focus Target" with the currently scheduled task in the planner
@@ -69,10 +76,14 @@ const Pomodoro: React.FC = () => {
   const handleCustomSave = (e: React.FormEvent) => {
       e.preventDefault();
       // Values are in minutes in the form, convert to seconds
+      // NOTE: We assume the user inputs minutes, so we multiply by 60 for context
+      // But wait, the state 'customForm' holds seconds. We need to convert back and forth carefully.
+      // Actually, let's just use seconds in state for consistency, but input fields read/write minutes.
+      
       const settings: TimerSettings = {
-          focus: customForm.focus * 60,
-          shortBreak: customForm.shortBreak * 60,
-          longBreak: customForm.longBreak * 60
+          focus: customForm.focus, // Already in seconds if we handle input correctly
+          shortBreak: customForm.shortBreak,
+          longBreak: customForm.longBreak
       };
       setCustomSettings(settings);
       setPreset('custom'); // Ensure we switch to custom
@@ -368,12 +379,17 @@ const Pomodoro: React.FC = () => {
 
                   <form onSubmit={handleCustomSave} className="space-y-5">
                       <div className="space-y-1">
-                          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Focus Duration (min)</label>
+                          <div className="flex justify-between items-center">
+                              <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Focus Duration</label>
+                              <span className="text-[10px] text-slate-400 font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">Minutes</span>
+                          </div>
                           <input 
                               type="number" 
-                              value={customForm.focus / 60}
+                              value={Math.floor(customForm.focus / 60)}
                               onChange={(e) => setCustomForm({...customForm, focus: parseInt(e.target.value) * 60})}
                               className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-pink-500 transition-all"
+                              min="1"
+                              max="120"
                           />
                       </div>
                       
@@ -382,18 +398,22 @@ const Pomodoro: React.FC = () => {
                               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Short Break</label>
                               <input 
                                   type="number" 
-                                  value={customForm.shortBreak / 60}
+                                  value={Math.floor(customForm.shortBreak / 60)}
                                   onChange={(e) => setCustomForm({...customForm, shortBreak: parseInt(e.target.value) * 60})}
                                   className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 transition-all"
+                                  min="1"
+                                  max="30"
                               />
                           </div>
                           <div className="space-y-1">
                               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Long Break</label>
                               <input 
                                   type="number" 
-                                  value={customForm.longBreak / 60}
+                                  value={Math.floor(customForm.longBreak / 60)}
                                   onChange={(e) => setCustomForm({...customForm, longBreak: parseInt(e.target.value) * 60})}
                                   className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 transition-all"
+                                  min="1"
+                                  max="60"
                               />
                           </div>
                       </div>
