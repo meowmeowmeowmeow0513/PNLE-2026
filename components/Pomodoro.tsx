@@ -2,101 +2,69 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Coffee, CheckCircle2, Activity, Zap, SkipForward, Layers, Target, Music, Settings, X, Save, Trophy, Star
+    Brain, Coffee, Target, Music, Settings, X, Save, Trophy, Star, Sparkles, Zap, SkipForward, Layers, Activity
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
 import { isWithinInterval } from 'date-fns';
 import confetti from 'canvas-confetti';
 
-// --- ANIMATED CAT COMPONENT ---
+// --- MINIMALIST AESTHETIC CAT ---
 const AnimatedCat = () => (
-  <div className="relative w-48 h-48 mx-auto">
-    <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-2xl">
+  <div className="relative w-40 h-40 mx-auto">
+    <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-xl">
       <defs>
-        <filter id="fluff" x="-20%" y="-20%" width="140%" height="140%">
-          <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="noise" />
-          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
+        <linearGradient id="catGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#FDF2F8" /> {/* Pink-50 */}
+          <stop offset="100%" stopColor="#FCE7F3" /> {/* Pink-100 */}
+        </linearGradient>
+        <filter id="softGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="3" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
         </filter>
       </defs>
       
       <style>
         {`
-          @keyframes ear-twitch-left { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-10deg); } }
-          @keyframes ear-twitch-right { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(10deg); } }
-          @keyframes blink { 0%, 48%, 52%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
-          @keyframes nose-wiggle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
-          @keyframes whisker-shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
-          @keyframes float-head { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(5px); } }
-          @keyframes tail-wag { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(15deg); } }
+          @keyframes float-minimal { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
+          @keyframes blink-minimal { 0%, 48%, 52%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
+          @keyframes ear-twitch { 0%, 90% { transform: rotate(0deg); } 95% { transform: rotate(-5deg); } 100% { transform: rotate(0deg); } }
           
-          .cat-head { animation: float-head 3s ease-in-out infinite; transform-origin: center bottom; }
-          .cat-ear-left { animation: ear-twitch-left 3s ease-in-out infinite; transform-origin: 60px 70px; }
-          .cat-ear-right { animation: ear-twitch-right 3.5s ease-in-out infinite; transform-origin: 140px 70px; }
-          .cat-eye { animation: blink 4s infinite; transform-origin: center; transform-box: fill-box; }
-          .cat-nose { animation: nose-wiggle 3s ease-in-out infinite; }
-          .cat-whiskers { animation: whisker-shake 2s ease-in-out infinite; transform-origin: center; }
+          .min-cat-body { animation: float-minimal 4s ease-in-out infinite; transform-origin: center bottom; }
+          .min-cat-eye { animation: blink-minimal 5s infinite; transform-origin: center; transform-box: fill-box; }
+          .min-cat-ear { animation: ear-twitch 3s infinite; transform-origin: bottom center; }
         `}
       </style>
 
-      {/* Paws (Behind) */}
-      <ellipse cx="60" cy="180" rx="15" ry="12" fill="#fce7f3" />
-      <ellipse cx="140" cy="180" rx="15" ry="12" fill="#fce7f3" />
-
-      {/* Group Head for Float Animation */}
-      <g className="cat-head">
+      {/* Main Group */}
+      <g className="min-cat-body">
           {/* Ears */}
-          <path d="M40 80 L30 30 L90 60 Z" fill="#ec4899" className="cat-ear-left" stroke="#db2777" strokeWidth="4" strokeLinejoin="round" />
-          <path d="M160 80 L170 30 L110 60 Z" fill="#ec4899" className="cat-ear-right" stroke="#db2777" strokeWidth="4" strokeLinejoin="round" />
+          <path d="M45 70 L35 30 L85 55 Z" fill="url(#catGradient)" stroke="#FBCFE8" strokeWidth="3" strokeLinejoin="round" className="min-cat-ear" />
+          <path d="M155 70 L165 30 L115 55 Z" fill="url(#catGradient)" stroke="#FBCFE8" strokeWidth="3" strokeLinejoin="round" className="min-cat-ear" style={{ animationDelay: '1.5s' }} />
           
-          {/* Inner Ears */}
-          <path d="M45 75 L38 45 L80 65 Z" fill="#fbcfe8" className="cat-ear-left" />
-          <path d="M155 75 L162 45 L120 65 Z" fill="#fbcfe8" className="cat-ear-right" />
-
-          {/* Face Shape */}
-          <ellipse cx="100" cy="110" rx="70" ry="60" fill="#ec4899" stroke="#db2777" strokeWidth="4" />
+          {/* Face Base */}
+          <ellipse cx="100" cy="110" rx="75" ry="60" fill="url(#catGradient)" stroke="#FBCFE8" strokeWidth="3" />
           
           {/* Cheeks */}
-          <circle cx="60" cy="120" r="15" fill="#fbcfe8" opacity="0.6" />
-          <circle cx="140" cy="120" r="15" fill="#fbcfe8" opacity="0.6" />
+          <circle cx="55" cy="115" r="8" fill="#F472B6" opacity="0.3" />
+          <circle cx="145" cy="115" r="8" fill="#F472B6" opacity="0.3" />
 
-          {/* Eyes */}
-          <g className="cat-eye">
-              <ellipse cx="70" cy="100" rx="12" ry="16" fill="white" />
-              <circle cx="70" cy="100" r="6" fill="#1e293b" />
-              <circle cx="74" cy="96" r="3" fill="white" />
+          {/* Eyes (Simple Curves) */}
+          <g className="min-cat-eye">
+              <circle cx="70" cy="100" r="5" fill="#374151" />
           </g>
-          <g className="cat-eye" style={{ animationDelay: '0.1s' }}>
-              <ellipse cx="130" cy="100" rx="12" ry="16" fill="white" />
-              <circle cx="130" cy="100" r="6" fill="#1e293b" />
-              <circle cx="134" cy="96" r="3" fill="white" />
+          <g className="min-cat-eye" style={{ animationDelay: '0.2s' }}>
+              <circle cx="130" cy="100" r="5" fill="#374151" />
           </g>
 
-          {/* Snout Area */}
-          <ellipse cx="100" cy="135" rx="20" ry="14" fill="#fdf2f8" />
+          {/* Nose & Mouth (Minimalist) */}
+          <path d="M96 115 L104 115 L100 120 Z" fill="#EC4899" />
+          <path d="M100 120 Q90 128 85 122 M100 120 Q110 128 115 122" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" />
 
-          {/* Nose */}
-          <path d="M92 130 L108 130 L100 140 Z" fill="#be185d" className="cat-nose" />
-
-          {/* Mouth */}
-          <path d="M100 140 Q90 150 80 145" fill="none" stroke="#be185d" strokeWidth="3" strokeLinecap="round" />
-          <path d="M100 140 Q110 150 120 145" fill="none" stroke="#be185d" strokeWidth="3" strokeLinecap="round" />
-
-          {/* Whiskers */}
-          <g className="cat-whiskers" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.8">
-              <line x1="50" y1="130" x2="10" y2="120" />
-              <line x1="50" y1="135" x2="10" y2="135" />
-              <line x1="50" y1="140" x2="10" y2="150" />
-              
-              <line x1="150" y1="130" x2="190" y2="120" />
-              <line x1="150" y1="135" x2="190" y2="135" />
-              <line x1="150" y1="140" x2="190" y2="150" />
-          </g>
+          {/* Paws Peeking */}
+          <path d="M60 165 Q70 155 80 165" fill="none" stroke="#FBCFE8" strokeWidth="4" strokeLinecap="round" opacity="0.8" />
+          <path d="M120 165 Q130 155 140 165" fill="none" stroke="#FBCFE8" strokeWidth="4" strokeLinecap="round" opacity="0.8" />
       </g>
-
-      {/* Paws (Front) */}
-      <path d="M50 170 Q60 150 70 170" fill="#fce7f3" stroke="#db2777" strokeWidth="3" />
-      <path d="M130 170 Q140 150 150 170" fill="#fce7f3" stroke="#db2777" strokeWidth="3" />
     </svg>
   </div>
 );
@@ -125,23 +93,25 @@ const Pomodoro: React.FC = () => {
       if (sessionsCompleted > prevSessionsRef.current) {
           if (sessionsCompleted > 0 && sessionsCompleted % sessionGoal === 0) {
               setShowGoalModal(true);
-              // Trigger confetti
+              // Trigger minimalist confetti
               const duration = 3000;
               const end = Date.now() + duration;
               (function frame() {
                 confetti({
-                  particleCount: 5,
+                  particleCount: 3,
                   angle: 60,
                   spread: 55,
                   origin: { x: 0 },
-                  colors: ['#ec4899', '#a855f7', '#fbbf24']
+                  colors: ['#F472B6', '#A78BFA', '#FCD34D'],
+                  shapes: ['circle']
                 });
                 confetti({
-                  particleCount: 5,
+                  particleCount: 3,
                   angle: 120,
                   spread: 55,
                   origin: { x: 1 },
-                  colors: ['#ec4899', '#a855f7', '#fbbf24']
+                  colors: ['#F472B6', '#A78BFA', '#FCD34D'],
+                  shapes: ['circle']
                 });
                 if (Date.now() < end) {
                   requestAnimationFrame(frame);
@@ -501,88 +471,74 @@ const Pomodoro: React.FC = () => {
 
       </div>
 
-      {/* --- CUTE CAT BREAK NOTIFICATION MODAL --- */}
+      {/* --- MINIMALIST BREAK NOTIFICATION MODAL --- */}
       {showBreakModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
               <div 
-                className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in overflow-hidden" 
+                className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 dark:border-white/10 relative flex flex-col items-center text-center animate-zoom-in" 
                 onClick={e => e.stopPropagation()}
               >
-                  {/* Confetti Background Effect */}
-                  <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-pink-500 to-transparent"></div>
-
                   <AnimatedCat />
                   
-                  <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-6 mb-2 tracking-tight">
-                      Meow! Good Job!
+                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-6 mb-2">
+                      Pause & Breathe
                   </h3>
-                  <p className="text-slate-500 dark:text-slate-300 font-medium mb-8">
-                      You've crushed that session. Time to rest your brain cells! :)))!!
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8 leading-relaxed">
+                      You've earned this moment. Step away, stretch, and recharge for the next round.
                   </p>
 
                   <div className="flex flex-col w-full gap-3">
                       <button 
                           onClick={() => { setShowBreakModal(false); toggleTimer(); }}
-                          className="w-full py-3.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl font-bold shadow-lg shadow-pink-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2"
+                          className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg hover:shadow-xl transition-all transform active:scale-95 flex items-center justify-center gap-2"
                       >
-                          <Coffee size={20} /> Let's Rest (Start Break)
+                          <Coffee size={18} /> Start Break
                       </button>
                       <button 
                           onClick={() => { setShowBreakModal(false); skipForward(); }}
-                          className="w-full py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl font-bold transition-colors"
+                          className="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 font-bold tracking-wide uppercase py-2 transition-colors"
                       >
-                          Skip Break (I'm a Robot)
+                          Skip Rest
                       </button>
                   </div>
               </div>
           </div>
       )}
 
-      {/* --- GOAL COMPLETION CELEBRATION MODAL --- */}
+      {/* --- PREMIUM GOAL CELEBRATION MODAL --- */}
       {showGoalModal && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in" onClick={() => setShowGoalModal(false)}>
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xl animate-fade-in" onClick={() => setShowGoalModal(false)}>
               <div 
-                className="bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 rounded-[2.5rem] p-1 w-full max-w-sm shadow-2xl relative animate-zoom-in" 
+                className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-10 w-full max-w-sm shadow-2xl border border-white/50 dark:border-white/10 relative animate-zoom-in text-center overflow-hidden" 
                 onClick={e => e.stopPropagation()}
               >
-                  <div className="bg-[#020617] rounded-[2.3rem] p-8 flex flex-col items-center text-center relative overflow-hidden">
-                      {/* Rays */}
-                      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
-                      <div className="absolute -top-24 -right-24 w-64 h-64 bg-yellow-500/20 rounded-full blur-[80px] animate-pulse"></div>
-                      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-pink-500/20 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '1s'}}></div>
+                  {/* Subtle Aura */}
+                  <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-pink-500/20 rounded-full blur-[80px] pointer-events-none"></div>
 
-                      <div className="relative mb-6">
-                          <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-20 rounded-full"></div>
-                          <div className="relative w-24 h-24 bg-gradient-to-br from-yellow-300 to-amber-600 rounded-3xl rotate-12 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                              <Trophy size={48} className="text-white drop-shadow-md" />
-                          </div>
-                          <div className="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center animate-bounce">
-                              <Star size={16} className="text-amber-500 fill-current" />
-                          </div>
+                  <div className="relative z-10 flex flex-col items-center">
+                      <div className="w-20 h-20 bg-gradient-to-tr from-amber-300 to-amber-500 rounded-2xl rotate-3 shadow-lg shadow-amber-500/30 flex items-center justify-center mb-6 text-white transform hover:rotate-6 transition-transform duration-500">
+                          <Trophy size={40} className="drop-shadow-md" />
                       </div>
 
-                      <h3 className="text-3xl font-black text-white mb-2 tracking-tight">
-                          Goal Crushed!
+                      <h3 className="text-3xl font-black text-slate-900 dark:text-white mb-2 tracking-tight">
+                          Goal Reached
                       </h3>
-                      <p className="text-slate-300 font-medium mb-2">
-                          You completed {sessionsCompleted} focus sessions today.
-                      </p>
-                      <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-8">
-                          Unstoppable Momentum
+                      <p className="text-slate-500 dark:text-slate-400 font-medium text-sm mb-8">
+                          {sessionsCompleted} focus sessions completed today.<br/>Excellent momentum.
                       </p>
 
                       <div className="flex flex-col w-full gap-3">
                           <button 
                               onClick={() => { setShowGoalModal(false); toggleTimer(); }}
-                              className="w-full py-4 bg-white text-indigo-900 rounded-xl font-black uppercase tracking-wider shadow-xl shadow-white/10 transition-all transform active:scale-95 flex items-center justify-center gap-2 hover:bg-slate-100"
+                              className="w-full py-4 bg-pink-600 hover:bg-pink-500 text-white rounded-2xl font-bold shadow-lg shadow-pink-500/20 transition-all transform active:scale-95 flex items-center justify-center gap-2"
                           >
-                              <Coffee size={20} /> Take a Well-Deserved Break
+                              <Sparkles size={18} /> Take a Break
                           </button>
                           <button 
                               onClick={() => setShowGoalModal(false)}
-                              className="text-slate-400 hover:text-white text-xs font-bold mt-2 transition-colors"
+                              className="text-slate-400 hover:text-slate-600 dark:hover:text-white text-xs font-bold uppercase tracking-widest mt-2 transition-colors"
                           >
-                              Close & Continue
+                              Dismiss
                           </button>
                       </div>
                   </div>
