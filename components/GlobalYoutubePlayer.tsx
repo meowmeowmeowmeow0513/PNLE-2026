@@ -1,11 +1,12 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { NavigationItem } from '../types';
 import { usePomodoro } from './PomodoroContext';
 import { 
     Pause, Play, RotateCcw, Maximize2, 
-    ChevronUp, ChevronDown, Music, Volume2, VolumeX, Target 
+    ChevronUp, ChevronDown, Volume2, VolumeX, 
+    MonitorPlay, Minimize2, ExternalLink
 } from 'lucide-react';
 
 interface GlobalYoutubePlayerProps {
@@ -14,14 +15,38 @@ interface GlobalYoutubePlayerProps {
 
 const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem }) => {
   const { 
-    timeLeft, isActive, mode, pipWindow, focusTask, isMuted,
+    timeLeft, isActive, mode, pipWindow, focusTask, isMuted, initialTime,
     toggleTimer, resetTimer, setPipWindow, toggleMute
   } = usePomodoro();
   
   // -- STATE --
   const [isAnchored, setIsAnchored] = useState(false);
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
-  const [isExpanded, setIsExpanded] = useState(false); // For floating widget
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isHovered, setIsHovered] = useState(false);
+
+  // -- THEME SYNC FOR PIP --
+  useEffect(() => {
+    if (!pipWindow) return;
+
+    const syncTheme = () => {
+        const isDark = document.documentElement.classList.contains('dark');
+        if (isDark) {
+            pipWindow.document.documentElement.classList.add('dark');
+        } else {
+            pipWindow.document.documentElement.classList.remove('dark');
+        }
+    };
+
+    // Initial sync
+    syncTheme();
+
+    // Watch for changes on the main window's html element
+    const observer = new MutationObserver(syncTheme);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
+    return () => observer.disconnect();
+  }, [pipWindow]);
 
   // -- ANCHOR SYSTEM --
   useEffect(() => {
@@ -31,9 +56,12 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
         
         if (isPomoPage && anchorEl) {
             const rect = anchorEl.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
+            // Check if visible
+            if (rect.width > 0 && rect.height > 0 && rect.top < window.innerHeight && rect.bottom > 0) {
                 setAnchorRect(rect);
                 setIsAnchored(true);
+                // Auto-expand if anchoring, collapse if floating initially
+                if (!isAnchored) setIsExpanded(true); 
                 return;
             }
         }
@@ -41,7 +69,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
     };
 
     checkAnchor();
-    const interval = setInterval(checkAnchor, 100); 
+    const interval = setInterval(checkAnchor, 200); 
     window.addEventListener('resize', checkAnchor);
     window.addEventListener('scroll', checkAnchor);
 
@@ -50,56 +78,63 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
         window.removeEventListener('resize', checkAnchor);
         window.removeEventListener('scroll', checkAnchor);
     };
-  }, [activeItem]);
+  }, [activeItem, isAnchored]);
 
   // -- PIP LOGIC --
-  useEffect(() => {
-    const handleOpenPiP = async () => {
-        if (pipWindow) {
-            pipWindow.close();
-            return;
-        }
+  const handleTogglePiP = async (e?: React.MouseEvent) => {
+    e?.stopPropagation();
 
-        if (!('documentPictureInPicture' in window)) {
-            alert("Picture-in-Picture API not supported.");
-            return;
-        }
+    if (pipWindow) {
+        pipWindow.close();
+        return;
+    }
 
-        try {
-            const dpip = (window as any).documentPictureInPicture;
-            const win = await dpip.requestWindow({ width: 320, height: 320 });
+    if (!('documentPictureInPicture' in window)) {
+        alert("Picture-in-Picture API not supported.");
+        return;
+    }
 
-            win.document.body.className = "dark bg-[#020617] text-white flex flex-col items-center justify-center h-full overflow-hidden";
-            
-            const style = win.document.createElement('style');
-            let cssRules = '';
-            Array.from(document.styleSheets).forEach(sheet => {
-                try {
-                    const rules = Array.from(sheet.cssRules).map(rule => rule.cssText).join('');
-                    cssRules += rules;
-                } catch (e) {
-                    if (sheet.href) {
-                        const link = win.document.createElement('link');
-                        link.rel = 'stylesheet';
-                        link.href = sheet.href;
-                        win.document.head.appendChild(link);
-                    }
+    try {
+        const dpip = (window as any).documentPictureInPicture;
+        // Request a square-ish window
+        const win = await dpip.requestWindow({ width: 350, height: 350 });
+
+        // Initial setup - Theme handled by useEffect now
+        const isDark = document.documentElement.classList.contains('dark');
+        win.document.documentElement.className = isDark ? 'dark' : '';
+        win.document.body.className = "bg-slate-50 dark:bg-[#020617] text-slate-900 dark:text-white flex flex-col items-center justify-center h-full overflow-hidden select-none m-0 p-0 transition-colors duration-300";
+        
+        const style = win.document.createElement('style');
+        let cssRules = `
+            @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;700;800&display=swap');
+            body { font-family: 'Plus Jakarta Sans', sans-serif; }
+            * { box-sizing: border-box; }
+            /* Scrollbar hiding */
+            ::-webkit-scrollbar { width: 0px; background: transparent; }
+        `;
+        
+        // Try to copy Tailwind styles
+        Array.from(document.styleSheets).forEach(sheet => {
+            try {
+                if (sheet.href) {
+                    const link = win.document.createElement('link');
+                    link.rel = 'stylesheet';
+                    link.href = sheet.href;
+                    win.document.head.appendChild(link);
                 }
-            });
-            style.textContent = cssRules;
-            win.document.head.appendChild(style);
+            } catch (e) {}
+        });
+        
+        style.textContent = cssRules;
+        win.document.head.appendChild(style);
 
-            win.addEventListener('pagehide', () => setPipWindow(null));
-            setPipWindow(win);
+        win.addEventListener('pagehide', () => setPipWindow(null));
+        setPipWindow(win);
 
-        } catch (err) {
-            console.error("PiP Error:", err);
-        }
-    };
-
-    window.addEventListener('open-pip', handleOpenPiP);
-    return () => window.removeEventListener('open-pip', handleOpenPiP);
-  }, [pipWindow, setPipWindow]);
+    } catch (err) {
+        console.error("PiP Error:", err);
+    }
+  };
 
   // -- STYLE CALCULATION --
   const getContainerStyle = (): React.CSSProperties => {
@@ -110,53 +145,91 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
               left: anchorRect.left,
               width: anchorRect.width,
               height: anchorRect.height,
-              zIndex: 10,
+              zIndex: 40,
               borderRadius: '1.5rem',
               transform: 'none',
-              transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+              transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
               boxShadow: 'none',
           };
       } else {
-          // Floating "Dynamic Island" Widget
+          // Floating Widget
           return {
               position: 'fixed',
               bottom: '24px',
               right: '24px',
-              width: isExpanded ? '340px' : '180px',
-              height: isExpanded ? '260px' : '56px',
+              width: isExpanded ? '300px' : '160px',
+              height: isExpanded ? '200px' : '56px',
               zIndex: 50,
-              borderRadius: isExpanded ? '20px' : '100px',
+              borderRadius: isExpanded ? '24px' : '100px',
               transition: 'all 0.4s cubic-bezier(0.16, 1, 0.3, 1)',
-              boxShadow: '0 20px 40px -10px rgba(0,0,0,0.5)',
-              backgroundColor: 'rgba(2, 6, 23, 0.8)', // Deep Midnight
-              backdropFilter: 'blur(20px)',
-              // The pulse animation class is handled in className, but border here is fallback
+              boxShadow: isExpanded 
+                ? '0 25px 50px -12px rgba(0, 0, 0, 0.25)' 
+                : '0 10px 25px -5px rgba(0, 0, 0, 0.1)',
           };
       }
   };
 
-  // -- PIP PORTAL CONTENT --
+  // -- HELPERS --
+  const formatTime = (seconds: number) => {
+      const m = Math.floor(seconds / 60);
+      const s = seconds % 60;
+      return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
+  const progress = ((initialTime - timeLeft) / initialTime) * 100;
+  const strokeDasharray = 2 * Math.PI * 18; // r=18
+  const strokeDashoffset = strokeDasharray - (progress / 100) * strokeDasharray;
+
+  // -- PIP CONTENT (EXTERNAL WINDOW) --
   const PiPContent = pipWindow ? createPortal(
-    <div className="w-full h-full flex flex-col items-center justify-center p-6 relative select-none">
-        <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${isActive ? 'from-pink-500 to-purple-600' : 'from-cyan-500 to-blue-600'}`}></div>
+    <div className="relative w-full h-full flex flex-col justify-between bg-slate-50 dark:bg-[#020617] transition-colors duration-300">
+        {/* Dynamic Background */}
+        <div className={`absolute inset-0 opacity-20 bg-gradient-to-br ${isActive ? 'from-pink-500 via-rose-400 to-orange-400 dark:from-pink-600 dark:via-purple-600 dark:to-indigo-600 animate-pulse' : 'from-cyan-400 via-sky-400 to-blue-400 dark:from-cyan-600 dark:via-blue-600 dark:to-teal-600'}`}></div>
         
-        <div className="relative z-10 flex flex-col items-center gap-4">
-             <span className="text-6xl font-mono font-bold tracking-tighter tabular-nums drop-shadow-2xl">
-                 {Math.floor(timeLeft / 60).toString().padStart(2, '0')}:{Math.floor(timeLeft % 60).toString().padStart(2, '0')}
+        {/* Header */}
+        <div className="relative z-10 p-4 flex justify-between items-start w-full">
+            <div className="flex flex-col">
+                <span className={`text-[10px] font-black uppercase tracking-widest ${isActive ? 'text-pink-600 dark:text-pink-400' : 'text-cyan-600 dark:text-cyan-400'}`}>
+                    {mode === 'pomodoro' ? 'FOCUS MODE' : 'REST MODE'}
+                </span>
+                <span className="text-xs text-slate-500 dark:text-white/60 font-medium truncate max-w-[200px]">
+                    {focusTask || 'Session Active'}
+                </span>
+            </div>
+            {/* Visualizer Bars (Static Simulation) */}
+            <div className="flex items-end gap-1 h-4">
+                {[...Array(4)].map((_, i) => (
+                    <div key={i} className={`w-1 rounded-full ${isActive ? 'bg-pink-500 animate-pulse' : 'bg-cyan-500'}`} style={{ height: `${Math.random() * 100}%`, animationDelay: `${i * 0.1}s` }}></div>
+                ))}
+            </div>
+        </div>
+
+        {/* Main Timer */}
+        <div className="relative z-10 flex-1 flex flex-col items-center justify-center">
+             <span className="text-7xl font-mono font-black tracking-tighter text-slate-900 dark:text-white drop-shadow-sm dark:drop-shadow-2xl transition-colors duration-300">
+                 {formatTime(timeLeft)}
              </span>
-             
-             <div className="flex items-center gap-4 mt-2">
-                 <button onClick={resetTimer} className="p-3 rounded-full bg-white/10 hover:bg-white/20 transition-colors">
-                     <RotateCcw size={20} />
-                 </button>
-                 <button onClick={toggleTimer} className={`p-4 rounded-full text-white shadow-lg scale-110 ${isActive ? 'bg-amber-500' : 'bg-pink-500'}`}>
-                     {isActive ? <Pause size={24} fill="currentColor"/> : <Play size={24} fill="currentColor"/>}
-                 </button>
-             </div>
-             
-             <p className="text-xs font-bold uppercase tracking-widest opacity-50 mt-4">
-                 {mode === 'pomodoro' ? 'Focusing' : 'Break Time'}
-             </p>
+        </div>
+
+        {/* Controls */}
+        <div className="relative z-10 p-6 flex items-center justify-center gap-6">
+             <button onClick={resetTimer} className="p-3 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 hover:text-slate-900 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white/70 dark:hover:text-white transition-colors">
+                 <RotateCcw size={20} />
+             </button>
+             <button 
+                onClick={toggleTimer} 
+                className={`p-5 rounded-full text-white shadow-xl hover:scale-105 transition-transform active:scale-95 ${isActive ? 'bg-gradient-to-br from-amber-500 to-orange-600' : 'bg-gradient-to-br from-pink-500 to-rose-600'}`}
+             >
+                 {isActive ? <Pause size={32} fill="currentColor"/> : <Play size={32} fill="currentColor" className="ml-1"/>}
+             </button>
+             <button onClick={() => handleTogglePiP()} className="p-3 rounded-full bg-slate-200 hover:bg-slate-300 text-slate-600 hover:text-slate-900 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white/70 dark:hover:text-white transition-colors" title="Return to App">
+                 <ExternalLink size={20} />
+             </button>
+        </div>
+        
+        {/* Progress Bar Bottom */}
+        <div className="h-1.5 w-full bg-slate-200 dark:bg-white/10">
+            <div className={`h-full transition-all duration-1000 ${isActive ? 'bg-pink-500' : 'bg-cyan-500'}`} style={{ width: `${(1 - (timeLeft/initialTime)) * 100}%` }}></div>
         </div>
     </div>,
     pipWindow.document.body
@@ -166,90 +239,145 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
     <>
       <div 
         style={getContainerStyle()} 
-        className={`overflow-hidden flex flex-col border border-white/10 ${!isAnchored && isActive ? 'animate-pulse ring-1 ring-pink-500/50 border-pink-500/30' : ''}`}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+        className={`
+            overflow-hidden flex flex-col select-none transition-all duration-300
+            ${!isAnchored ? 'backdrop-blur-2xl bg-white/90 dark:bg-black/60 border border-slate-200 dark:border-white/10 shadow-2xl shadow-slate-200/50 dark:shadow-black/50' : ''}
+            ${!isAnchored && isActive ? 'ring-1 ring-pink-500/50 dark:ring-pink-500/30' : ''}
+        `}
       >
           
-          {/* -- FLOATING HEADER (Only when NOT anchored) -- */}
-          {!isAnchored && (
-              <div 
-                className={`flex items-center justify-between px-4 cursor-pointer transition-all ${isExpanded ? 'h-12 border-b border-white/5 bg-white/5' : 'h-full'}`}
-                onClick={() => setIsExpanded(!isExpanded)}
-              >
-                  {!isExpanded ? (
-                    // Collapsed State: Mini Player
-                    <div className="flex items-center gap-3 w-full">
-                         {/* Mini Progress Ring */}
-                         <div className={`relative w-6 h-6 rounded-full border-2 flex items-center justify-center ${isActive ? 'border-pink-500' : 'border-slate-600'}`}>
-                            {isActive && <div className="w-1.5 h-1.5 bg-pink-500 rounded-full animate-ping"></div>}
-                         </div>
-                         
-                         <div className="flex flex-col flex-1 min-w-0">
-                             <span className="text-sm font-bold text-white font-mono leading-none tracking-tight">
-                                {Math.floor(timeLeft / 60)}:{Math.floor(timeLeft % 60).toString().padStart(2, '0')}
-                             </span>
-                             <span className="text-[10px] text-slate-400 truncate max-w-[90px] font-medium mt-0.5">
-                                {focusTask || 'No Active Task'}
-                             </span>
-                         </div>
+          {/* --- VIDEO LAYER (Hidden visually when floating-collapsed, but active) --- */}
+          <div className="absolute inset-0 z-0 pointer-events-none">
+             {/* Gradient Overlay for Text Readability - Adapted for Light/Dark */}
+             <div className="absolute inset-0 bg-gradient-to-t from-white/95 via-white/40 to-white/10 dark:from-black/90 dark:via-black/40 dark:to-black/20 z-10 transition-colors duration-300"></div>
+             
+             <iframe 
+                width="100%" 
+                height="100%" 
+                src="https://www.youtube.com/embed/videoseries?list=PLxoZGx3mVZsxJgQlgxSOBn6zCONGfl6Tm&enablejsapi=1&controls=0&showinfo=0&modestbranding=1" 
+                title="Lofi Girl" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+                className="w-full h-full object-cover opacity-60 grayscale-[30%]"
+                style={{ 
+                    // Hide visuals when collapsed floating, keep audio
+                    opacity: (!isAnchored && !isExpanded) ? 0 : 0.6,
+                    pointerEvents: (!isAnchored && !isExpanded) ? 'none' : 'auto'
+                }}
+            />
+          </div>
 
-                         {/* Mini Controls */}
-                         <button 
-                            onClick={(e) => { e.stopPropagation(); toggleTimer(); }}
-                            className="p-2 rounded-full hover:bg-white/10 text-white transition-colors"
-                         >
-                            {isActive ? <Pause size={14} fill="currentColor"/> : <Play size={14} fill="currentColor"/>}
-                         </button>
-                    </div>
-                  ) : (
-                    // Expanded Header
-                    <div className="flex items-center justify-between w-full">
-                        <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-                            <Music size={12} className="text-pink-500" />
-                            <span>Audio Player</span>
-                        </div>
-                        <ChevronDown size={16} className="text-slate-400" />
-                    </div>
+          {/* --- FLOATING CONTENT LAYER --- */}
+          {!isAnchored && (
+              <div className="relative z-20 flex flex-col h-full w-full">
+                  
+                  {/* EXPANDED STATE UI */}
+                  {isExpanded && (
+                      <div className="flex flex-col h-full p-4 animate-in fade-in duration-300">
+                          {/* Header */}
+                          <div className="flex justify-between items-start mb-2">
+                              <div className="flex items-center gap-2">
+                                  <div className={`w-2 h-2 rounded-full animate-pulse ${isActive ? 'bg-pink-500' : 'bg-cyan-500'}`}></div>
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-white/70">
+                                      {mode === 'pomodoro' ? 'Focus Session' : 'Break Time'}
+                                  </span>
+                              </div>
+                              <div className="flex gap-2">
+                                  <button onClick={() => setIsExpanded(false)} className="p-1.5 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-white/10 dark:hover:bg-white/20 dark:text-white transition-colors">
+                                      <Minimize2 size={14} />
+                                  </button>
+                              </div>
+                          </div>
+
+                          {/* Task Info */}
+                          <div className="flex-1 flex flex-col justify-center">
+                              <span className="text-4xl font-mono font-bold text-slate-900 dark:text-white tracking-tighter tabular-nums drop-shadow-sm dark:drop-shadow-lg transition-colors duration-300">
+                                  {formatTime(timeLeft)}
+                              </span>
+                              <p className="text-xs text-slate-500 dark:text-white/60 truncate font-medium mt-1">
+                                  {focusTask || 'No active task selected'}
+                              </p>
+                          </div>
+
+                          {/* Controls Row */}
+                          <div className="flex items-center justify-between mt-auto pt-2 border-t border-slate-200 dark:border-white/10">
+                              <button onClick={toggleMute} className="p-2 text-slate-400 hover:text-slate-700 dark:text-white/60 dark:hover:text-white transition-colors">
+                                  {isMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                              </button>
+                              
+                              <div className="flex items-center gap-4">
+                                  <button onClick={resetTimer} className="p-2 text-slate-400 hover:text-slate-700 dark:text-white/60 dark:hover:text-white transition-colors hover:rotate-180 duration-500">
+                                      <RotateCcw size={18} />
+                                  </button>
+                                  <button 
+                                    onClick={toggleTimer}
+                                    className={`p-3 rounded-full text-white shadow-lg flex items-center justify-center transition-transform active:scale-95 ${isActive ? 'bg-amber-500' : 'bg-pink-600 hover:bg-pink-500'}`}
+                                  >
+                                      {isActive ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-0.5" />}
+                                  </button>
+                              </div>
+
+                              <button onClick={(e) => handleTogglePiP(e)} className="p-2 text-slate-400 hover:text-slate-700 dark:text-white/60 dark:hover:text-white transition-colors">
+                                  <MonitorPlay size={18} />
+                              </button>
+                          </div>
+                      </div>
+                  )}
+
+                  {/* COLLAPSED STATE UI */}
+                  {!isExpanded && (
+                      <div 
+                        onClick={() => setIsExpanded(true)}
+                        className="h-full w-full flex items-center justify-between px-1.5 cursor-pointer group"
+                      >
+                          {/* Circular Progress Play Button */}
+                          <div className="relative w-10 h-10 flex items-center justify-center">
+                              <svg className="w-full h-full transform -rotate-90 pointer-events-none">
+                                  <circle cx="20" cy="20" r="18" stroke="currentColor" strokeWidth="3" fill="transparent" className="text-slate-200 dark:text-white/10 transition-colors" />
+                                  <circle 
+                                    cx="20" cy="20" r="18" 
+                                    stroke="currentColor" strokeWidth="3" fill="transparent" 
+                                    strokeDasharray={strokeDasharray}
+                                    strokeDashoffset={strokeDashoffset}
+                                    strokeLinecap="round"
+                                    className={`${isActive ? 'text-pink-500' : 'text-slate-400 dark:text-slate-500'} transition-all duration-1000 ease-linear`}
+                                  />
+                              </svg>
+                              <button 
+                                onClick={(e) => { e.stopPropagation(); toggleTimer(); }}
+                                className="absolute inset-0 flex items-center justify-center text-slate-700 dark:text-white hover:scale-110 transition-transform"
+                              >
+                                  {isActive ? <Pause size={14} fill="currentColor" /> : <Play size={14} fill="currentColor" className="ml-0.5" />}
+                              </button>
+                          </div>
+
+                          {/* Time Display */}
+                          <div className="flex flex-col items-start mr-auto ml-2">
+                              <span className="text-sm font-bold text-slate-800 dark:text-white font-mono leading-none transition-colors">
+                                  {formatTime(timeLeft)}
+                              </span>
+                              <span className="text-[9px] text-slate-400 dark:text-slate-400 font-bold uppercase tracking-wider mt-0.5 group-hover:text-pink-500 dark:group-hover:text-pink-400 transition-colors">
+                                  {mode === 'pomodoro' ? 'Focus' : 'Break'}
+                              </span>
+                          </div>
+
+                          {/* Expand Hint */}
+                          <div className="p-2 text-slate-400 group-hover:text-slate-700 dark:group-hover:text-white transition-colors">
+                              <ChevronUp size={16} />
+                          </div>
+                      </div>
                   )}
               </div>
           )}
 
-          {/* -- VIDEO CONTAINER -- */}
-          <div className="flex-1 bg-black relative w-full h-full group">
-             <iframe 
-                width="100%" 
-                height="100%" 
-                src="https://www.youtube.com/embed/videoseries?list=PLxoZGx3mVZsxJgQlgxSOBn6zCONGfl6Tm&enablejsapi=1" 
-                title="Study Playlist" 
-                frameBorder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-                allowFullScreen
-                className="w-full h-full object-cover"
-                style={{ 
-                    // Hide video visuals when floating collapsed, but KEEP AUDIO PLAYING
-                    opacity: (!isAnchored && !isExpanded) ? 0 : 1, 
-                    pointerEvents: (!isAnchored && !isExpanded) ? 'none' : 'auto',
-                    transition: 'opacity 0.3s'
-                }}
-            />
-            
-            {/* Expanded Controls Overlay (Mute Toggle) */}
-            {(!isAnchored && isExpanded) && (
-                <div className="absolute top-2 right-2 flex gap-2">
-                    <button 
-                        onClick={toggleMute}
-                        className="p-2 bg-black/60 hover:bg-black/80 backdrop-blur-sm rounded-lg text-white/80 hover:text-white transition-colors"
-                        title="Toggle Mute"
-                    >
-                        {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-                    </button>
-                </div>
-            )}
-            
-            {/* Overlay Gradient for Anchor Mode to blend it */}
-            {isAnchored && (
-                <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/80 via-transparent to-transparent opacity-60"></div>
-            )}
-          </div>
+          {/* --- ANCHORED OVERLAY --- */}
+          {isAnchored && (
+              <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-white/90 via-transparent to-transparent dark:from-black/80 dark:via-transparent dark:to-transparent opacity-0 hover:opacity-100 transition-opacity duration-300 flex flex-col justify-end p-6">
+                  {/* Anchored controls appear on hover only */}
+              </div>
+          )}
       </div>
 
       {PiPContent}
