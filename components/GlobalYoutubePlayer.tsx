@@ -150,7 +150,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
             <iframe 
                 width="100%" 
                 height="100%" 
-                src="https://www.youtube.com/embed/rFRpnSxTWR0?si=1zzNmH_5xoEnXC8X&enablejsapi=1&controls=1&autoplay=0&loop=1" 
+                src="https://www.youtube.com/embed/rFRpnSxTWR0?list=PLxoZGx3mVZsxJgQlgxSOBn6zCONGfl6Tm&enablejsapi=1&controls=1&autoplay=0&loop=1" 
                 title="Focus Station" 
                 frameBorder="0"
                 allow="autoplay; encrypted-media; picture-in-picture"
