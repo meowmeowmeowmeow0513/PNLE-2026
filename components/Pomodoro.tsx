@@ -11,7 +11,7 @@ import { isWithinInterval } from 'date-fns';
 const Pomodoro: React.FC = () => {
   const { 
     mode, timeLeft, isActive, activePreset, timerSettings, sessionGoal, sessionsCompleted, focusTask, isBrownNoiseOn,
-    toggleTimer, resetTimer, setPreset, setSessionGoal, setFocusTask, toggleBrownNoise, skipForward, setPipWindow, setCustomSettings
+    toggleTimer, resetTimer, setPreset, setSessionGoal, setFocusTask, toggleBrownNoise, skipForward, togglePiP, setCustomSettings
   } = usePomodoro();
 
   const { tasks } = useTasks();
@@ -66,19 +66,6 @@ const Pomodoro: React.FC = () => {
         : 'drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]'
     : '';
 
-  // PiP Handler
-  const handlePopOut = async () => {
-      if ('documentPictureInPicture' in window) {
-          try {
-            // @ts-ignore
-            const newWindow = await window.documentPictureInPicture.requestWindow({ width: 320, height: 380 });
-            setPipWindow(newWindow);
-          } catch(e) { console.error(e); }
-      } else {
-          alert("PiP not supported.");
-      }
-  };
-
   const handleCustomSave = (e: React.FormEvent) => {
       e.preventDefault();
       // Values are in minutes in the form, convert to seconds
@@ -95,7 +82,7 @@ const Pomodoro: React.FC = () => {
   const incompleteTasks = tasks.filter(t => !t.completed).slice(0, 5);
 
   return (
-    <div className="min-h-[calc(100vh-100px)] w-full flex flex-col items-center justify-center relative overflow-hidden font-sans transition-colors duration-500">
+    <div className="min-h-[calc(100vh-100px)] w-full flex flex-col items-center justify-center relative overflow-hidden font-sans transition-colors duration-500 justify-center">
       
       {/* Background Ambience */}
       <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[800px] rounded-full blur-[150px] opacity-10 dark:opacity-20 pointer-events-none transition-colors duration-1000 ${isFocus ? 'bg-pink-500' : 'bg-cyan-500'}`}></div>
@@ -328,7 +315,7 @@ const Pomodoro: React.FC = () => {
                     <span className="text-[10px] font-bold uppercase tracking-wider">Brown Noise</span>
                 </button>
                 <button 
-                    onClick={handlePopOut}
+                    onClick={togglePiP}
                     className="p-4 rounded-2xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 dark:text-slate-400 hover:text-pink-500 dark:hover:text-pink-400 hover:border-pink-500/50 flex flex-col items-center justify-center gap-2 transition-all h-28"
                 >
                     <MonitorPlay size={24} />
