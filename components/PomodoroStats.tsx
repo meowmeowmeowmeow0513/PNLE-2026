@@ -10,7 +10,7 @@ const EKGLine = ({ data }: { data: number[] }) => {
     if (data.length === 0) {
         return (
             <svg viewBox="0 0 300 100" className="w-full h-full opacity-50">
-                <path d="M0 50 L300 50" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" />
+                <path d="M0 50 L300 50" fill="none" stroke="currentColor" strokeWidth="2" strokeDasharray="4 4" className="text-emerald-500/30" />
             </svg>
         );
     }
@@ -54,7 +54,13 @@ const PomodoroStats: React.FC = () => {
   const { sessionHistory, dailyProgress, deleteSession } = usePomodoro();
 
   const today = new Date();
-  const todaysSessions = sessionHistory.filter(s => isSameDay(new Date(s.startTime), today));
+  const todaysSessions = sessionHistory.filter(s => {
+      try {
+          return isSameDay(new Date(s.startTime), today);
+      } catch (e) {
+          return false;
+      }
+  });
   const focusSessions = todaysSessions.filter(s => s.type === 'focus');
   
   // METRICS
@@ -80,18 +86,19 @@ const PomodoroStats: React.FC = () => {
     <div className="flex flex-col h-full gap-4">
         
         {/* --- VITALS MONITOR --- */}
-        <div className="bg-[#0f172a]/90 border border-slate-700 rounded-3xl p-6 shadow-2xl relative overflow-hidden backdrop-blur-xl">
-            {/* Screen Glare & Scanlines */}
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-0 bg-[length:100%_2px,3px_100%] pointer-events-none"></div>
+        <div className="bg-white dark:bg-[#0f172a]/90 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-xl dark:shadow-2xl relative overflow-hidden backdrop-blur-xl transition-colors">
+            {/* Screen Glare & Scanlines (Dark mode only) */}
+            <div className="absolute inset-0 dark:bg-[linear-gradient(rgba(18,16,16,0)_50%,rgba(0,0,0,0.25)_50%),linear-gradient(90deg,rgba(255,0,0,0.06),rgba(0,255,0,0.02),rgba(0,0,255,0.06))] z-0 dark:bg-[length:100%_2px,3px_100%] pointer-events-none opacity-50"></div>
+            
             <div className="absolute top-0 right-0 p-4 opacity-50">
                 <div className="flex items-center gap-2">
                     <span className="w-2 h-2 bg-emerald-500 rounded-full animate-ping"></span>
-                    <span className="text-[10px] font-mono text-emerald-500 uppercase">Live Vitals</span>
+                    <span className="text-[10px] font-mono text-emerald-600 dark:text-emerald-500 uppercase font-bold">Live Vitals</span>
                 </div>
             </div>
 
             {/* EKG Graph Area */}
-            <div className="h-24 w-full border-b border-slate-700/50 mb-6 relative z-10">
+            <div className="h-24 w-full border-b border-slate-100 dark:border-slate-700/50 mb-6 relative z-10 text-emerald-500">
                 <EKGLine data={chartData} />
             </div>
 
@@ -99,44 +106,44 @@ const PomodoroStats: React.FC = () => {
             <div className="grid grid-cols-3 gap-4 relative z-10">
                 {/* Heart Rate (Avg Duration) */}
                 <div className="flex flex-col">
-                    <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-1">
                         <Heart size={14} className="text-pink-500 animate-pulse" />
                         <span className="text-[10px] font-bold uppercase">Avg HR</span>
                     </div>
-                    <span className="text-2xl font-mono font-bold text-white">
-                        {avgSessionLength}<span className="text-xs text-slate-500 ml-1">bpm</span>
+                    <span className="text-2xl font-mono font-bold text-slate-800 dark:text-white">
+                        {avgSessionLength}<span className="text-xs text-slate-400 ml-1">bpm</span>
                     </span>
-                    <span className="text-[10px] text-slate-500">Session Len</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">Session Len</span>
                 </div>
 
                 {/* O2 Sat (Focus Ratio) */}
                 <div className="flex flex-col">
-                    <div className="flex items-center gap-1.5 text-slate-400 mb-1">
-                        <Wind size={14} className="text-cyan-400" />
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-1">
+                        <Wind size={14} className="text-cyan-500 dark:text-cyan-400" />
                         <span className="text-[10px] font-bold uppercase">SpO2</span>
                     </div>
-                    <span className={`text-2xl font-mono font-bold ${o2Sat >= 95 ? 'text-emerald-400' : 'text-yellow-400'}`}>
-                        {o2Sat}<span className="text-xs text-slate-500 ml-1">%</span>
+                    <span className={`text-2xl font-mono font-bold ${o2Sat >= 95 ? 'text-emerald-500 dark:text-emerald-400' : 'text-yellow-500 dark:text-yellow-400'}`}>
+                        {o2Sat}<span className="text-xs text-slate-400 ml-1">%</span>
                     </span>
-                    <span className="text-[10px] text-slate-500">Focus Eff.</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">Focus Eff.</span>
                 </div>
 
                 {/* Fluids (Total Time) */}
                 <div className="flex flex-col">
-                    <div className="flex items-center gap-1.5 text-slate-400 mb-1">
+                    <div className="flex items-center gap-1.5 text-slate-500 dark:text-slate-400 mb-1">
                         <Droplets size={14} className="text-blue-500" />
                         <span className="text-[10px] font-bold uppercase">Fluids</span>
                     </div>
-                    <span className="text-2xl font-mono font-bold text-white">
-                        {(totalFocusTime / 60).toFixed(1)}<span className="text-xs text-slate-500 ml-1">L</span>
+                    <span className="text-2xl font-mono font-bold text-slate-800 dark:text-white">
+                        {(totalFocusTime / 60).toFixed(1)}<span className="text-xs text-slate-400 ml-1">L</span>
                     </span>
-                    <span className="text-[10px] text-slate-500">Total Hrs</span>
+                    <span className="text-[10px] text-slate-400 dark:text-slate-500">Total Hrs</span>
                 </div>
             </div>
         </div>
 
         {/* --- SESSION LOG --- */}
-        <div className="flex-1 bg-white/50 dark:bg-slate-900/50 backdrop-blur-md border border-white/20 dark:border-slate-700/50 rounded-3xl p-5 overflow-hidden flex flex-col min-h-[250px]">
+        <div className="flex-1 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-3xl p-5 overflow-hidden flex flex-col min-h-[250px]">
             <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
                 <Clock size={12} /> Today's Log
             </h3>
@@ -146,10 +153,11 @@ const PomodoroStats: React.FC = () => {
                     <div className="h-full flex flex-col items-center justify-center text-slate-400 opacity-60">
                         <Activity size={24} className="mb-2" />
                         <span className="text-xs">No data recorded yet</span>
+                        <span className="text-[9px] mt-1">(Min 10s to log)</span>
                     </div>
                 ) : (
                     todaysSessions.map(session => (
-                        <div key={session.id} className="group flex justify-between items-center p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 hover:border-pink-200 dark:hover:border-slate-600 transition-all">
+                        <div key={session.id} className="group flex justify-between items-center p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700/50 hover:border-pink-200 dark:hover:border-slate-600 transition-all shadow-sm">
                             <div className="flex flex-col">
                                 <div className="flex items-center gap-2">
                                     <span className={`w-1.5 h-1.5 rounded-full ${session.type === 'focus' ? 'bg-pink-500' : 'bg-cyan-500'}`}></span>
@@ -164,13 +172,14 @@ const PomodoroStats: React.FC = () => {
                             
                             <div className="flex items-center gap-3">
                                 {session.type === 'focus' && (
-                                    <span className="text-[10px] font-medium text-slate-500 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded truncate max-w-[80px]">
+                                    <span className="text-[10px] font-medium text-slate-500 bg-slate-50 dark:bg-slate-700 px-2 py-0.5 rounded truncate max-w-[80px]">
                                         {session.subject}
                                     </span>
                                 )}
                                 <button 
                                     onClick={() => deleteSession(session.id)}
-                                    className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                                    className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100 p-1"
+                                    title="Delete Log"
                                 >
                                     <Trash2 size={14} />
                                 </button>
