@@ -67,7 +67,7 @@ const Pomodoro: React.FC = () => {
       if (sessionsCompleted > prevSessionsRef.current) {
           if (sessionsCompleted > 0 && sessionsCompleted % sessionGoal === 0) {
               setShowGoalModal(true);
-              confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+              confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
           }
       }
       prevSessionsRef.current = sessionsCompleted;
@@ -76,6 +76,7 @@ const Pomodoro: React.FC = () => {
   // --- BREAK MODAL TRIGGER ---
   useEffect(() => {
       if (prevModeRef.current === 'focus' && (mode === 'shortBreak' || mode === 'longBreak')) {
+          // If NOT completing a goal (handled above), show break cat
           if (sessionsCompleted % sessionGoal !== 0) {
              setShowBreakModal(true);
           }
@@ -108,9 +109,8 @@ const Pomodoro: React.FC = () => {
   // --- HANDLERS ---
   
   const handleStopClick = () => {
-      // If timer is running or has progress (timeLeft < max), show confirmation
       const maxTime = mode === 'focus' ? timerSettings.focus : (mode === 'shortBreak' ? timerSettings.shortBreak : timerSettings.longBreak);
-      if (timeLeft < maxTime) {
+      if (timeLeft < maxTime && timeLeft > 0) {
           setShowEarlyExitModal(true);
       } else {
           resetTimer();
@@ -172,8 +172,8 @@ const Pomodoro: React.FC = () => {
       {/* --- GRID LAYOUT --- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full max-w-7xl mx-auto p-4 md:p-6 z-10 flex-1 h-full items-stretch">
         
-        {/* LEFT: VITALS & STATS */}
-        <div className="lg:col-span-3 flex flex-col h-full order-2 lg:order-1">
+        {/* LEFT: VITALS & STATS (Refined Width) */}
+        <div className="lg:col-span-3 flex flex-col h-full order-2 lg:order-1 min-h-[400px]">
             <PomodoroStats />
         </div>
 
@@ -260,7 +260,7 @@ const Pomodoro: React.FC = () => {
                             className={`py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
                                 activePreset === p 
                                 ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md scale-105' 
-                                : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 hover:bg-slate-100'
+                                : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
                             }`}
                         >
                             {p === 'micro' ? '15/5' : p === 'classic' ? '25/5' : p === 'long' ? '50/10' : 'Custom'}
@@ -308,24 +308,25 @@ const Pomodoro: React.FC = () => {
                 />
              </div>
 
-             {/* 4. Media Controls */}
+             {/* 4. Media Controls & PiP */}
              <div className="grid grid-cols-2 gap-3">
                 <button onClick={toggleBrownNoise} className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500'}`}>
                     <Waves size={20} className={isBrownNoiseOn ? 'animate-pulse' : ''} />
                     <span className="text-[9px] font-bold uppercase">Brown Noise</span>
                 </button>
-                <button onClick={togglePiP} className="p-3 rounded-2xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1.5 transition-all">
+                <button onClick={togglePiP} className="p-3 rounded-2xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow-md">
                     <MonitorPlay size={20} />
                     <span className="text-[9px] font-bold uppercase">Mini Mode</span>
                 </button>
              </div>
 
-             {/* 5. Video Anchor */}
+             {/* 5. Video Anchor (Critical for GlobalYoutubePlayer) */}
              <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group">
                  <div className="absolute top-2 left-2 z-20 bg-black/60 px-2 py-1 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                      <div className="flex items-center gap-1 text-[9px] font-bold text-white uppercase"><Music size={10} /> Focus Cam</div>
                  </div>
                  <div id="video-anchor" className="w-full h-full bg-slate-900 relative flex items-center justify-center text-slate-700">
+                     {/* The iframe from GlobalYoutubePlayer will overlay this div precisely */}
                      <span className="text-[9px] font-mono tracking-widest uppercase">Video Feed</span>
                  </div>
              </div>
@@ -360,7 +361,7 @@ const Pomodoro: React.FC = () => {
                           </button>
                           <button 
                               onClick={() => handleEarlyExit('resume')}
-                              className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2 hover:text-white"
+                              className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-2 hover:text-slate-600 dark:hover:text-white"
                           >
                               Resume Timer
                           </button>
@@ -370,15 +371,38 @@ const Pomodoro: React.FC = () => {
           </div>
       )}
 
-      {/* --- BREAK MODAL --- */}
+      {/* --- BREAK MODAL (Cat) --- */}
       {showBreakModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/30 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
               <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in" onClick={e => e.stopPropagation()}>
                   <AnimatedCat />
                   <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-6 mb-2">Pause & Breathe</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8">You've earned this moment. Recharge.</p>
-                  <button onClick={() => { setShowBreakModal(false); toggleTimer(); }} className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg">Start Break</button>
-                  <button onClick={() => { setShowBreakModal(false); skipForward(); }} className="text-xs text-slate-400 font-bold uppercase mt-3">Skip Rest</button>
+                  <button onClick={() => { setShowBreakModal(false); toggleTimer(); }} className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transform active:scale-95 transition-transform">Start Break</button>
+                  <button onClick={() => { setShowBreakModal(false); skipForward(); }} className="text-xs text-slate-400 font-bold uppercase mt-4 hover:text-slate-600 dark:hover:text-white">Skip Rest</button>
+              </div>
+          </div>
+      )}
+
+      {/* --- GOAL COMPLETION MODAL --- */}
+      {showGoalModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onClick={() => setShowGoalModal(false)}>
+              <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in overflow-hidden" onClick={e => e.stopPropagation()}>
+                  {/* Glow Effect */}
+                  <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-amber-400/20 to-transparent pointer-events-none"></div>
+                  
+                  <div className="w-24 h-24 bg-amber-100 dark:bg-amber-500/20 rounded-full flex items-center justify-center mb-6 relative z-10 animate-bounce">
+                      <Trophy size={48} className="text-amber-500" />
+                  </div>
+                  
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-2 relative z-10">Goal Crushed!</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8 relative z-10">
+                      You finished your session goal. Excellent work!
+                  </p>
+                  
+                  <button onClick={() => setShowGoalModal(false)} className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold shadow-lg shadow-amber-500/30 transform active:scale-95 transition-transform relative z-10">
+                      Awesome
+                  </button>
               </div>
           </div>
       )}
