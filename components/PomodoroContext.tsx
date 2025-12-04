@@ -97,6 +97,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [focusTask, setFocusTask] = useState('');
   
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
+  const [isBrownNoiseOn, setIsBrownNoiseOn] = useState(false);
   
   // --- ANALYTICS STATE ---
   const [sessionHistory, setSessionHistory] = useState<PomodoroSession[]>([]);
