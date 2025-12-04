@@ -325,7 +325,10 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         setTimeLeft(timerSettings.focus);
     }
 
-    startAlarmLoop();
+    // Only start alarm if it wasn't a manual skip
+    if (!wasSkipped) {
+       startAlarmLoop();
+    }
   };
 
   const toggleTimer = () => {
@@ -357,7 +360,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const skipForward = () => {
       // Manual skip to next state - passing TRUE to prevent gamification abuse
       handleComplete(true);
-      stopAlarm(); // Auto-stop alarm when manually skipping
+      stopAlarm(); // Ensure alarm stops
       setIsActive(false); // Don't auto-start next
   };
 
