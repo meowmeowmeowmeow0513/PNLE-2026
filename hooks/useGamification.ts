@@ -57,9 +57,10 @@ const DAILY_TEMPLATES: Omit<Mission, 'current' | 'isCompleted' | 'isClaimed' | '
     { id: 'd3', label: 'Daily Login', target: 1, xpReward: 5, actionType: 'login', icon: 'login' },
 ];
 
+// Weekly missions updated to prevent "fast forward" abuse on timer
 const WEEKLY_TEMPLATES: Omit<Mission, 'current' | 'isCompleted' | 'isClaimed' | 'type' | 'lastReset'>[] = [
-    { id: 'w1', label: 'Complete 30 Tasks', target: 30, xpReward: 100, actionType: 'complete_task', icon: 'list' },
-    { id: 'w2', label: 'Complete 5 Focus Sessions', target: 5, xpReward: 75, actionType: 'finish_pomodoro', icon: 'brain' },
+    { id: 'w1', label: 'Complete 25 Tasks', target: 25, xpReward: 100, actionType: 'complete_task', icon: 'list' },
+    { id: 'w2', label: 'Heavy Duty (50 Tasks)', target: 50, xpReward: 200, actionType: 'complete_task', icon: 'layers' },
     { id: 'w3', label: 'Perfect Week (7 Logins)', target: 7, xpReward: 150, actionType: 'login', icon: 'calendar' },
 ];
 
