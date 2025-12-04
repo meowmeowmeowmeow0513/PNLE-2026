@@ -1,12 +1,40 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
     Brain, Coffee, CheckCircle2, Activity, Zap, SkipForward, Layers, Target, Music, Settings, X, Save
 } from 'lucide-react';
-import { usePomodoro, PresetName, TimerSettings } from './PomodoroContext';
+import { usePomodoro, PresetName, TimerSettings, TimerMode } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
 import { isWithinInterval } from 'date-fns';
+
+// --- CUTE CAT COMPONENT ---
+const CatFace = () => (
+  <svg width="100" height="100" viewBox="0 0 100 100" className="text-pink-500 animate-bounce-slow drop-shadow-lg">
+    {/* Ears */}
+    <path d="M20 30 L10 5 L40 20 Z" fill="currentColor" />
+    <path d="M80 30 L90 5 L60 20 Z" fill="currentColor" />
+    
+    {/* Head */}
+    <ellipse cx="50" cy="55" rx="40" ry="35" fill="currentColor" />
+    
+    {/* Eyes */}
+    <ellipse cx="35" cy="45" rx="5" ry="7" fill="white" className="animate-blink" />
+    <ellipse cx="65" cy="45" rx="5" ry="7" fill="white" className="animate-blink" style={{ animationDelay: '0.1s' }} />
+    <circle cx="35" cy="45" r="2" fill="#1e293b" />
+    <circle cx="65" cy="45" r="2" fill="#1e293b" />
+
+    {/* Nose & Mouth */}
+    <circle cx="50" cy="58" r="3" fill="#fbcfe8" />
+    <path d="M45 65 Q50 70 55 65" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
+    
+    {/* Whiskers */}
+    <line x1="20" y1="55" x2="5" y2="50" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+    <line x1="20" y1="60" x2="5" y2="65" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+    <line x1="80" y1="55" x2="95" y2="50" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+    <line x1="80" y1="60" x2="95" y2="65" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
+  </svg>
+);
 
 const Pomodoro: React.FC = () => {
   const { 
@@ -19,11 +47,23 @@ const Pomodoro: React.FC = () => {
   // Local state
   const [showTaskDropdown, setShowTaskDropdown] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [showBreakModal, setShowBreakModal] = useState(false);
   
-  // Custom Timer Form State (Initialize with values from timerSettings if custom, or default)
+  // Track mode change to trigger break modal
+  const prevModeRef = useRef<TimerMode>(mode);
+
+  useEffect(() => {
+      // Trigger modal if we switched FROM focus TO break
+      if (prevModeRef.current === 'focus' && (mode === 'shortBreak' || mode === 'longBreak')) {
+          setShowBreakModal(true);
+      }
+      prevModeRef.current = mode;
+  }, [mode]);
+
+  // Custom Timer Form State
   const [customForm, setCustomForm] = useState<TimerSettings>({ focus: 25 * 60, shortBreak: 5 * 60, longBreak: 20 * 60 });
 
-  // Update local form state when opening modal to match current custom settings
+  // Update local form state when opening modal
   useEffect(() => {
       if (isCustomModalOpen && activePreset === 'custom') {
           setCustomForm(timerSettings);
@@ -31,12 +71,10 @@ const Pomodoro: React.FC = () => {
   }, [isCustomModalOpen, activePreset, timerSettings]);
 
   // --- AUTOMATIC TASK SYNC ---
-  // Syncs the "Focus Target" with the currently scheduled task in the planner
   useEffect(() => {
       if (!isActive && !focusTask && tasks.length > 0) {
           const now = new Date();
           const activeTask = tasks.find(t => {
-              // Find uncompleted tasks where NOW is between Start and End
               const start = new Date(t.start);
               const end = new Date(t.end);
               return !t.completed && isWithinInterval(now, { start, end });
@@ -49,44 +87,41 @@ const Pomodoro: React.FC = () => {
   }, [isActive, focusTask, tasks, setFocusTask]);
 
   // --- SVG MATH ---
-  // Large thick ring
   const radius = 140;
   const circumference = 2 * Math.PI * radius;
   const totalTime = mode === 'focus' ? timerSettings.focus : (mode === 'shortBreak' ? timerSettings.shortBreak : timerSettings.longBreak);
   const progress = timeLeft / totalTime;
   const strokeDashoffset = circumference - (progress * circumference);
   
-  // Format Time (MM:SS)
   const formatTime = (seconds: number) => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
     return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // Theme Colors (Responsive)
   const isFocus = mode === 'focus';
   const themeColor = isFocus ? 'text-pink-600 dark:text-pink-500' : 'text-cyan-600 dark:text-cyan-500';
-  const strokeColor = isFocus ? '#ec4899' : '#06b6d4'; // Tailwind pink-500 / cyan-500
+  const strokeColor = isFocus ? '#ec4899' : '#06b6d4'; 
   const glowShadow = isActive 
     ? isFocus 
         ? 'drop-shadow-[0_0_15px_rgba(236,72,153,0.6)]' 
         : 'drop-shadow-[0_0_15px_rgba(6,182,212,0.6)]'
     : '';
 
+  // Handle Input Changes for Custom Timer
+  const handleInputChange = (field: keyof TimerSettings, value: string) => {
+      const parsed = parseInt(value);
+      if (!isNaN(parsed) && parsed >= 0) {
+          setCustomForm(prev => ({...prev, [field]: parsed * 60})); // Store as seconds
+      } else if (value === '') {
+          setCustomForm(prev => ({...prev, [field]: 0})); // Handle empty
+      }
+  };
+
   const handleCustomSave = (e: React.FormEvent) => {
       e.preventDefault();
-      // Values are in minutes in the form, convert to seconds
-      // NOTE: We assume the user inputs minutes, so we multiply by 60 for context
-      // But wait, the state 'customForm' holds seconds. We need to convert back and forth carefully.
-      // Actually, let's just use seconds in state for consistency, but input fields read/write minutes.
-      
-      const settings: TimerSettings = {
-          focus: customForm.focus, // Already in seconds if we handle input correctly
-          shortBreak: customForm.shortBreak,
-          longBreak: customForm.longBreak
-      };
-      setCustomSettings(settings);
-      setPreset('custom'); // Ensure we switch to custom
+      setCustomSettings(customForm);
+      setPreset('custom');
       setIsCustomModalOpen(false);
   };
 
@@ -362,6 +397,43 @@ const Pomodoro: React.FC = () => {
 
       </div>
 
+      {/* --- CUTE CAT BREAK NOTIFICATION MODAL --- */}
+      {showBreakModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
+              <div 
+                className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in overflow-hidden" 
+                onClick={e => e.stopPropagation()}
+              >
+                  {/* Confetti Background Effect */}
+                  <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-pink-500 to-transparent"></div>
+
+                  <CatFace />
+                  
+                  <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-6 mb-2 tracking-tight">
+                      Meow! Good Job!
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-300 font-medium mb-8">
+                      You've crushed that session. Time to rest your brain cells! :)))!!
+                  </p>
+
+                  <div className="flex flex-col w-full gap-3">
+                      <button 
+                          onClick={() => { setShowBreakModal(false); toggleTimer(); }}
+                          className="w-full py-3.5 bg-pink-500 hover:bg-pink-600 text-white rounded-xl font-bold shadow-lg shadow-pink-500/30 transition-all transform active:scale-95 flex items-center justify-center gap-2"
+                      >
+                          <Coffee size={20} /> Let's Rest (Start Break)
+                      </button>
+                      <button 
+                          onClick={() => { setShowBreakModal(false); skipForward(); }}
+                          className="w-full py-3.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl font-bold transition-colors"
+                      >
+                          Skip Break (I'm a Robot)
+                      </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {/* --- CUSTOM TIMER MODAL --- */}
       {isCustomModalOpen && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
@@ -385,9 +457,10 @@ const Pomodoro: React.FC = () => {
                           </div>
                           <input 
                               type="number" 
-                              value={Math.floor(customForm.focus / 60)}
-                              onChange={(e) => setCustomForm({...customForm, focus: parseInt(e.target.value) * 60})}
-                              className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-pink-500 transition-all"
+                              value={Math.floor(customForm.focus / 60) || ''}
+                              onChange={(e) => handleInputChange('focus', e.target.value)}
+                              className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-pink-500 transition-all placeholder:text-slate-600"
+                              placeholder="25"
                               min="1"
                               max="120"
                           />
@@ -398,9 +471,10 @@ const Pomodoro: React.FC = () => {
                               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Short Break</label>
                               <input 
                                   type="number" 
-                                  value={Math.floor(customForm.shortBreak / 60)}
-                                  onChange={(e) => setCustomForm({...customForm, shortBreak: parseInt(e.target.value) * 60})}
-                                  className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 transition-all"
+                                  value={Math.floor(customForm.shortBreak / 60) || ''}
+                                  onChange={(e) => handleInputChange('shortBreak', e.target.value)}
+                                  className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 transition-all placeholder:text-slate-600"
+                                  placeholder="5"
                                   min="1"
                                   max="30"
                               />
@@ -409,9 +483,10 @@ const Pomodoro: React.FC = () => {
                               <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Long Break</label>
                               <input 
                                   type="number" 
-                                  value={Math.floor(customForm.longBreak / 60)}
-                                  onChange={(e) => setCustomForm({...customForm, longBreak: parseInt(e.target.value) * 60})}
-                                  className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 transition-all"
+                                  value={Math.floor(customForm.longBreak / 60) || ''}
+                                  onChange={(e) => handleInputChange('longBreak', e.target.value)}
+                                  className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white focus:outline-none focus:border-cyan-500 transition-all placeholder:text-slate-600"
+                                  placeholder="20"
                                   min="1"
                                   max="60"
                               />
