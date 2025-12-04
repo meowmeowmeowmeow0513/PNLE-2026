@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { NavigationItem } from '../types';
 import { usePomodoro } from './PomodoroContext';
@@ -14,81 +14,77 @@ interface GlobalYoutubePlayerProps {
 const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem }) => {
   const { 
     timeLeft, isActive, mode, pipWindow, focusTask, sessionsCompleted, sessionGoal,
-    toggleTimer, setPipWindow
+    toggleTimer, togglePiP
   } = usePomodoro();
 
-  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  // --- PHANTOM OVERLAY STRATEGY ---
+  // We keep the player in a FIXED position div always mounted.
+  // If we are on the 'Pomodoro Timer' page, we find the #video-anchor element
+  // and match our fixed div's position to it exactly.
+  // If we are NOT on the page, we hide the player (opacity 0, 1x1 pixel) but keep it mounted.
+  
+  const [playerStyle, setPlayerStyle] = useState<React.CSSProperties>({
+      position: 'fixed',
+      bottom: 0,
+      right: 0,
+      width: '1px',
+      height: '1px',
+      opacity: 0,
+      pointerEvents: 'none',
+      zIndex: -1
+  });
 
-  // --- 1. PERSISTENCE LOGIC ---
+  const anchorRef = useRef<HTMLElement | null>(null);
+
   useEffect(() => {
-    const checkAnchor = () => {
-      const el = document.getElementById('video-anchor');
-      setAnchorEl(el);
-    };
-    checkAnchor();
-    const interval = setInterval(checkAnchor, 500);
-    return () => clearInterval(interval);
-  }, [activeItem]);
+    let animationFrameId: number;
 
-  const isDocked = activeItem === 'Pomodoro Timer' && anchorEl !== null;
-
-  // --- 2. PIP LOGIC ---
-  const copyStylesToWindow = (newWindow: Window) => {
-    Array.from(document.styleSheets).forEach((styleSheet) => {
-      try {
-        if (styleSheet.cssRules) {
-          const newStyle = newWindow.document.createElement('style');
-          Array.from(styleSheet.cssRules).forEach((rule) => {
-            newStyle.appendChild(newWindow.document.createTextNode(rule.cssText));
-          });
-          newWindow.document.head.appendChild(newStyle);
-        } else if (styleSheet.href) {
-          const newLink = newWindow.document.createElement('link');
-          newLink.rel = 'stylesheet';
-          newLink.href = styleSheet.href;
-          newWindow.document.head.appendChild(newLink);
-        }
-      } catch (e) {}
-    });
-    // Attempt to copy Tailwind script if present
-    const tailwindScript = document.querySelector('script[src*="tailwindcss"]');
-    if(tailwindScript) {
-        const newScript = newWindow.document.createElement('script');
-        newScript.src = tailwindScript.getAttribute('src') || "";
-        newWindow.document.head.appendChild(newScript);
-    }
-  };
-
-  const handleTogglePiP = async () => {
-    if (pipWindow) {
-        pipWindow.close();
-        setPipWindow(null);
-        return;
-    }
-    
-    if ('documentPictureInPicture' in window) {
-        try {
-            // @ts-ignore
-            const newWindow = await window.documentPictureInPicture.requestWindow({
-                width: 320,
-                height: 380,
+    const syncPosition = () => {
+        const anchor = document.getElementById('video-anchor');
+        
+        // 1. If we are on the Pomodoro page AND the anchor exists
+        if (activeItem === 'Pomodoro Timer' && anchor) {
+            const rect = anchor.getBoundingClientRect();
+            
+            // Only update if dimensions imply visibility
+            if (rect.width > 0 && rect.height > 0) {
+                setPlayerStyle({
+                    position: 'fixed',
+                    top: `${rect.top}px`,
+                    left: `${rect.left}px`,
+                    width: `${rect.width}px`,
+                    height: `${rect.height}px`,
+                    opacity: 1,
+                    zIndex: 40, // Above normal content, below modals/tooltips
+                    borderRadius: '0.75rem', // Match rounded-xl
+                    overflow: 'hidden',
+                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                    pointerEvents: 'auto',
+                    transition: 'none' // Instant snapping to avoid lag during scroll
+                });
+            }
+        } 
+        // 2. Otherwise, hide it (Phantom Mode)
+        else {
+            setPlayerStyle({
+                position: 'fixed',
+                bottom: '10px',
+                right: '10px',
+                width: '1px',
+                height: '1px',
+                opacity: 0,
+                zIndex: -1,
+                pointerEvents: 'none'
             });
-            copyStylesToWindow(newWindow);
-            
-            // Set body class for aesthetics (Dark Mode Default for PiP)
-            newWindow.document.body.className = "bg-[#020617] text-white flex flex-col items-center justify-center overflow-hidden font-sans selection:bg-pink-500/30";
-            
-            newWindow.addEventListener('pagehide', () => setPipWindow(null));
-            setPipWindow(newWindow);
-        } catch (err) {
-            console.error("PiP failed", err);
         }
-    } else {
-        alert("Picture-in-Picture not supported in this browser.");
-    }
-  };
 
-  // --- 3. RENDERING ---
+        animationFrameId = requestAnimationFrame(syncPosition);
+    };
+
+    syncPosition();
+
+    return () => cancelAnimationFrame(animationFrameId);
+  }, [activeItem]);
 
   const formatTime = (seconds: number) => {
       const m = Math.floor(seconds / 60);
@@ -96,20 +92,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // The actual Player Iframe - NEW URL
-  const PlayerContent = (
-      <iframe 
-          width="100%" 
-          height="100%" 
-          src="https://www.youtube.com/embed/rFRpnSxTWR0?si=1zzNmH_5xoEnXC8X&enablejsapi=1&controls=1&autoplay=0&loop=1" 
-          title="Focus Station" 
-          frameBorder="0"
-          allow="autoplay; encrypted-media; picture-in-picture"
-          className="w-full h-full object-cover"
-      />
-  );
-
-  // Content for the PiP Window - Windows 11 Clock Style but Superior
+  // --- CONTENT FOR PIP WINDOW ---
   const PiPContent = pipWindow ? createPortal(
     <div className="flex flex-col items-center justify-center h-full w-full relative p-6">
         {/* Animated Background Gradient */}
@@ -162,33 +145,34 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
 
   return (
     <>
-        {/* STRATEGY 1: Docked Player (Portal into Pomodoro Page) */}
-        {isDocked && anchorEl && createPortal(
-            <div className="w-full h-full relative group rounded-2xl overflow-hidden shadow-2xl">
-                {PlayerContent}
-                {/* Overlay Button for PiP */}
+        {/* PERMANENT PLAYER CONTAINER (Moving Overlay) */}
+        <div style={playerStyle} className="group bg-black">
+            <iframe 
+                width="100%" 
+                height="100%" 
+                src="https://www.youtube.com/embed/rFRpnSxTWR0?si=1zzNmH_5xoEnXC8X&enablejsapi=1&controls=1&autoplay=0&loop=1" 
+                title="Focus Station" 
+                frameBorder="0"
+                allow="autoplay; encrypted-media; picture-in-picture"
+                className="w-full h-full object-cover"
+            />
+            
+            {/* Overlay Button for PiP (Visible only when hovering the player on the Pomodoro page) */}
+            {activeItem === 'Pomodoro Timer' && (
                 <button 
-                    onClick={handleTogglePiP}
-                    className="absolute top-3 right-3 p-2 bg-black/60 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-pink-500 backdrop-blur-md z-20"
+                    onClick={togglePiP}
+                    className="absolute top-3 right-3 p-2 bg-black/60 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-pink-500 backdrop-blur-md z-50"
                     title="Pop Out Widget"
                 >
                     <MonitorPlay size={16} />
                 </button>
-            </div>,
-            anchorEl
-        )}
+            )}
+        </div>
 
-        {/* STRATEGY 2: Hidden Player (Keep Audio Alive) */}
-        {!isDocked && (
-            <div className="fixed bottom-0 right-0 w-1 h-1 opacity-0 pointer-events-none z-0">
-                {PlayerContent}
-            </div>
-        )}
-
-        {/* STRATEGY 3: Floating Widget (When Active + Away from Page + NOT PiP) */}
-        {!isDocked && isActive && !pipWindow && (
-            <div className="fixed bottom-6 right-6 z-[60] animate-in slide-in-from-bottom-10 fade-in duration-500">
-                <div className="bg-white/10 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/20 dark:border-white/10 p-2 pr-4 rounded-full shadow-2xl flex items-center gap-4 group hover:scale-105 transition-transform">
+        {/* FLOATING PILL (When Active + Away from Page + NOT PiP) */}
+        {activeItem !== 'Pomodoro Timer' && isActive && !pipWindow && (
+            <div className="fixed bottom-6 right-6 z-[999] animate-in slide-in-from-bottom-10 fade-in duration-500">
+                <div className="bg-white/10 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/20 dark:border-white/10 p-2 pr-4 rounded-full shadow-2xl flex items-center gap-4 group hover:scale-105 transition-transform cursor-move">
                     {/* Mini Circle */}
                     <button 
                         onClick={toggleTimer}
@@ -209,7 +193,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                     <div className="h-8 w-px bg-slate-200 dark:bg-white/10 mx-1"></div>
 
                     <button 
-                        onClick={handleTogglePiP} 
+                        onClick={togglePiP} 
                         className="text-slate-400 hover:text-pink-500 dark:hover:text-white transition-colors"
                         title="Keep on Top"
                     >
@@ -219,7 +203,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
             </div>
         )}
 
-        {/* PiP Portal */}
+        {/* PiP Portal Content */}
         {PiPContent}
     </>
   );
