@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import { useGamification } from '../hooks/useGamification';
 
 export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
 
@@ -53,6 +54,8 @@ const DEFAULT_PRESETS: Record<PresetName, TimerSettings> = {
 };
 
 export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { trackAction } = useGamification();
+
   // --- STATE ---
   const [mode, setMode] = useState<TimerMode>('focus');
   const [activePreset, setActivePreset] = useState<PresetName>('classic');
@@ -289,16 +292,22 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     setTimeLeft(remaining);
 
     if (remaining <= 0) {
-      handleComplete();
+      handleComplete(false);
     }
   };
 
-  const handleComplete = () => {
+  const handleComplete = (wasSkipped: boolean = false) => {
     setIsActive(false);
     if (timerIdRef.current) clearInterval(timerIdRef.current);
     endTimeRef.current = null;
     setTimeLeft(0);
     
+    // --- GAMIFICATION SYNC ---
+    // Only reward if it was a genuine Focus completion (not skipped)
+    if (!wasSkipped && mode === 'focus') {
+        trackAction('finish_pomodoro');
+    }
+
     // Logic for auto-switching or waiting user input
     if (mode === 'focus') {
         setSessionsCompleted(prev => prev + 1);
@@ -346,8 +355,8 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const skipForward = () => {
-      // Manual skip to next state
-      handleComplete();
+      // Manual skip to next state - passing TRUE to prevent gamification abuse
+      handleComplete(true);
       stopAlarm(); // Auto-stop alarm when manually skipping
       setIsActive(false); // Don't auto-start next
   };
