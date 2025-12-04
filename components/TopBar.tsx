@@ -104,7 +104,7 @@ const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick, isDark, toggleTheme
           </div>
         </div>
       </header>
-      {showSettings && <ProfileSettings onClose={() => setShowSettings(false)} />}
+      {showSettings && <ProfileSettings onClose={() => setShowSettings(false)} isDark={isDark} toggleTheme={toggleTheme} />}
     </>
   );
 };
