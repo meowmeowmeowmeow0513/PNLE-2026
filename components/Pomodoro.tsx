@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, Sparkles, Zap, SkipForward, Layers, Activity, AlertTriangle
+    Brain, Target, Music, Settings, X, Save, Trophy, Sparkles, Zap, SkipForward, Layers, AlertTriangle
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
@@ -10,32 +10,45 @@ import { isWithinInterval } from 'date-fns';
 import confetti from 'canvas-confetti';
 import PomodoroStats from './PomodoroStats';
 
-// --- MINIMALIST AESTHETIC CAT ---
+// --- MINIMALIST AESTHETIC CAT (Enhanced) ---
 const AnimatedCat = () => (
-  <div className="relative w-32 h-32 mx-auto mb-4">
-    <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-lg">
+  <div className="relative w-40 h-40 mx-auto mb-6">
+    <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-xl overflow-visible">
       <defs>
         <linearGradient id="catGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#FDF2F8" />
-          <stop offset="100%" stopColor="#FCE7F3" />
+          <stop offset="100%" stopColor="#FBCFE8" />
         </linearGradient>
       </defs>
       <style>
         {`
-          @keyframes float-minimal { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-6px); } }
-          @keyframes blink-minimal { 0%, 48%, 52%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
-          .min-cat-body { animation: float-minimal 4s ease-in-out infinite; transform-origin: center bottom; }
-          .min-cat-eye { animation: blink-minimal 5s infinite; transform-origin: center; transform-box: fill-box; }
+          @keyframes bounce-gentle { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+          @keyframes blink-soft { 0%, 45%, 55%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
+          @keyframes tail-wag { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+          .cat-body { animation: bounce-gentle 3s ease-in-out infinite; transform-origin: center bottom; }
+          .cat-eye { animation: blink-soft 4s infinite; transform-origin: center; transform-box: fill-box; }
+          .cat-tail { animation: tail-wag 2s ease-in-out infinite; transform-origin: bottom center; }
         `}
       </style>
-      <g className="min-cat-body">
-          <path d="M45 70 L35 30 L85 55 Z" fill="url(#catGradient)" stroke="#FBCFE8" strokeWidth="3" strokeLinejoin="round" />
-          <path d="M155 70 L165 30 L115 55 Z" fill="url(#catGradient)" stroke="#FBCFE8" strokeWidth="3" strokeLinejoin="round" />
-          <ellipse cx="100" cy="110" rx="75" ry="60" fill="url(#catGradient)" stroke="#FBCFE8" strokeWidth="3" />
-          <g className="min-cat-eye"><circle cx="70" cy="100" r="5" fill="#374151" /></g>
-          <g className="min-cat-eye" style={{ animationDelay: '0.2s' }}><circle cx="130" cy="100" r="5" fill="#374151" /></g>
-          <path d="M96 115 L104 115 L100 120 Z" fill="#EC4899" />
-          <path d="M100 120 Q90 128 85 122 M100 120 Q110 128 115 122" fill="none" stroke="#374151" strokeWidth="2" strokeLinecap="round" />
+      <g className="cat-body">
+          {/* Ears */}
+          <path d="M50 70 L40 20 L90 55 Z" fill="url(#catGradient)" stroke="#F9A8D4" strokeWidth="4" strokeLinejoin="round" />
+          <path d="M150 70 L160 20 L110 55 Z" fill="url(#catGradient)" stroke="#F9A8D4" strokeWidth="4" strokeLinejoin="round" />
+          
+          {/* Head */}
+          <ellipse cx="100" cy="110" rx="80" ry="65" fill="url(#catGradient)" stroke="#F9A8D4" strokeWidth="4" />
+          
+          {/* Eyes */}
+          <g className="cat-eye"><circle cx="65" cy="100" r="8" fill="#1F2937" /></g>
+          <g className="cat-eye" style={{ animationDelay: '0.2s' }}><circle cx="135" cy="100" r="8" fill="#1F2937" /></g>
+          
+          {/* Cheeks */}
+          <circle cx="50" cy="120" r="10" fill="#F472B6" opacity="0.4" />
+          <circle cx="150" cy="120" r="10" fill="#F472B6" opacity="0.4" />
+
+          {/* Nose & Mouth */}
+          <path d="M95 115 L105 115 L100 122 Z" fill="#EC4899" />
+          <path d="M100 122 Q90 135 80 125 M100 122 Q110 135 120 125" fill="none" stroke="#374151" strokeWidth="3" strokeLinecap="round" />
       </g>
     </svg>
   </div>
@@ -172,7 +185,7 @@ const Pomodoro: React.FC = () => {
       {/* --- GRID LAYOUT --- */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full max-w-7xl mx-auto p-4 md:p-6 z-10 flex-1 h-full items-stretch">
         
-        {/* LEFT: VITALS & STATS (Refined Width) */}
+        {/* LEFT: STATS (Refined Width) */}
         <div className="lg:col-span-3 flex flex-col h-full order-2 lg:order-1 min-h-[400px]">
             <PomodoroStats />
         </div>
@@ -269,10 +282,10 @@ const Pomodoro: React.FC = () => {
                 </div>
              </div>
 
-             {/* 2. Focus Target */}
-             <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm backdrop-blur-md flex-1 min-h-[100px] flex flex-col">
+             {/* 2. Focus Target (Fixed height to avoid stretching) */}
+             <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm backdrop-blur-md h-auto">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2"><Brain size={12} /> Target</h3>
-                <div className="relative flex-1">
+                <div className="relative h-12">
                     <input 
                         type="text" 
                         value={focusTask}
@@ -280,7 +293,7 @@ const Pomodoro: React.FC = () => {
                         onFocus={() => setShowTaskDropdown(true)}
                         onBlur={() => setTimeout(() => setShowTaskDropdown(false), 200)}
                         placeholder="Study Topic..."
-                        className="w-full h-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all resize-none"
+                        className="w-full h-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
                     />
                     {showTaskDropdown && incompleteTasks.length > 0 && (
                         <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
@@ -310,9 +323,9 @@ const Pomodoro: React.FC = () => {
 
              {/* 4. Media Controls & PiP */}
              <div className="grid grid-cols-2 gap-3">
-                <button onClick={toggleBrownNoise} className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500'}`}>
+                <button onClick={toggleBrownNoise} className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-inner' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-300'}`}>
                     <Waves size={20} className={isBrownNoiseOn ? 'animate-pulse' : ''} />
-                    <span className="text-[9px] font-bold uppercase">Brown Noise</span>
+                    <span className="text-[9px] font-bold uppercase">{isBrownNoiseOn ? 'Noise On' : 'No Sound'}</span>
                 </button>
                 <button onClick={togglePiP} className="p-3 rounded-2xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow-md">
                     <MonitorPlay size={20} />
@@ -321,7 +334,7 @@ const Pomodoro: React.FC = () => {
              </div>
 
              {/* 5. Video Anchor (Critical for GlobalYoutubePlayer) */}
-             <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group">
+             <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group mt-auto">
                  <div className="absolute top-2 left-2 z-20 bg-black/60 px-2 py-1 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                      <div className="flex items-center gap-1 text-[9px] font-bold text-white uppercase"><Music size={10} /> Focus Cam</div>
                  </div>
@@ -376,9 +389,9 @@ const Pomodoro: React.FC = () => {
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
               <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in" onClick={e => e.stopPropagation()}>
                   <AnimatedCat />
-                  <h3 className="text-xl font-bold text-slate-800 dark:text-white mt-6 mb-2">Pause & Breathe</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8">You've earned this moment. Recharge.</p>
-                  <button onClick={() => { setShowBreakModal(false); toggleTimer(); }} className="w-full py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transform active:scale-95 transition-transform">Start Break</button>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-2 mb-2 tracking-tight">Let's Rest!</h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8">You've earned this moment. Breathe.</p>
+                  <button onClick={() => { setShowBreakModal(false); toggleTimer(); }} className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transform active:scale-95 transition-transform">Start Break</button>
                   <button onClick={() => { setShowBreakModal(false); skipForward(); }} className="text-xs text-slate-400 font-bold uppercase mt-4 hover:text-slate-600 dark:hover:text-white">Skip Rest</button>
               </div>
           </div>
