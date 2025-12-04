@@ -30,7 +30,7 @@ interface PomodoroContextType {
   setSessionGoal: (goal: number) => void;
   setFocusTask: (task: string) => void;
   toggleBrownNoise: () => void;
-  setPipWindow: (win: Window | null) => void;
+  togglePiP: () => Promise<void>; // Centralized PiP Toggle
   stopAlarm: () => void;
   skipForward: () => void;
 }
@@ -193,6 +193,63 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
+  // --- PiP LOGIC (Centralized) ---
+  const togglePiP = async () => {
+    if (pipWindow) {
+        // Close existing
+        pipWindow.close();
+        setPipWindow(null);
+        return;
+    }
+
+    if ('documentPictureInPicture' in window) {
+        try {
+            // @ts-ignore
+            const win = await window.documentPictureInPicture.requestWindow({
+                width: 320,
+                height: 380,
+            });
+
+            // Copy Styles for aesthetics
+            Array.from(document.styleSheets).forEach((styleSheet) => {
+                try {
+                    if (styleSheet.cssRules) {
+                        const newStyle = win.document.createElement('style');
+                        Array.from(styleSheet.cssRules).forEach((rule) => {
+                            newStyle.appendChild(win.document.createTextNode(rule.cssText));
+                        });
+                        win.document.head.appendChild(newStyle);
+                    } else if (styleSheet.href) {
+                        const newLink = win.document.createElement('link');
+                        newLink.rel = 'stylesheet';
+                        newLink.href = styleSheet.href;
+                        win.document.head.appendChild(newLink);
+                    }
+                } catch (e) {}
+            });
+            // Copy Tailwind script if present (CDN mode)
+            const tailwindScript = document.querySelector('script[src*="tailwindcss"]');
+            if(tailwindScript) {
+                const newScript = win.document.createElement('script');
+                newScript.src = tailwindScript.getAttribute('src') || "";
+                win.document.head.appendChild(newScript);
+            }
+
+            // Set Body Class
+            win.document.body.className = "bg-[#020617] text-white flex flex-col items-center justify-center overflow-hidden font-sans selection:bg-pink-500/30";
+
+            // Listen for close
+            win.addEventListener('pagehide', () => setPipWindow(null));
+            setPipWindow(win);
+
+        } catch (err) {
+            console.error("PiP failed", err);
+        }
+    } else {
+        alert("Mini Mode (PiP) is not supported by your browser.");
+    }
+  };
+
   // --- LOGIC: PRESETS ---
   const setPreset = (name: PresetName) => {
       setIsActive(false);
@@ -322,7 +379,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     setSessionGoal,
     setFocusTask,
     toggleBrownNoise,
-    setPipWindow,
+    togglePiP,
     stopAlarm,
     skipForward
   };
