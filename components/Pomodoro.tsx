@@ -2,38 +2,103 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Coffee, CheckCircle2, Activity, Zap, SkipForward, Layers, Target, Music, Settings, X, Save
+    Brain, Coffee, CheckCircle2, Activity, Zap, SkipForward, Layers, Target, Music, Settings, X, Save, Trophy, Star
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
 import { isWithinInterval } from 'date-fns';
+import confetti from 'canvas-confetti';
 
-// --- CUTE CAT COMPONENT ---
-const CatFace = () => (
-  <svg width="100" height="100" viewBox="0 0 100 100" className="text-pink-500 animate-bounce-slow drop-shadow-lg">
-    {/* Ears */}
-    <path d="M20 30 L10 5 L40 20 Z" fill="currentColor" />
-    <path d="M80 30 L90 5 L60 20 Z" fill="currentColor" />
-    
-    {/* Head */}
-    <ellipse cx="50" cy="55" rx="40" ry="35" fill="currentColor" />
-    
-    {/* Eyes */}
-    <ellipse cx="35" cy="45" rx="5" ry="7" fill="white" className="animate-blink" />
-    <ellipse cx="65" cy="45" rx="5" ry="7" fill="white" className="animate-blink" style={{ animationDelay: '0.1s' }} />
-    <circle cx="35" cy="45" r="2" fill="#1e293b" />
-    <circle cx="65" cy="45" r="2" fill="#1e293b" />
+// --- ANIMATED CAT COMPONENT ---
+const AnimatedCat = () => (
+  <div className="relative w-48 h-48 mx-auto">
+    <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-2xl">
+      <defs>
+        <filter id="fluff" x="-20%" y="-20%" width="140%" height="140%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.05" numOctaves="3" result="noise" />
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2" />
+        </filter>
+      </defs>
+      
+      <style>
+        {`
+          @keyframes ear-twitch-left { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(-10deg); } }
+          @keyframes ear-twitch-right { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(10deg); } }
+          @keyframes blink { 0%, 48%, 52%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
+          @keyframes nose-wiggle { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+          @keyframes whisker-shake { 0%, 100% { transform: rotate(0deg); } 25% { transform: rotate(-2deg); } 75% { transform: rotate(2deg); } }
+          @keyframes float-head { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(5px); } }
+          @keyframes tail-wag { 0%, 100% { transform: rotate(0deg); } 50% { transform: rotate(15deg); } }
+          
+          .cat-head { animation: float-head 3s ease-in-out infinite; transform-origin: center bottom; }
+          .cat-ear-left { animation: ear-twitch-left 3s ease-in-out infinite; transform-origin: 60px 70px; }
+          .cat-ear-right { animation: ear-twitch-right 3.5s ease-in-out infinite; transform-origin: 140px 70px; }
+          .cat-eye { animation: blink 4s infinite; transform-origin: center; transform-box: fill-box; }
+          .cat-nose { animation: nose-wiggle 3s ease-in-out infinite; }
+          .cat-whiskers { animation: whisker-shake 2s ease-in-out infinite; transform-origin: center; }
+        `}
+      </style>
 
-    {/* Nose & Mouth */}
-    <circle cx="50" cy="58" r="3" fill="#fbcfe8" />
-    <path d="M45 65 Q50 70 55 65" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
-    
-    {/* Whiskers */}
-    <line x1="20" y1="55" x2="5" y2="50" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-    <line x1="20" y1="60" x2="5" y2="65" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-    <line x1="80" y1="55" x2="95" y2="50" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-    <line x1="80" y1="60" x2="95" y2="65" stroke="white" strokeWidth="2" strokeLinecap="round" opacity="0.6" />
-  </svg>
+      {/* Paws (Behind) */}
+      <ellipse cx="60" cy="180" rx="15" ry="12" fill="#fce7f3" />
+      <ellipse cx="140" cy="180" rx="15" ry="12" fill="#fce7f3" />
+
+      {/* Group Head for Float Animation */}
+      <g className="cat-head">
+          {/* Ears */}
+          <path d="M40 80 L30 30 L90 60 Z" fill="#ec4899" className="cat-ear-left" stroke="#db2777" strokeWidth="4" strokeLinejoin="round" />
+          <path d="M160 80 L170 30 L110 60 Z" fill="#ec4899" className="cat-ear-right" stroke="#db2777" strokeWidth="4" strokeLinejoin="round" />
+          
+          {/* Inner Ears */}
+          <path d="M45 75 L38 45 L80 65 Z" fill="#fbcfe8" className="cat-ear-left" />
+          <path d="M155 75 L162 45 L120 65 Z" fill="#fbcfe8" className="cat-ear-right" />
+
+          {/* Face Shape */}
+          <ellipse cx="100" cy="110" rx="70" ry="60" fill="#ec4899" stroke="#db2777" strokeWidth="4" />
+          
+          {/* Cheeks */}
+          <circle cx="60" cy="120" r="15" fill="#fbcfe8" opacity="0.6" />
+          <circle cx="140" cy="120" r="15" fill="#fbcfe8" opacity="0.6" />
+
+          {/* Eyes */}
+          <g className="cat-eye">
+              <ellipse cx="70" cy="100" rx="12" ry="16" fill="white" />
+              <circle cx="70" cy="100" r="6" fill="#1e293b" />
+              <circle cx="74" cy="96" r="3" fill="white" />
+          </g>
+          <g className="cat-eye" style={{ animationDelay: '0.1s' }}>
+              <ellipse cx="130" cy="100" rx="12" ry="16" fill="white" />
+              <circle cx="130" cy="100" r="6" fill="#1e293b" />
+              <circle cx="134" cy="96" r="3" fill="white" />
+          </g>
+
+          {/* Snout Area */}
+          <ellipse cx="100" cy="135" rx="20" ry="14" fill="#fdf2f8" />
+
+          {/* Nose */}
+          <path d="M92 130 L108 130 L100 140 Z" fill="#be185d" className="cat-nose" />
+
+          {/* Mouth */}
+          <path d="M100 140 Q90 150 80 145" fill="none" stroke="#be185d" strokeWidth="3" strokeLinecap="round" />
+          <path d="M100 140 Q110 150 120 145" fill="none" stroke="#be185d" strokeWidth="3" strokeLinecap="round" />
+
+          {/* Whiskers */}
+          <g className="cat-whiskers" stroke="white" strokeWidth="3" strokeLinecap="round" opacity="0.8">
+              <line x1="50" y1="130" x2="10" y2="120" />
+              <line x1="50" y1="135" x2="10" y2="135" />
+              <line x1="50" y1="140" x2="10" y2="150" />
+              
+              <line x1="150" y1="130" x2="190" y2="120" />
+              <line x1="150" y1="135" x2="190" y2="135" />
+              <line x1="150" y1="140" x2="190" y2="150" />
+          </g>
+      </g>
+
+      {/* Paws (Front) */}
+      <path d="M50 170 Q60 150 70 170" fill="#fce7f3" stroke="#db2777" strokeWidth="3" />
+      <path d="M130 170 Q140 150 150 170" fill="#fce7f3" stroke="#db2777" strokeWidth="3" />
+    </svg>
+  </div>
 );
 
 const Pomodoro: React.FC = () => {
@@ -48,17 +113,56 @@ const Pomodoro: React.FC = () => {
   const [showTaskDropdown, setShowTaskDropdown] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [showBreakModal, setShowBreakModal] = useState(false);
+  const [showGoalModal, setShowGoalModal] = useState(false);
   
   // Track mode change to trigger break modal
   const prevModeRef = useRef<TimerMode>(mode);
+  const prevSessionsRef = useRef<number>(sessionsCompleted);
 
+  // --- GOAL COMPLETION TRIGGER ---
+  useEffect(() => {
+      // Check if sessions incremented AND we hit the goal
+      if (sessionsCompleted > prevSessionsRef.current) {
+          if (sessionsCompleted > 0 && sessionsCompleted % sessionGoal === 0) {
+              setShowGoalModal(true);
+              // Trigger confetti
+              const duration = 3000;
+              const end = Date.now() + duration;
+              (function frame() {
+                confetti({
+                  particleCount: 5,
+                  angle: 60,
+                  spread: 55,
+                  origin: { x: 0 },
+                  colors: ['#ec4899', '#a855f7', '#fbbf24']
+                });
+                confetti({
+                  particleCount: 5,
+                  angle: 120,
+                  spread: 55,
+                  origin: { x: 1 },
+                  colors: ['#ec4899', '#a855f7', '#fbbf24']
+                });
+                if (Date.now() < end) {
+                  requestAnimationFrame(frame);
+                }
+              }());
+          }
+      }
+      prevSessionsRef.current = sessionsCompleted;
+  }, [sessionsCompleted, sessionGoal]);
+
+  // --- BREAK MODAL TRIGGER ---
   useEffect(() => {
       // Trigger modal if we switched FROM focus TO break
+      // BUT ONLY if we aren't showing the Goal Modal (Goal Modal takes precedence)
       if (prevModeRef.current === 'focus' && (mode === 'shortBreak' || mode === 'longBreak')) {
-          setShowBreakModal(true);
+          if (sessionsCompleted % sessionGoal !== 0) {
+             setShowBreakModal(true);
+          }
       }
       prevModeRef.current = mode;
-  }, [mode]);
+  }, [mode, sessionsCompleted, sessionGoal]);
 
   // Custom Timer Form State
   const [customForm, setCustomForm] = useState<TimerSettings>({ focus: 25 * 60, shortBreak: 5 * 60, longBreak: 20 * 60 });
@@ -407,7 +511,7 @@ const Pomodoro: React.FC = () => {
                   {/* Confetti Background Effect */}
                   <div className="absolute inset-0 opacity-10 pointer-events-none bg-[radial-gradient(circle,_var(--tw-gradient-stops))] from-pink-500 to-transparent"></div>
 
-                  <CatFace />
+                  <AnimatedCat />
                   
                   <h3 className="text-2xl font-black text-slate-900 dark:text-white mt-6 mb-2 tracking-tight">
                       Meow! Good Job!
@@ -429,6 +533,58 @@ const Pomodoro: React.FC = () => {
                       >
                           Skip Break (I'm a Robot)
                       </button>
+                  </div>
+              </div>
+          </div>
+      )}
+
+      {/* --- GOAL COMPLETION CELEBRATION MODAL --- */}
+      {showGoalModal && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-xl animate-fade-in" onClick={() => setShowGoalModal(false)}>
+              <div 
+                className="bg-gradient-to-br from-indigo-900 via-purple-900 to-pink-900 rounded-[2.5rem] p-1 w-full max-w-sm shadow-2xl relative animate-zoom-in" 
+                onClick={e => e.stopPropagation()}
+              >
+                  <div className="bg-[#020617] rounded-[2.3rem] p-8 flex flex-col items-center text-center relative overflow-hidden">
+                      {/* Rays */}
+                      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+                      <div className="absolute -top-24 -right-24 w-64 h-64 bg-yellow-500/20 rounded-full blur-[80px] animate-pulse"></div>
+                      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-pink-500/20 rounded-full blur-[80px] animate-pulse" style={{ animationDelay: '1s'}}></div>
+
+                      <div className="relative mb-6">
+                          <div className="absolute inset-0 bg-yellow-500 blur-2xl opacity-20 rounded-full"></div>
+                          <div className="relative w-24 h-24 bg-gradient-to-br from-yellow-300 to-amber-600 rounded-3xl rotate-12 flex items-center justify-center shadow-lg shadow-amber-500/30">
+                              <Trophy size={48} className="text-white drop-shadow-md" />
+                          </div>
+                          <div className="absolute -top-2 -right-2 w-8 h-8 bg-white rounded-full flex items-center justify-center animate-bounce">
+                              <Star size={16} className="text-amber-500 fill-current" />
+                          </div>
+                      </div>
+
+                      <h3 className="text-3xl font-black text-white mb-2 tracking-tight">
+                          Goal Crushed!
+                      </h3>
+                      <p className="text-slate-300 font-medium mb-2">
+                          You completed {sessionsCompleted} focus sessions today.
+                      </p>
+                      <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mb-8">
+                          Unstoppable Momentum
+                      </p>
+
+                      <div className="flex flex-col w-full gap-3">
+                          <button 
+                              onClick={() => { setShowGoalModal(false); toggleTimer(); }}
+                              className="w-full py-4 bg-white text-indigo-900 rounded-xl font-black uppercase tracking-wider shadow-xl shadow-white/10 transition-all transform active:scale-95 flex items-center justify-center gap-2 hover:bg-slate-100"
+                          >
+                              <Coffee size={20} /> Take a Well-Deserved Break
+                          </button>
+                          <button 
+                              onClick={() => setShowGoalModal(false)}
+                              className="text-slate-400 hover:text-white text-xs font-bold mt-2 transition-colors"
+                          >
+                              Close & Continue
+                          </button>
+                      </div>
                   </div>
               </div>
           </div>
