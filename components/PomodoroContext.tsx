@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, ReactNod
 import { useGamification } from '../hooks/useGamification';
 import { db } from '../firebase';
 import { useAuth } from '../AuthContext';
-import { collection, addDoc, query, where, orderBy, onSnapshot, deleteDoc, doc, Timestamp } from 'firebase/firestore';
+import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
 import { isSameDay } from 'date-fns';
 
 export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
@@ -73,7 +73,8 @@ const DEFAULT_PRESETS: Record<PresetName, TimerSettings> = {
   custom: { focus: 45 * 60, shortBreak: 10 * 60, longBreak: 25 * 60 },
 };
 
-const MIN_SAVE_DURATION = 5 * 60; // 5 Minutes
+// Lowered to 10 seconds for testing/UX as requested
+const MIN_SAVE_DURATION = 10; 
 
 export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { currentUser } = useAuth();
@@ -121,9 +122,6 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         return;
     }
 
-    // Only fetch last 24h or recent 50 to save reads/bandwidth for now, 
-    // but user requested "Today" logic. Let's fetch all and filter in memory or query reasonably.
-    // For Vitals, we need "Today".
     const q = query(
         collection(db, 'users', currentUser.uid, 'pomodoro_sessions'),
         orderBy('createdAt', 'desc')
@@ -147,7 +145,11 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // --- HELPERS: SAVE SESSION ---
   const saveSession = async (duration: number, sessionType: TimerMode) => {
-      if (!currentUser || duration < MIN_SAVE_DURATION) return; // Anti-Abuse
+      if (!currentUser) return;
+      if (duration < MIN_SAVE_DURATION) {
+          console.log(`Session too short to save (${duration}s). Min required: ${MIN_SAVE_DURATION}s`);
+          return;
+      }
 
       try {
           const now = new Date();
@@ -233,7 +235,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
     } else {
         // Break ending
-        if (!wasSkipped) saveSession(elapsed, mode); // Save breaks too? Optional. Let's save them for "O2 Saturation" calc.
+        if (!wasSkipped) saveSession(elapsed, mode);
         nextMode = 'focus';
         nextTime = timerSettings.focus;
     }
@@ -268,7 +270,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       const elapsed = initialDurationRef.current - timeLeft;
       
-      if (save && elapsed >= MIN_SAVE_DURATION) {
+      if (save) {
           await saveSession(elapsed, mode);
       }
 
@@ -361,7 +363,6 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   const startAlarmLoop = () => {
-      // Simple beep
       const play = () => {
           const ctx = initAudio();
           const osc = ctx.createOscillator();
@@ -389,7 +390,6 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   // --- PIP ---
   const togglePiP = async () => {
-      // Implementation passed to UI via context, logic same as before or simplified
       if (pipWindow) {
           pipWindow.close();
           setPipWindow(null);
@@ -399,11 +399,27 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
           try {
               // @ts-ignore
               const win = await window.documentPictureInPicture.requestWindow({ width: 300, height: 300 });
-              // Copy styles... (omitted for brevity, same as previous)
-              win.document.body.className = "bg-slate-900 text-white flex items-center justify-center";
+              // Copy styles
+              Array.from(document.styleSheets).forEach((styleSheet) => {
+                try {
+                  if (styleSheet.cssRules) {
+                    const newStyleEl = win.document.createElement('style');
+                    Array.from(styleSheet.cssRules).forEach((cssRule) => {
+                      newStyleEl.appendChild(win.document.createTextNode(cssRule.cssText));
+                    });
+                    win.document.head.appendChild(newStyleEl);
+                  }
+                } catch (e) {}
+              });
+              
+              win.document.body.className = "bg-slate-900 text-white flex items-center justify-center overflow-hidden";
               win.addEventListener('pagehide', () => setPipWindow(null));
               setPipWindow(win);
-          } catch(e) {}
+          } catch(e) {
+              console.error("PiP failed", e);
+          }
+      } else {
+          alert("Picture-in-Picture is not supported in this browser.");
       }
   };
 
