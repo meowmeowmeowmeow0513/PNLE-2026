@@ -37,6 +37,7 @@ interface PomodoroContextType {
   focusTask: string;
   isBrownNoiseOn: boolean;
   pipWindow: Window | null;
+  sessionNotes: string; // New: Brain Dump notes
   
   // Stats & History
   sessionHistory: PomodoroSession[];
@@ -49,6 +50,7 @@ interface PomodoroContextType {
   setCustomSettings: (settings: TimerSettings) => void;
   setSessionGoal: (goal: number) => void;
   setFocusTask: (task: string) => void;
+  setSessionNotes: (notes: string) => void; // New
   toggleBrownNoise: () => void;
   togglePiP: () => Promise<void>;
   stopAlarm: () => void;
@@ -96,6 +98,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [sessionGoal, setSessionGoal] = useState(4);
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
   const [focusTask, setFocusTask] = useState('');
+  const [sessionNotes, setSessionNotes] = useState('');
   
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
   const [isBrownNoiseOn, setIsBrownNoiseOn] = useState(false);
@@ -442,6 +445,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     focusTask,
     isBrownNoiseOn,
     pipWindow,
+    sessionNotes,
     sessionHistory,
     dailyProgress,
     toggleTimer,
@@ -451,6 +455,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     setCustomSettings,
     setSessionGoal,
     setFocusTask,
+    setSessionNotes,
     toggleBrownNoise,
     togglePiP,
     stopAlarm,
