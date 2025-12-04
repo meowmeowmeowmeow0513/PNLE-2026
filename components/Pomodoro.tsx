@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, Sparkles, Zap, SkipForward, Layers, AlertTriangle, PenTool
+    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
@@ -10,10 +10,14 @@ import { isWithinInterval } from 'date-fns';
 import confetti from 'canvas-confetti';
 import PomodoroStats from './PomodoroStats';
 
-// --- MINIMALIST AESTHETIC CAT (Enhanced) ---
-const AnimatedCat = () => (
-  <div className="relative w-40 h-40 mx-auto mb-6">
-    <svg viewBox="0 0 200 200" className="w-full h-full drop-shadow-xl overflow-visible">
+// --- ANIMATED CAT COMPONENT (Dynamic State) ---
+interface AnimatedCatProps {
+    variant?: 'sleeping' | 'awake' | 'waiting';
+}
+
+const AnimatedCat: React.FC<AnimatedCatProps> = ({ variant = 'awake' }) => (
+  <div className="relative w-full h-full flex items-center justify-center">
+    <svg viewBox="0 0 200 200" className="w-40 h-40 drop-shadow-xl overflow-visible">
       <defs>
         <linearGradient id="catGradient" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#FDF2F8" />
@@ -22,14 +26,27 @@ const AnimatedCat = () => (
       </defs>
       <style>
         {`
-          @keyframes bounce-gentle { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+          @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
+          @keyframes bounce-happy { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
           @keyframes blink-soft { 0%, 45%, 55%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
           @keyframes tail-wag { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
-          .cat-body { animation: bounce-gentle 3s ease-in-out infinite; transform-origin: center bottom; }
-          .cat-eye { animation: blink-soft 4s infinite; transform-origin: center; transform-box: fill-box; }
-          .cat-tail { animation: tail-wag 2s ease-in-out infinite; transform-origin: bottom center; }
+          @keyframes zzz { 0% { transform: translate(0, 0) scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate(20px, -30px) scale(1.2); opacity: 0; } }
+          
+          .cat-body { transform-origin: center bottom; animation: ${variant === 'sleeping' ? 'breathe 4s ease-in-out infinite' : 'bounce-happy 2s ease-in-out infinite'}; }
+          .cat-eye { transform-origin: center; transform-box: fill-box; animation: ${variant === 'awake' ? 'blink-soft 4s infinite' : 'none'}; }
+          .cat-zzz { animation: zzz 3s linear infinite; }
         `}
       </style>
+      
+      {/* ZZZ Particles if Sleeping */}
+      {variant === 'sleeping' && (
+          <g className="text-slate-400 dark:text-slate-500 font-black text-2xl" style={{ transform: 'translate(130px, 60px)' }}>
+              <text x="0" y="0" className="cat-zzz" style={{ animationDelay: '0s' }}>z</text>
+              <text x="15" y="-15" className="cat-zzz" style={{ animationDelay: '1s' }}>z</text>
+              <text x="30" y="-30" className="cat-zzz" style={{ animationDelay: '2s' }}>Z</text>
+          </g>
+      )}
+
       <g className="cat-body">
           {/* Ears */}
           <path d="M50 70 L40 20 L90 55 Z" fill="url(#catGradient)" stroke="#F9A8D4" strokeWidth="4" strokeLinejoin="round" />
@@ -38,9 +55,22 @@ const AnimatedCat = () => (
           {/* Head */}
           <ellipse cx="100" cy="110" rx="80" ry="65" fill="url(#catGradient)" stroke="#F9A8D4" strokeWidth="4" />
           
-          {/* Eyes */}
-          <g className="cat-eye"><circle cx="65" cy="100" r="8" fill="#1F2937" /></g>
-          <g className="cat-eye" style={{ animationDelay: '0.2s' }}><circle cx="135" cy="100" r="8" fill="#1F2937" /></g>
+          {/* Face Elements */}
+          {variant === 'sleeping' ? (
+              // Sleeping Eyes
+              <g stroke="#374151" strokeWidth="4" fill="none" strokeLinecap="round">
+                  <path d="M55 105 Q65 115 75 105" />
+                  <path d="M125 105 Q135 115 145 105" />
+              </g>
+          ) : (
+              // Awake Eyes
+              <g fill="#1F2937">
+                  <ellipse cx="65" cy="100" rx="8" ry="10" className="cat-eye" />
+                  <ellipse cx="135" cy="100" rx="8" ry="10" className="cat-eye" style={{ animationDelay: '0.2s' }} />
+                  <circle cx="67" cy="96" r="3" fill="white" />
+                  <circle cx="137" cy="96" r="3" fill="white" />
+              </g>
+          )}
           
           {/* Cheeks */}
           <circle cx="50" cy="120" r="10" fill="#F472B6" opacity="0.4" />
@@ -54,10 +84,77 @@ const AnimatedCat = () => (
   </div>
 );
 
+// --- FOCUS PET WIDGET ---
+const FocusPet = () => {
+    const { isActive, mode, timeLeft, timerSettings } = usePomodoro();
+    
+    // Calculate Energy Progress
+    const totalTime = mode === 'focus' ? timerSettings.focus : 1; 
+    const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
+    
+    let variant: 'sleeping' | 'awake' | 'waiting' = 'waiting';
+    let message = "Ready to focus?";
+    let subtext = "I'll keep watch while you study.";
+
+    if (isActive) {
+        if (mode === 'focus') {
+            variant = 'sleeping';
+            message = "Shh... Focusing...";
+            subtext = "Accumulating XP...";
+        } else {
+            variant = 'awake';
+            message = "Yay! Break Time!";
+            subtext = "Stretch and drink water!";
+        }
+    } else {
+        if (mode === 'focus') {
+            variant = 'waiting';
+            message = "Ready when you are?";
+            subtext = "Press play to start.";
+        } else {
+            variant = 'waiting';
+            message = "Paused Break";
+            subtext = "Don't rest too long!";
+        }
+    }
+
+    return (
+        <div className="flex-1 flex flex-col bg-white/60 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm relative overflow-hidden group min-h-[180px]">
+            {/* Background Decor */}
+            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            
+            <div className="flex-1 relative z-10 flex flex-col items-center justify-center">
+                <AnimatedCat variant={variant} />
+                
+                <div className="text-center mt-[-10px] relative z-20">
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-white transition-colors duration-300">{message}</h4>
+                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{subtext}</p>
+                </div>
+            </div>
+
+            {/* Focus Energy Bar */}
+            <div className="mt-3 relative z-10">
+                <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                    <span className="flex items-center gap-1"><Zap size={10} className="text-amber-400 fill-current" /> Focus Energy</span>
+                    <span>{Math.round(progress)}%</span>
+                </div>
+                <div className="h-2 w-full bg-slate-200 dark:bg-slate-700/50 rounded-full overflow-hidden border border-slate-100 dark:border-white/5">
+                    <div 
+                        className="h-full bg-gradient-to-r from-amber-400 to-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)] transition-all duration-1000 ease-linear"
+                        style={{ width: `${progress}%` }}
+                    >
+                        <div className="absolute inset-0 bg-white/30 w-full h-full animate-[shimmer_2s_infinite]"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const Pomodoro: React.FC = () => {
   const { 
-    mode, timeLeft, isActive, activePreset, timerSettings, sessionGoal, sessionsCompleted, focusTask, isBrownNoiseOn, sessionNotes,
-    toggleTimer, resetTimer, stopSessionEarly, setPreset, setSessionGoal, setFocusTask, setSessionNotes, toggleBrownNoise, skipForward, togglePiP, setCustomSettings
+    mode, timeLeft, isActive, activePreset, timerSettings, sessionGoal, sessionsCompleted, focusTask, isBrownNoiseOn,
+    toggleTimer, resetTimer, stopSessionEarly, setPreset, setSessionGoal, setFocusTask, toggleBrownNoise, skipForward, togglePiP, setCustomSettings
   } = usePomodoro();
 
   const { tasks } = useTasks();
@@ -159,7 +256,7 @@ const Pomodoro: React.FC = () => {
   const strokeColor = isFocus ? '#ec4899' : '#06b6d4'; 
   const bgTransition = isFocus ? 'bg-pink-500' : 'bg-cyan-600';
 
-  const incompleteTasks = tasks.filter(t => !t.completed).slice(0, 50); // Increased limit as we have scroll now
+  const incompleteTasks = tasks.filter(t => !t.completed).slice(0, 50);
 
   const handleInputChange = (field: keyof TimerSettings, value: string) => {
       const parsed = parseInt(value);
@@ -253,16 +350,16 @@ const Pomodoro: React.FC = () => {
             </div>
         </div>
 
-        {/* RIGHT: MISSION CONTROL (Presets, Task, Media) */}
-        <div className="lg:col-span-3 flex flex-col gap-4 order-3 h-full">
+        {/* RIGHT: MISSION CONTROL (Compact Layout) */}
+        <div className="lg:col-span-3 flex flex-col gap-3 order-3 h-full">
              
-             {/* 1. Timer Presets */}
-             <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm backdrop-blur-md">
-                <div className="flex justify-between items-center mb-3">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Layers size={12} /> Presets</h3>
-                    <button onClick={() => setIsCustomModalOpen(true)} className="text-pink-500 hover:text-pink-600"><Settings size={14} /></button>
+             {/* 1. Presets (Compact) */}
+             <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm backdrop-blur-md">
+                <div className="flex justify-between items-center mb-2">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Layers size={10} /> Presets</h3>
+                    <button onClick={() => setIsCustomModalOpen(true)} className="text-pink-500 hover:text-pink-600"><Settings size={12} /></button>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-4 gap-1">
                     {(['micro', 'classic', 'long', 'custom'] as PresetName[]).map((p) => (
                         <button 
                             key={p}
@@ -270,86 +367,78 @@ const Pomodoro: React.FC = () => {
                                 if (p === 'custom' && activePreset === 'custom') setIsCustomModalOpen(true);
                                 else setPreset(p);
                             }}
-                            className={`py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all border ${
+                            className={`py-1.5 rounded-lg text-[9px] font-bold uppercase tracking-wide transition-all border ${
                                 activePreset === p 
-                                ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-md scale-105' 
+                                ? 'bg-slate-900 dark:bg-white text-white dark:text-black border-transparent shadow-sm' 
                                 : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-700'
                             }`}
                         >
-                            {p === 'micro' ? '15/5' : p === 'classic' ? '25/5' : p === 'long' ? '50/10' : 'Custom'}
+                            {p === 'micro' ? '15/5' : p === 'classic' ? '25/5' : p === 'long' ? '50/10' : 'Cust'}
                         </button>
                     ))}
                 </div>
              </div>
 
-             {/* 2. Focus Target (Fixed height to avoid stretching) */}
-             <div className="relative bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm backdrop-blur-md z-50">
-                <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2"><Brain size={12} /> Target</h3>
-                <div className="relative h-12">
+             {/* 2. Target & Goal (Combined for space) */}
+             <div className="relative z-50">
+                 {/* Target Input */}
+                 <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm backdrop-blur-md mb-3">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 flex items-center gap-2"><Brain size={10} /> Target</h3>
+                    <div className="relative">
+                        <input 
+                            type="text" 
+                            value={focusTask}
+                            onChange={(e) => setFocusTask(e.target.value)}
+                            onFocus={() => setShowTaskDropdown(true)}
+                            onBlur={() => setTimeout(() => setShowTaskDropdown(false), 200)}
+                            placeholder="What are you working on?"
+                            className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
+                        />
+                        {/* Absolute Dropdown */}
+                        {showTaskDropdown && incompleteTasks.length > 0 && (
+                            <div className="absolute top-full left-0 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-[100] max-h-48 overflow-y-auto custom-scrollbar p-1">
+                                {incompleteTasks.map(t => (
+                                    <button key={t.id} onClick={() => setFocusTask(t.title)} className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-pink-50 dark:hover:bg-pink-900/20 truncate rounded-lg transition-colors mb-0.5 last:mb-0">
+                                        {t.title}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                 </div>
+
+                 {/* Goal Slider (Compact) */}
+                 <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm backdrop-blur-md relative z-10">
+                    <div className="flex justify-between items-center mb-1">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Target size={10} /> Goal</h3>
+                        <span className="text-[10px] font-bold text-pink-500">{sessionsCompleted}/{sessionGoal}</span>
+                    </div>
                     <input 
-                        type="text" 
-                        value={focusTask}
-                        onChange={(e) => setFocusTask(e.target.value)}
-                        onFocus={() => setShowTaskDropdown(true)}
-                        onBlur={() => setTimeout(() => setShowTaskDropdown(false), 200)}
-                        placeholder="What are you working on?"
-                        className="w-full h-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
+                        type="range" min="1" max="12" step="1"
+                        value={sessionGoal}
+                        onChange={(e) => setSessionGoal(parseInt(e.target.value))}
+                        className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
                     />
-                    
-                    {/* Improved Dropdown: Higher Z-Index, Scrollable */}
-                    {showTaskDropdown && incompleteTasks.length > 0 && (
-                        <div className="absolute top-full left-0 w-full mt-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[100] max-h-60 overflow-y-auto custom-scrollbar p-1">
-                            {incompleteTasks.map(t => (
-                                <button key={t.id} onClick={() => setFocusTask(t.title)} className="w-full text-left px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-pink-50 dark:hover:bg-pink-900/20 truncate rounded-lg transition-colors mb-0.5 last:mb-0">
-                                    {t.title}
-                                </button>
-                            ))}
-                        </div>
-                    )}
-                </div>
+                 </div>
              </div>
 
-             {/* 3. Session Goal */}
-             <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm backdrop-blur-md">
-                <div className="flex justify-between items-center mb-2">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Target size={12} /> Goal</h3>
-                    <span className="text-xs font-bold text-pink-500">{sessionsCompleted}/{sessionGoal}</span>
-                </div>
-                <input 
-                    type="range" min="1" max="12" step="1"
-                    value={sessionGoal}
-                    onChange={(e) => setSessionGoal(parseInt(e.target.value))}
-                    className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
-                />
-             </div>
-
-             {/* 4. Media Controls & PiP */}
-             <div className="grid grid-cols-2 gap-3">
-                <button onClick={toggleBrownNoise} className={`p-3 rounded-2xl border flex flex-col items-center justify-center gap-1.5 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-inner' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-300'}`}>
-                    <Waves size={20} className={isBrownNoiseOn ? 'animate-pulse' : ''} />
+             {/* 3. Media Controls (Compact) */}
+             <div className="grid grid-cols-2 gap-2">
+                <button onClick={toggleBrownNoise} className={`py-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-inner' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-300'}`}>
+                    <Waves size={16} className={isBrownNoiseOn ? 'animate-pulse' : ''} />
                     <span className="text-[9px] font-bold uppercase">{isBrownNoiseOn ? 'Noise On' : 'No Sound'}</span>
                 </button>
-                <button onClick={togglePiP} className="p-3 rounded-2xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1.5 transition-all shadow-sm hover:shadow-md">
-                    <MonitorPlay size={20} />
+                <button onClick={togglePiP} className="py-2 rounded-xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1 transition-all shadow-sm">
+                    <MonitorPlay size={16} />
                     <span className="text-[9px] font-bold uppercase">Mini Mode</span>
                 </button>
              </div>
 
-             {/* 5. Brain Dump (Session Notes) - Fills Dead Space */}
-             <div className="flex-1 flex flex-col bg-yellow-50 dark:bg-yellow-500/5 border border-yellow-200 dark:border-yellow-500/20 rounded-3xl p-4 shadow-sm min-h-[120px]">
-                 <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500 mb-2 flex items-center gap-2">
-                     <PenTool size={12} /> Brain Dump
-                 </h3>
-                 <textarea
-                    value={sessionNotes}
-                    onChange={(e) => setSessionNotes(e.target.value)}
-                    placeholder="Distracted? Write it here and forget it for now..."
-                    className="w-full flex-1 bg-transparent border-none outline-none resize-none text-xs font-medium text-slate-700 dark:text-slate-300 placeholder-yellow-500/40 dark:placeholder-yellow-500/30 leading-relaxed p-0"
-                 />
-             </div>
+             {/* 4. FOCUS COMPANION PET (Fills space) */}
+             <FocusPet />
 
-             {/* 6. Video Anchor */}
-             <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group">
+             {/* 5. Video Anchor */}
+             <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group shrink-0">
                  <div className="absolute top-2 left-2 z-20 bg-black/60 px-2 py-1 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                      <div className="flex items-center gap-1 text-[9px] font-bold text-white uppercase"><Music size={10} /> Focus Cam</div>
                  </div>
@@ -402,7 +491,9 @@ const Pomodoro: React.FC = () => {
       {showBreakModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
               <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in" onClick={e => e.stopPropagation()}>
-                  <AnimatedCat />
+                  <div className="w-32 h-32 mb-4">
+                      <AnimatedCat variant="awake" />
+                  </div>
                   <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-2 mb-2 tracking-tight">Let's Rest!</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8">You've earned this moment. Breathe.</p>
                   <button onClick={() => { setShowBreakModal(false); toggleTimer(); }} className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transform active:scale-95 transition-transform">Start Break</button>
