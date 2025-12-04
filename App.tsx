@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -114,7 +115,7 @@ const App: React.FC = () => {
   return (
     <PomodoroProvider>
       <TaskProvider>
-        {/* INJECTED STYLES FOR AURORA ANIMATION */}
+        {/* INJECTED STYLES FOR ANIMATIONS & AURORA */}
         <style>{`
           @keyframes aurora {
             0% { transform: translate(0px, 0px) scale(1); opacity: 0.4; }
@@ -127,6 +128,22 @@ const App: React.FC = () => {
           }
           .animate-aurora-delayed {
             animation: aurora 20s infinite ease-in-out reverse;
+          }
+          
+          /* Custom Keyframes for Modals */
+          @keyframes fade-in {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          .animate-fade-in {
+            animation: fade-in 0.2s ease-out forwards;
+          }
+          @keyframes zoom-in {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+          }
+          .animate-zoom-in {
+            animation: zoom-in 0.2s ease-out forwards;
           }
         `}</style>
 
