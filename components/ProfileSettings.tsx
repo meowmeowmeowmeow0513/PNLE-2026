@@ -1,13 +1,14 @@
 
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../AuthContext';
 import { useGamification } from '../hooks/useGamification';
 import { 
   Camera, X, Loader, Check, User, Mail, Trash2, 
-  AlertTriangle, Save, Moon, Sun, Monitor, Bell, 
-  Volume2, Shield, KeyRound, LogOut, Award, Sparkles, Layout
+  AlertTriangle, Save, Moon, Sun, Bell, 
+  Volume2, Shield, KeyRound, Palette, ChevronRight
 } from 'lucide-react';
 
 interface ProfileSettingsProps {
@@ -44,6 +45,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
       return () => clearTimeout(timer);
     }
   }, [message]);
+
+  // Lock body scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, []);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -118,11 +127,11 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
       }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-0 md:p-6 animate-fade-in">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-0 md:p-6 animate-fade-in">
       {/* Backdrop */}
       <div 
-        className="absolute inset-0 bg-white/30 dark:bg-black/60 backdrop-blur-xl transition-opacity" 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" 
         onClick={onClose}
       />
 
@@ -140,7 +149,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
             {/* Mobile Header (Title + Close) */}
             <div className="md:hidden flex items-center justify-between w-full mb-2">
                  <h2 className="text-lg font-black text-slate-800 dark:text-white">Settings</h2>
-                 <button onClick={onClose} className="p-2 bg-slate-200 dark:bg-slate-800 rounded-full"><X size={18} /></button>
+                 <button onClick={onClose} className="p-2 bg-slate-200 dark:bg-slate-800 rounded-full text-slate-600 dark:text-slate-300"><X size={18} /></button>
             </div>
 
             {/* Navigation Tabs */}
@@ -155,7 +164,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
                     onClick={() => setActiveTab('appearance')}
                     className={`flex items-center gap-3 px-4 py-3 rounded-2xl transition-all text-sm font-bold whitespace-nowrap ${activeTab === 'appearance' ? 'bg-pink-500 text-white shadow-lg shadow-pink-500/20' : 'text-slate-500 hover:bg-slate-200 dark:text-slate-400 dark:hover:bg-white/5'}`}
                 >
-                    <Layout size={18} /> Appearance
+                    <Palette size={18} /> Appearance
                 </button>
                 <button 
                     onClick={() => setActiveTab('account')}
@@ -178,14 +187,14 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
             
             {/* Success/Error Message Toast */}
             {message && (
-                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300">
-                    <div className={`flex items-center gap-2 px-4 py-2.5 rounded-full shadow-xl border ${
+                <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 animate-in slide-in-from-top-4 fade-in duration-300 w-full max-w-xs px-4">
+                    <div className={`flex items-center gap-2 px-4 py-3 rounded-xl shadow-xl border ${
                         message.type === 'success' 
                         ? 'bg-emerald-500 text-white border-emerald-400' 
                         : 'bg-red-500 text-white border-red-400'
                     }`}>
                         {message.type === 'success' ? <Check size={16} strokeWidth={3} /> : <AlertTriangle size={16} strokeWidth={3} />}
-                        <span className="text-xs font-bold">{message.text}</span>
+                        <span className="text-xs font-bold flex-1">{message.text}</span>
                     </div>
                 </div>
             )}
@@ -217,7 +226,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
                                     <input type="file" ref={fileInputRef} onChange={handleFileChange} accept="image/*" className="hidden" />
                                 </div>
 
-                                <h2 className="text-2xl font-black tracking-tight">{displayName || 'Student Nurse'}</h2>
+                                <h2 className="text-2xl font-black tracking-tight text-center">{displayName || 'Student Nurse'}</h2>
                                 <p className="text-white/60 text-sm font-medium mb-6">{currentUser?.email}</p>
 
                                 {/* Rank Stats */}
@@ -228,7 +237,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
                                     </div>
                                     <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 text-center border border-white/10">
                                         <div className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1">Level</div>
-                                        <div className="text-sm font-black text-white">{currentRank?.id + 1}</div>
+                                        <div className="text-sm font-black text-white">{(currentRank?.id || 0) + 1}</div>
                                     </div>
                                     <div className="bg-white/10 backdrop-blur-md rounded-xl p-3 text-center border border-white/10">
                                         <div className="text-[10px] font-bold uppercase tracking-wider text-white/60 mb-1">XP</div>
@@ -265,7 +274,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
                                         className="w-full pl-12 pr-4 py-3 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl font-medium text-slate-500 dark:text-slate-500 cursor-not-allowed"
                                     />
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-2 pl-1 flex items-center gap-1"><Lock size={10} /> Email cannot be changed.</p>
+                                <p className="text-[10px] text-slate-400 mt-2 pl-1 flex items-center gap-1"><KeyRound size={10} /> Email cannot be changed.</p>
                             </div>
 
                             <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
@@ -320,7 +329,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
                             </div>
                         </div>
 
-                        {/* Mock Notifications (Placeholders for now) */}
+                        {/* Mock Notifications */}
                         <div className="opacity-50 pointer-events-none grayscale">
                             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-4">Notifications</h3>
                             <div className="space-y-3">
@@ -399,7 +408,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
                                             <p className="text-xs text-red-400/80">Permanently remove all data</p>
                                         </div>
                                     </div>
-                                    <div className="text-red-400 group-hover:translate-x-1 transition-transform">→</div>
+                                    <div className="text-red-400 group-hover:translate-x-1 transition-transform"><ChevronRight size={18} /></div>
                                 </button>
                             ) : (
                                 <div className="bg-red-50 dark:bg-red-900/10 border border-red-200 dark:border-red-900/30 rounded-2xl p-5 animate-in zoom-in-95">
@@ -431,7 +440,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose, isDark, togg
             </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
