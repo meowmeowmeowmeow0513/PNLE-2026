@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, Sparkles, Zap, SkipForward, Layers, AlertTriangle
+    Brain, Target, Music, Settings, X, Save, Trophy, Sparkles, Zap, SkipForward, Layers, AlertTriangle, PenTool
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
@@ -56,8 +56,8 @@ const AnimatedCat = () => (
 
 const Pomodoro: React.FC = () => {
   const { 
-    mode, timeLeft, isActive, activePreset, timerSettings, sessionGoal, sessionsCompleted, focusTask, isBrownNoiseOn,
-    toggleTimer, resetTimer, stopSessionEarly, setPreset, setSessionGoal, setFocusTask, toggleBrownNoise, skipForward, togglePiP, setCustomSettings
+    mode, timeLeft, isActive, activePreset, timerSettings, sessionGoal, sessionsCompleted, focusTask, isBrownNoiseOn, sessionNotes,
+    toggleTimer, resetTimer, stopSessionEarly, setPreset, setSessionGoal, setFocusTask, setSessionNotes, toggleBrownNoise, skipForward, togglePiP, setCustomSettings
   } = usePomodoro();
 
   const { tasks } = useTasks();
@@ -159,7 +159,7 @@ const Pomodoro: React.FC = () => {
   const strokeColor = isFocus ? '#ec4899' : '#06b6d4'; 
   const bgTransition = isFocus ? 'bg-pink-500' : 'bg-cyan-600';
 
-  const incompleteTasks = tasks.filter(t => !t.completed).slice(0, 5);
+  const incompleteTasks = tasks.filter(t => !t.completed).slice(0, 50); // Increased limit as we have scroll now
 
   const handleInputChange = (field: keyof TimerSettings, value: string) => {
       const parsed = parseInt(value);
@@ -283,7 +283,7 @@ const Pomodoro: React.FC = () => {
              </div>
 
              {/* 2. Focus Target (Fixed height to avoid stretching) */}
-             <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm backdrop-blur-md h-auto">
+             <div className="relative bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm backdrop-blur-md z-50">
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2"><Brain size={12} /> Target</h3>
                 <div className="relative h-12">
                     <input 
@@ -292,13 +292,15 @@ const Pomodoro: React.FC = () => {
                         onChange={(e) => setFocusTask(e.target.value)}
                         onFocus={() => setShowTaskDropdown(true)}
                         onBlur={() => setTimeout(() => setShowTaskDropdown(false), 200)}
-                        placeholder="Study Topic..."
+                        placeholder="What are you working on?"
                         className="w-full h-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl px-4 text-sm font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
                     />
+                    
+                    {/* Improved Dropdown: Higher Z-Index, Scrollable */}
                     {showTaskDropdown && incompleteTasks.length > 0 && (
-                        <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                        <div className="absolute top-full left-0 w-full mt-2 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl z-[100] max-h-60 overflow-y-auto custom-scrollbar p-1">
                             {incompleteTasks.map(t => (
-                                <button key={t.id} onClick={() => setFocusTask(t.title)} className="w-full text-left px-4 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-pink-50 dark:hover:bg-pink-900/20 truncate border-b border-slate-100 dark:border-slate-700/50 last:border-0">
+                                <button key={t.id} onClick={() => setFocusTask(t.title)} className="w-full text-left px-4 py-3 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-pink-50 dark:hover:bg-pink-900/20 truncate rounded-lg transition-colors mb-0.5 last:mb-0">
                                     {t.title}
                                 </button>
                             ))}
@@ -333,13 +335,25 @@ const Pomodoro: React.FC = () => {
                 </button>
              </div>
 
-             {/* 5. Video Anchor (Critical for GlobalYoutubePlayer) */}
-             <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group mt-auto">
+             {/* 5. Brain Dump (Session Notes) - Fills Dead Space */}
+             <div className="flex-1 flex flex-col bg-yellow-50 dark:bg-yellow-500/5 border border-yellow-200 dark:border-yellow-500/20 rounded-3xl p-4 shadow-sm min-h-[120px]">
+                 <h3 className="text-[10px] font-black uppercase tracking-widest text-yellow-600 dark:text-yellow-500 mb-2 flex items-center gap-2">
+                     <PenTool size={12} /> Brain Dump
+                 </h3>
+                 <textarea
+                    value={sessionNotes}
+                    onChange={(e) => setSessionNotes(e.target.value)}
+                    placeholder="Distracted? Write it here and forget it for now..."
+                    className="w-full flex-1 bg-transparent border-none outline-none resize-none text-xs font-medium text-slate-700 dark:text-slate-300 placeholder-yellow-500/40 dark:placeholder-yellow-500/30 leading-relaxed p-0"
+                 />
+             </div>
+
+             {/* 6. Video Anchor */}
+             <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group">
                  <div className="absolute top-2 left-2 z-20 bg-black/60 px-2 py-1 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                      <div className="flex items-center gap-1 text-[9px] font-bold text-white uppercase"><Music size={10} /> Focus Cam</div>
                  </div>
                  <div id="video-anchor" className="w-full h-full bg-slate-900 relative flex items-center justify-center text-slate-700">
-                     {/* The iframe from GlobalYoutubePlayer will overlay this div precisely */}
                      <span className="text-[9px] font-mono tracking-widest uppercase">Video Feed</span>
                  </div>
              </div>
