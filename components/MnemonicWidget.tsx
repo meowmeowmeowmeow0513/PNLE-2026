@@ -212,65 +212,85 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none"></div>
       <div className={`absolute -top-24 -right-24 w-64 h-64 bg-gradient-to-br ${themeClasses.replace('border', 'from').split(' ')[0]} rounded-full blur-[80px] opacity-20 pointer-events-none`}></div>
 
-      {/* Main Content Area */}
-      <div className="p-6 pb-24 flex-1 relative z-10 flex flex-col justify-start h-full">
-        <div className="flex items-start justify-between mb-6 shrink-0">
-            <div className="flex items-center gap-3">
-                <div className={`p-2.5 bg-white/50 dark:bg-white/10 rounded-xl shadow-sm backdrop-blur-md ${iconColor}`}>
-                    <Lightbulb size={22} className="fill-current" />
-                </div>
-                <div>
-                    <h3 className="font-bold text-sm text-slate-800 dark:text-white leading-tight">Daily Mnemonic</h3>
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 opacity-80">
-                        Day {new Date().getDate()}
-                    </span>
-                </div>
-            </div>
-            <span className="px-3 py-1 bg-white/50 dark:bg-white/10 border border-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 backdrop-blur-md shadow-sm">
-                {todayMnemonic.category}
-            </span>
-        </div>
+      {/* MAIN CONTENT (Flex Column) */}
+      <div className="flex-1 flex flex-col min-h-0 relative z-10">
+          
+          {/* Header & Title Section */}
+          <div className="px-6 pt-6 pb-2 shrink-0">
+              <div className="flex items-start justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                      <div className={`p-2.5 bg-white/50 dark:bg-white/10 rounded-xl shadow-sm backdrop-blur-md ${iconColor}`}>
+                          <Lightbulb size={20} className="fill-current" />
+                      </div>
+                      <div>
+                          <h3 className="font-bold text-xs text-slate-500 dark:text-slate-400 uppercase tracking-widest">Daily Mnemonic</h3>
+                          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 opacity-80">
+                              Day {new Date().getDate()}
+                          </p>
+                      </div>
+                  </div>
+                  <span className="px-3 py-1 bg-white/50 dark:bg-white/10 border border-white/20 rounded-full text-[10px] font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 backdrop-blur-md shadow-sm">
+                      {todayMnemonic.category}
+                  </span>
+              </div>
 
-        <div className="space-y-6 flex-1 flex flex-col min-h-0">
-            <div className="shrink-0">
-                <h3 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${textGradient} mb-3 drop-shadow-sm leading-none`}>
-                    {todayMnemonic.code}
-                </h3>
-                <p className="text-sm font-bold text-slate-500 dark:text-slate-400 flex items-center gap-2">
-                    <BookOpen size={16} />
-                    {todayMnemonic.title}
-                </p>
-            </div>
+              <div className="mb-2">
+                  <h3 className={`text-3xl md:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${textGradient} drop-shadow-sm leading-none mb-2`}>
+                      {todayMnemonic.code}
+                  </h3>
+                  <p className="text-sm font-bold text-slate-600 dark:text-slate-300 flex items-center gap-2">
+                      <BookOpen size={16} className={iconColor} />
+                      {todayMnemonic.title}
+                  </p>
+              </div>
+          </div>
 
-            {/* Meaning Section with Hide/Reveal Active Recall */}
-            <div 
-                className={`bg-white/60 dark:bg-black/20 rounded-2xl p-6 border border-white/40 dark:border-white/5 shadow-inner backdrop-blur-sm flex-1 relative transition-all cursor-pointer group/meaning ring-1 ring-white/10 dark:ring-white/5 ${isMeaningRevealed ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden'}`}
-                onClick={() => setIsMeaningRevealed(!isMeaningRevealed)}
-                style={{ minHeight: '140px' }}
-            >
-                <div className={`transition-all duration-500 min-h-full ${isMeaningRevealed ? 'opacity-100 blur-0' : 'opacity-20 blur-md grayscale'}`}>
-                    {/* Extensive padding to ensure text is never hidden behind footer */}
-                    <p className="whitespace-pre-line text-base leading-relaxed font-medium text-slate-700 dark:text-slate-200 pr-2 pb-48">
-                        {todayMnemonic.meaning}
-                    </p>
+          {/* Meaning Section (Scrollable Area) */}
+          <div className="flex-1 px-6 pb-2 min-h-0 overflow-hidden flex flex-col">
+              <div 
+                  className={`bg-white/60 dark:bg-black/20 rounded-2xl p-5 border border-white/40 dark:border-white/5 shadow-inner backdrop-blur-sm flex-1 relative transition-all cursor-pointer group/meaning ring-1 ring-white/10 dark:ring-white/5 overflow-hidden flex flex-col`}
+                  onClick={() => setIsMeaningRevealed(!isMeaningRevealed)}
+              >
+                  {/* Scrollable Text Container */}
+                  <div className={`w-full h-full overflow-y-auto custom-scrollbar transition-all duration-500 ${isMeaningRevealed ? 'opacity-100 blur-0' : 'opacity-30 blur-md grayscale select-none'}`}>
+                      <p className="whitespace-pre-line text-lg leading-relaxed font-bold text-slate-700 dark:text-slate-200 pb-8">
+                          {todayMnemonic.meaning}
+                      </p>
+                  </div>
+
+                  {/* Cover for Hidden State */}
+                  {!isMeaningRevealed && (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+                          <div className={`p-4 rounded-full bg-white dark:bg-slate-800 shadow-2xl backdrop-blur-xl border border-white/20 dark:border-white/10 ${iconColor} group-hover/meaning:scale-110 transition-transform mb-3`}>
+                              <Eye size={32} />
+                          </div>
+                          <span className="px-4 py-1.5 rounded-full bg-slate-900/5 dark:bg-white/5 text-[10px] font-black uppercase tracking-widest text-slate-500 dark:text-slate-400 border border-slate-200/50 dark:border-white/5">
+                              Tap to Reveal
+                          </span>
+                      </div>
+                  )}
+              </div>
+          </div>
+
+          {/* Footer Trigger (Static, part of flow) */}
+          <div className="p-4 shrink-0 z-20">
+              <button 
+                onClick={handleToggleExpand}
+                className="w-full py-3 bg-white/50 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-white dark:hover:bg-white/10 transition-all rounded-xl flex items-center justify-center gap-2 group cursor-pointer shadow-sm hover:shadow-md"
+              >
+                <div className={`p-1 rounded-full text-white transition-all shadow-md group-hover:scale-110 ${isExpanded ? 'bg-slate-400 rotate-180' : `bg-gradient-to-r ${textGradient}`}`}>
+                    {isExpanded ? <ChevronDown size={14} /> : <Sparkles size={14} />}
                 </div>
-
-                {/* Cover for Hidden State */}
-                {!isMeaningRevealed && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
-                        <div className={`p-4 rounded-full bg-white/80 dark:bg-white/10 shadow-xl backdrop-blur-md ${iconColor} group-hover/meaning:scale-110 transition-transform`}>
-                            <Eye size={28} />
-                        </div>
-                        <p className="text-xs font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 mt-3">Tap to Reveal</p>
-                    </div>
-                )}
-            </div>
-        </div>
+                <span className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
+                    {isExpanded ? 'Close Insights' : 'AI Deep Dive'}
+                </span>
+              </button>
+          </div>
       </div>
       
-      {/* Instructor's Deep Dive Section (Slide Up - Fixed height relative to container) */}
+      {/* Instructor's Deep Dive Section (Slide Up) */}
       <div 
-        className={`absolute bottom-[60px] left-0 right-0 z-30 bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/10 transition-all duration-500 ease-spring shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex flex-col ${isExpanded ? 'h-[85%]' : 'h-0 overflow-hidden'}`}
+        className={`absolute bottom-0 left-0 right-0 z-30 bg-white/95 dark:bg-[#1e293b]/95 backdrop-blur-xl border-t border-slate-200/50 dark:border-white/10 transition-all duration-500 ease-spring shadow-[0_-10px_40px_rgba(0,0,0,0.1)] flex flex-col ${isExpanded ? 'h-[92%]' : 'h-0 overflow-hidden'}`}
       >
           {/* Panel Header */}
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-700/50 shrink-0 bg-white/50 dark:bg-white/5 backdrop-blur-sm">
@@ -280,14 +300,22 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
                       Instructor's Notes
                   </span>
               </div>
-              <button 
-                onClick={(e) => { e.stopPropagation(); fetchAIExplanation(true); }}
-                disabled={loading}
-                className={`p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors ${loading ? 'animate-spin' : ''}`}
-                title="Regenerate Explanation"
-              >
-                  <RefreshCw size={14} />
-              </button>
+              <div className="flex items-center gap-2">
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); fetchAIExplanation(true); }}
+                    disabled={loading}
+                    className={`p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors ${loading ? 'animate-spin' : ''}`}
+                    title="Regenerate"
+                  >
+                      <RefreshCw size={16} />
+                  </button>
+                  <button 
+                    onClick={handleToggleExpand}
+                    className="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                  >
+                      <ChevronDown size={16} />
+                  </button>
+              </div>
           </div>
 
           {/* Panel Content (Scrollable) */}
@@ -325,19 +353,6 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
               )}
           </div>
       </div>
-
-      {/* Footer Actions */}
-      <button 
-        onClick={handleToggleExpand}
-        className="absolute bottom-0 w-full p-4 bg-white/50 dark:bg-white/5 border-t border-slate-100 dark:border-white/5 hover:bg-white/80 dark:hover:bg-white/10 transition-all flex items-center justify-center gap-2 group cursor-pointer z-40 backdrop-blur-sm"
-      >
-        <div className={`p-1.5 rounded-full text-white transition-all shadow-md group-hover:scale-110 ${isExpanded ? 'bg-slate-400 rotate-180' : `bg-gradient-to-r ${textGradient}`}`}>
-            {isExpanded ? <ChevronDown size={16} /> : <Sparkles size={16} />}
-        </div>
-        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 group-hover:text-slate-800 dark:group-hover:text-white transition-colors">
-            {isExpanded ? 'Close Insights' : 'AI Deep Dive'}
-        </span>
-      </button>
     </div>
   );
 };
