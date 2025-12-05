@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { LayoutDashboard, Timer, Library, BookOpen, Folder, Calendar, GraduationCap, X } from 'lucide-react';
+import { LayoutDashboard, Timer, Library, BookOpen, Folder, Calendar, GraduationCap, X, Siren } from 'lucide-react';
 import { NavigationItem } from '../types';
 
 interface SidebarProps {
@@ -11,8 +11,9 @@ interface SidebarProps {
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ activeItem, onNavigate, isOpen, onClose }) => {
-  const navItems: { label: NavigationItem; icon: React.ReactNode }[] = [
+  const navItems: { label: NavigationItem; icon: React.ReactNode; special?: boolean }[] = [
     { label: 'Dashboard', icon: <LayoutDashboard size={24} /> },
+    { label: 'December Quest', icon: <Siren size={24} />, special: true },
     { label: 'Planner', icon: <Calendar size={24} /> },
     { label: 'Pomodoro Timer', icon: <Timer size={24} /> },
     { label: 'Resource Hub', icon: <Library size={24} /> },
@@ -70,14 +71,16 @@ const Sidebar: React.FC<SidebarProps> = ({ activeItem, onNavigate, isOpen, onClo
                   className={`relative w-full flex items-center gap-4 px-4 py-3.5 rounded-2xl transition-all duration-300 group overflow-hidden select-none ${
                     isActive
                       ? 'bg-gradient-to-r from-pink-500/10 via-pink-500/5 to-transparent text-pink-600 dark:text-pink-400 font-bold shadow-sm'
-                      : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white font-medium'
+                      : item.special 
+                        ? 'text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 font-bold'
+                        : 'text-slate-500 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white font-medium'
                   }`}
                 >
                   {isActive && (
                     <div className="absolute left-0 top-1/2 -translate-y-1/2 h-8 w-1 bg-pink-500 rounded-r-full shadow-[0_0_12px_#ec4899]"></div>
                   )}
                   
-                  <span className={`transition-transform duration-300 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'}`}>
+                  <span className={`transition-transform duration-300 ${isActive ? 'scale-110 drop-shadow-md' : 'group-hover:scale-110'} ${item.special && !isActive ? 'animate-pulse' : ''}`}>
                     {item.icon}
                   </span>
                   <span className="tracking-tight text-base">{item.label}</span>
