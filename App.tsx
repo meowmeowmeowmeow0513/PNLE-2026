@@ -8,6 +8,7 @@ import Resources from './components/Resources';
 import ExamTOS from './components/ExamTOS';
 import PersonalFolder from './components/PersonalFolder';
 import Planner from './components/Planner';
+import DecemberQuest from './components/DecemberQuest';
 import SignUp from './components/SignUp';
 import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
@@ -63,6 +64,8 @@ const App: React.FC = () => {
         return <ExamTOS />;
       case 'Personal Folder':
         return <PersonalFolder />;
+      case 'December Quest':
+        return <DecemberQuest />;
       default:
         return <Dashboard onNavigate={setActiveItem} />;
     }
