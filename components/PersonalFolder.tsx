@@ -7,7 +7,7 @@ import FolderCard from './FolderCard';
 import { 
   FolderPlus, Home, ChevronRight, Plus, 
   Link as LinkIcon, Youtube, FileText, Globe, 
-  StickyNote, Trash2, Edit2, ExternalLink, HardDrive, Check
+  StickyNote, Trash2, Edit2, ExternalLink, HardDrive, Check, Search, GripVertical
 } from 'lucide-react';
 import { UserFile, UserFolder, ResourceType } from '../types';
 import { format } from 'date-fns';
@@ -20,6 +20,9 @@ const PersonalFolder: React.FC = () => {
     loading, sortBy, setSortBy 
   } = useFileManager(currentUser?.uid);
   
+  // Local State
+  const [searchQuery, setSearchQuery] = useState('');
+
   // Modals
   const [isResourceModalOpen, setIsResourceModalOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
@@ -81,26 +84,43 @@ const PersonalFolder: React.FC = () => {
     setDraggedItem(null);
   };
 
+  // --- Filtering ---
+  const filteredFolders = sortedFolders.filter(f => 
+    f.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+  
+  const filteredFiles = sortedFiles.filter(f => 
+    f.fileName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (f.userNotes && f.userNotes.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
+
   return (
-    <div className="max-w-7xl mx-auto space-y-6 pb-10 font-sans">
+    <div className="max-w-7xl mx-auto space-y-6 pb-20 font-sans">
       
       {/* 1. Header & Controls */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
-          <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Resource Hub</h2>
-          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium">Your personal library of links, notes, and reviewers.</p>
+          <div className="flex items-center gap-3 mb-2">
+             <div className="p-2.5 bg-pink-500/10 rounded-xl text-pink-600 dark:text-pink-400">
+                 <Folder size={24} />
+             </div>
+             <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Personal Folder</h2>
+          </div>
+          <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-lg">
+              Your private desk. Organize your own notes, external links, and study materials here.
+          </p>
         </div>
         <div className="flex gap-3">
             <button
                 onClick={() => { setFolderToEdit(null); setIsFolderModalOpen(true); }}
-                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-all"
+                className="flex items-center gap-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white px-5 py-3 rounded-xl font-bold text-sm shadow-sm transition-all"
             >
                 <FolderPlus size={18} className="text-purple-500" />
                 New Folder
             </button>
             <button
                 onClick={() => { setResourceToEdit(null); setIsResourceModalOpen(true); }}
-                className="flex items-center gap-2 bg-pink-600 hover:bg-pink-500 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-pink-500/20 transition-all active:scale-95"
+                className="flex items-center gap-2 bg-pink-600 hover:bg-pink-500 text-white px-6 py-3 rounded-xl font-bold text-sm shadow-lg shadow-pink-500/20 transition-all active:scale-95"
             >
                 <Plus size={18} />
                 Add Resource
@@ -108,9 +128,11 @@ const PersonalFolder: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. Breadcrumbs & Sort */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-2 flex items-center justify-between shadow-sm">
-        <div className="flex items-center overflow-x-auto px-2 py-1 scrollbar-hide">
+      {/* 2. Navigation & Search Toolbar */}
+      <div className="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-2 flex flex-col md:flex-row md:items-center justify-between shadow-sm gap-2">
+        
+        {/* Breadcrumbs */}
+        <div className="flex items-center overflow-x-auto px-2 py-1 scrollbar-hide flex-1">
              {breadcrumbs.map((crumb, index) => {
                  const isTarget = dragOverFolderId === crumb.id;
                  return (
@@ -120,7 +142,7 @@ const PersonalFolder: React.FC = () => {
                             onClick={() => navigateUp(crumb.id)}
                             onDragOver={(e) => handleDragOver(e, crumb.id)}
                             onDrop={(e) => handleDrop(e, crumb.id)}
-                            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg transition-all whitespace-nowrap font-bold ${
+                            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all whitespace-nowrap font-bold ${
                                 isTarget ? 'bg-pink-100 dark:bg-pink-900/40 ring-2 ring-pink-500 text-pink-700' : ''
                             } ${
                                 index === breadcrumbs.length - 1 
@@ -135,14 +157,30 @@ const PersonalFolder: React.FC = () => {
                  );
              })}
         </div>
-        <div className="flex items-center gap-2 border-l border-slate-200 dark:border-slate-700 pl-3">
-             <span className="text-xs font-bold text-slate-400 hidden sm:block uppercase tracking-wider">Sort:</span>
+
+        {/* Search & Sort Controls */}
+        <div className="flex items-center gap-3 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-700 pt-2 md:pt-0 md:pl-3 px-2">
+             
+             {/* Search Input */}
+             <div className="relative group flex-1 md:flex-initial">
+                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
+                 <input 
+                    type="text" 
+                    placeholder="Search files..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full md:w-48 pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-900 border border-transparent focus:border-pink-500/50 focus:bg-white dark:focus:bg-black rounded-lg text-xs font-medium focus:outline-none transition-all"
+                 />
+             </div>
+
+             <div className="w-px h-6 bg-slate-200 dark:bg-slate-700 hidden md:block"></div>
+
              <select 
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as 'name' | 'date')}
-                className="text-xs bg-transparent text-slate-700 dark:text-slate-300 font-bold focus:outline-none cursor-pointer"
+                className="text-xs bg-transparent text-slate-600 dark:text-slate-300 font-bold focus:outline-none cursor-pointer hover:text-slate-900 dark:hover:text-white py-2"
              >
-                 <option value="date">Date Added</option>
+                 <option value="date">Newest First</option>
                  <option value="name">Name (A-Z)</option>
              </select>
         </div>
@@ -150,48 +188,68 @@ const PersonalFolder: React.FC = () => {
 
       {/* 3. Content Grid */}
       {loading ? (
-        <div className="h-64 flex items-center justify-center text-slate-400 font-bold animate-pulse">Loading resources...</div>
-      ) : sortedFolders.length === 0 && sortedFiles.length === 0 ? (
-        <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-3xl p-12 text-center flex flex-col items-center justify-center min-h-[400px] gap-6 bg-slate-50/50 dark:bg-slate-800/20">
+        <div className="h-64 flex flex-col items-center justify-center gap-4 animate-pulse">
+            <div className="w-12 h-12 bg-slate-200 dark:bg-slate-800 rounded-full"></div>
+            <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded"></div>
+        </div>
+      ) : filteredFolders.length === 0 && filteredFiles.length === 0 ? (
+        <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-[2rem] p-12 text-center flex flex-col items-center justify-center min-h-[400px] gap-6 bg-slate-50/50 dark:bg-slate-800/20">
             <div className="w-24 h-24 bg-white dark:bg-slate-800 rounded-full shadow-lg flex items-center justify-center text-slate-300 dark:text-slate-600 mb-2">
-                <FolderPlus size={48} />
+                {searchQuery ? <Search size={48} /> : <FolderPlus size={48} />}
             </div>
             <div>
-                <h3 className="text-xl font-black text-slate-700 dark:text-white">Empty Collection</h3>
+                <h3 className="text-xl font-black text-slate-700 dark:text-white">
+                    {searchQuery ? 'No results found' : 'Empty Folder'}
+                </h3>
                 <p className="text-slate-500 dark:text-slate-400 font-medium text-sm mt-2 max-w-xs mx-auto">
-                    Start organizing your study materials. Add links to videos, drives, or create sticky notes.
+                    {searchQuery ? `No items matching "${searchQuery}"` : 'Start organizing your study materials. Add links or create sticky notes.'}
                 </p>
+                {searchQuery && (
+                    <button 
+                        onClick={() => setSearchQuery('')}
+                        className="mt-4 text-xs font-bold text-pink-500 hover:text-pink-600"
+                    >
+                        Clear Search
+                    </button>
+                )}
             </div>
         </div>
       ) : (
-        <div className="space-y-8">
-            {/* Folders */}
-            {sortedFolders.length > 0 && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
-                    {sortedFolders.map(folder => (
-                        <FolderCard 
-                            key={folder.id}
-                            folder={folder}
-                            onNavigate={navigateToFolder}
-                            onEdit={(f) => { setFolderToEdit(f); setIsFolderModalOpen(true); }}
-                            onMove={(id) => handleMoveClick(id, 'folder')}
-                            onDelete={deleteFolder}
-                            onDragOver={handleDragOver}
-                            onDrop={handleDrop}
-                            onDragStart={(e, f) => handleDragStart(e, { id: f.id, type: 'folder', folderId: f.parentId })}
-                            onDragLeave={() => setDragOverFolderId(null)}
-                            isDragOver={dragOverFolderId === folder.id}
-                        />
-                    ))}
+        <div className="space-y-10 animate-fade-in">
+            {/* Folders Section */}
+            {filteredFolders.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2">
+                        <Folder size={12} /> Folders
+                    </h3>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                        {filteredFolders.map(folder => (
+                            <FolderCard 
+                                key={folder.id}
+                                folder={folder}
+                                onNavigate={navigateToFolder}
+                                onEdit={(f) => { setFolderToEdit(f); setIsFolderModalOpen(true); }}
+                                onMove={(id) => handleMoveClick(id, 'folder')}
+                                onDelete={deleteFolder}
+                                onDragOver={handleDragOver}
+                                onDrop={handleDrop}
+                                onDragStart={(e, f) => handleDragStart(e, { id: f.id, type: 'folder', folderId: f.parentId })}
+                                onDragLeave={() => setDragOverFolderId(null)}
+                                isDragOver={dragOverFolderId === folder.id}
+                            />
+                        ))}
+                    </div>
                 </div>
             )}
 
-            {/* Resources (Links & Notes) */}
-            {sortedFiles.length > 0 && (
-                <div>
-                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 pl-1">Resources</h3>
+            {/* Files Section */}
+            {filteredFiles.length > 0 && (
+                <div className="space-y-4">
+                    <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest pl-1 flex items-center gap-2">
+                        <GripVertical size={12} /> Files & Notes
+                    </h3>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-5">
-                        {sortedFiles.map(resource => (
+                        {filteredFiles.map(resource => (
                             <ResourceCard 
                                 key={resource.id} 
                                 resource={resource} 
@@ -259,33 +317,36 @@ const ResourceCard: React.FC<{
     
     const isNote = resource.fileType === 'note';
 
-    // --- STICKY NOTE RENDERER ---
+    // --- STICKY NOTE RENDERER (Enhanced "Washi Tape" Look) ---
     if (isNote) {
         const bgColors: Record<string, string> = {
-            yellow: 'bg-yellow-200 text-yellow-900 border-yellow-300',
-            pink: 'bg-pink-200 text-pink-900 border-pink-300',
-            cyan: 'bg-cyan-200 text-cyan-900 border-cyan-300',
-            green: 'bg-emerald-200 text-emerald-900 border-emerald-300',
-            slate: 'bg-slate-200 text-slate-800 border-slate-300'
+            yellow: 'bg-[#fef9c3] text-yellow-900',
+            pink: 'bg-[#fce7f3] text-pink-900',
+            cyan: 'bg-[#cffafe] text-cyan-900',
+            green: 'bg-[#dcfce7] text-emerald-900',
+            slate: 'bg-slate-200 text-slate-800'
         };
         const theme = bgColors[resource.color || 'yellow'] || bgColors.yellow;
-        const randomRotate = React.useMemo(() => Math.random() > 0.5 ? 'rotate-1' : '-rotate-1', []);
+        const randomRotate = React.useMemo(() => ['rotate-1', '-rotate-1', 'rotate-2', '-rotate-2'][Math.floor(Math.random() * 4)], []);
 
         return (
             <div 
                 draggable
                 onDragStart={onDragStart}
                 onClick={onEdit}
-                className={`aspect-square p-5 rounded-sm shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 hover:rotate-0 flex flex-col justify-between group relative ${theme} ${randomRotate} border-t-8 border-b-0 border-x-0`}
+                className={`aspect-square p-6 pt-8 rounded-sm shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 hover:rotate-0 flex flex-col justify-between group relative ${theme} ${randomRotate}`}
             >
-                <div className="overflow-hidden">
-                    <h4 className="font-black text-sm mb-2 opacity-90 uppercase tracking-wider">{resource.fileName}</h4>
-                    <p className="text-xs font-medium leading-relaxed whitespace-pre-wrap font-handwriting opacity-80 line-clamp-6">
+                {/* Washi Tape Visual */}
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-8 bg-white/40 backdrop-blur-sm shadow-sm rotate-1 transform skew-x-12 opacity-80"></div>
+
+                <div className="overflow-hidden flex-1">
+                    <h4 className="font-black text-sm mb-2 opacity-90 uppercase tracking-wider border-b border-black/10 pb-1">{resource.fileName}</h4>
+                    <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap font-handwriting opacity-80 line-clamp-6 text-lg">
                         {resource.userNotes}
                     </p>
                 </div>
                 
-                <div className="flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity mt-2">
                     <span className="text-[10px] font-bold opacity-50">{format(new Date(resource.createdAt), 'MMM d')}</span>
                     <button onClick={onDelete} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 text-current transition-colors">
                         <Trash2 size={14} />
@@ -320,7 +381,9 @@ const ResourceCard: React.FC<{
                 </div>
                 <div className="text-center w-full px-2">
                     <h4 className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate w-full">{resource.fileName}</h4>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5">{new URL(resource.downloadUrl).hostname.replace('www.','')}</p>
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
+                        {new URL(resource.downloadUrl).hostname.replace('www.','')}
+                    </p>
                 </div>
             </a>
 
@@ -451,7 +514,7 @@ const ResourceModal: React.FC<{
                                     value={content} 
                                     onChange={e => setContent(e.target.value)} 
                                     placeholder="Type your note here..."
-                                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 resize-none font-handwriting"
+                                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 resize-none font-handwriting text-lg"
                                 />
                             </div>
                             <div>
