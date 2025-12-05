@@ -84,7 +84,7 @@ const GhostEmptyState = () => {
            
            <button 
              onClick={() => document.getElementById('quick-add-input')?.focus()}
-             className="mt-4 text-[10px] font-bold uppercase tracking-widest text-pink-500 hover:text-white hover:bg-pink-500 bg-white dark:bg-pink-500/5 px-6 py-2 rounded-full border border-pink-200 dark:border-pink-500/20 transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-pink-500/30"
+             className="mt-4 text-[10px] font-bold uppercase tracking-widest text-pink-500 hover:text-white hover:bg-pink-50 bg-white dark:bg-pink-500/5 px-6 py-2 rounded-full border border-pink-200 dark:border-pink-500/20 transition-all hover:scale-105 active:scale-95 shadow-sm hover:shadow-pink-500/30"
             >
                Create First Task
            </button>
@@ -239,16 +239,13 @@ const StudyVitals = () => {
   );
 };
 
-// Internal Component: PNLE Countdown
+// Internal Component: PNLE Countdown (Redesigned)
 const PNLECountdown = () => {
     const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-    const radius = 24;
-    const circumference = 2 * Math.PI * radius;
 
     useEffect(() => {
         const calculateTime = () => {
             // Target: Aug 29, 2026, 7:00 AM Manila Time (UTC+8)
-            // ISO 8601 with Offset
             const targetDate = new Date("2026-08-29T07:00:00+08:00");
             const now = new Date();
             
@@ -268,97 +265,99 @@ const PNLECountdown = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // SVG Circle Math for Seconds
-    const secondsProgress = timeLeft.seconds / 60;
-    const strokeDashoffset = circumference - (secondsProgress * circumference);
+    const TimeBox = ({ value, label, max, isActive }: { value: number, label: string, max: number, isActive?: boolean }) => {
+        const radius = 45;
+        const circumference = 2 * Math.PI * radius;
+        // For days, we just show a full ring since max isn't fixed
+        const progress = max === 0 ? 1 : value / max; 
+        const dashoffset = circumference - (progress * circumference);
+        const formattedValue = value.toString().padStart(2, '0');
 
-    const TimeUnit = ({ value, label, showCircle = false }: { value: number, label: string, showCircle?: boolean }) => (
-        <div className="flex flex-col items-center justify-center relative w-full group">
-            {showCircle && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20 dark:opacity-30">
-                    <svg width="60" height="60" className="transform -rotate-90">
-                        <circle cx="30" cy="30" r={radius} stroke="currentColor" strokeWidth="2" fill="transparent" className="text-slate-200 dark:text-slate-700" />
+        return (
+            <div className="flex flex-col items-center gap-2 relative group/box">
+                <div className="relative w-full aspect-square max-w-[80px] sm:max-w-[100px] flex items-center justify-center">
+                    <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 drop-shadow-sm">
+                        {/* Track */}
+                        <circle cx="50" cy="50" r="45" className="stroke-slate-100 dark:stroke-white/5 fill-white dark:fill-white/5 transition-colors" strokeWidth="6" />
+                        {/* Indicator */}
                         <circle 
-                            cx="30" cy="30" r={radius} 
-                            stroke="#ec4899" 
-                            strokeWidth="2" 
-                            fill="transparent" 
-                            strokeDasharray={circumference} 
-                            strokeDashoffset={strokeDashoffset} 
+                            cx="50" cy="50" r="45" 
+                            className={`transition-all duration-1000 ease-linear ${
+                                isActive 
+                                ? 'stroke-pink-500' 
+                                : 'stroke-slate-300 dark:stroke-slate-600'
+                            }`}
+                            strokeWidth="6" 
                             strokeLinecap="round"
-                            className="transition-all duration-1000 ease-linear"
+                            strokeDasharray={circumference}
+                            strokeDashoffset={dashoffset}
+                            fill="transparent"
                         />
                     </svg>
+                    
+                    <div className="absolute inset-0 flex items-center justify-center flex-col">
+                        <span className={`text-2xl sm:text-3xl font-black tabular-nums tracking-tighter ${
+                            isActive 
+                            ? 'text-transparent bg-clip-text bg-gradient-to-br from-pink-500 to-rose-600 dark:from-pink-400 dark:to-rose-400' 
+                            : 'text-slate-700 dark:text-slate-200'
+                        }`}>
+                            {formattedValue}
+                        </span>
+                    </div>
                 </div>
-            )}
-            <div className={`relative z-10 flex flex-col items-center ${showCircle ? 'mb-0' : 'mb-0'}`}>
-                <span key={value} className="text-3xl md:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-white dark:via-pink-200 dark:to-pink-400 tabular-nums animate-in slide-in-from-bottom-2 fade-in duration-300 leading-none filter drop-shadow-sm">
-                    {value.toString().padStart(2, '0')}
-                </span>
-                <span className="text-[9px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mt-1 group-hover:text-pink-500 transition-colors">
-                    {label}
-                </span>
+                <span className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</span>
             </div>
-        </div>
-    );
-
-    const Separator = () => (
-        <div className="h-8 flex items-center justify-center pb-4">
-            <div className="w-1 h-1 bg-pink-300 dark:bg-pink-600 rounded-full animate-heartbeat"></div>
-            <div className="w-1 h-1 bg-pink-300 dark:bg-pink-600 rounded-full animate-heartbeat mt-3"></div>
-        </div>
-    );
+        );
+    };
 
     return (
-        <div className="relative group bg-white/80 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl p-6 shadow-sm dark:shadow-xl hover:border-pink-500/30 dark:hover:border-pink-500/30 transition-all duration-300">
-            {/* Background Ambience */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full blur-[50px] pointer-events-none group-hover:bg-pink-500/10 transition-colors"></div>
+        <div className="relative group overflow-hidden rounded-[2rem] p-[1px] transition-all duration-500 hover:shadow-2xl hover:shadow-pink-500/20 hover:-translate-y-1">
+            {/* Animated Border Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-200 via-white to-slate-200 dark:from-slate-800 dark:via-[#0f172a] dark:to-slate-900 opacity-100 rounded-[2rem]"></div>
+            <div className="absolute inset-0 bg-gradient-to-br from-pink-500 via-purple-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-[2rem] blur-sm"></div>
             
-            {/* Header */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2">
-                    <div className="p-2 bg-gradient-to-br from-pink-500 to-rose-600 rounded-xl text-white shadow-lg shadow-pink-500/20">
-                        <Clock size={18} className="animate-pulse-slow" />
+            <div className="relative bg-white/90 dark:bg-[#0B1121]/95 backdrop-blur-2xl rounded-[2rem] p-6 h-full flex flex-col justify-between overflow-hidden">
+                
+                {/* Background FX */}
+                <div className="absolute -top-24 -right-24 w-48 h-48 bg-pink-500/10 dark:bg-pink-500/20 rounded-full blur-[60px] animate-pulse pointer-events-none"></div>
+                <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-purple-500/10 dark:bg-purple-500/20 rounded-full blur-[60px] animate-pulse delay-700 pointer-events-none"></div>
+
+                {/* Header */}
+                <div className="flex flex-row items-center justify-between mb-6 z-10">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2.5 bg-slate-50 dark:bg-white/5 rounded-xl text-pink-500 ring-1 ring-pink-500/20 shadow-sm">
+                            <Clock size={20} className="animate-[spin_4s_linear_infinite] opacity-80" />
+                        </div>
+                        <div className="flex flex-col">
+                            <h3 className="text-xs font-black text-slate-800 dark:text-white uppercase tracking-[0.2em]">License Countdown</h3>
+                            <p className="text-[10px] text-slate-500 dark:text-slate-400 font-bold mt-0.5">Aug 29, 2026</p>
+                        </div>
                     </div>
-                    <div>
-                        <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Countdown to License</h3>
-                        <p className="text-[10px] text-pink-500 font-bold flex items-center gap-1">
-                            <MapPin size={10} /> MANILA TIME
-                        </p>
+                    {/* Pulsing Status */}
+                    <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-emerald-500/5 border border-emerald-500/20 rounded-full">
+                        <span className="relative flex h-1.5 w-1.5">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-emerald-500"></span>
+                        </span>
+                        <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">Active</span>
                     </div>
                 </div>
-                <div className="px-2 py-1 rounded-md bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-[10px] font-mono text-slate-500">
-                    Aug 29, 2026
+
+                {/* Counter Grid */}
+                <div className="grid grid-cols-4 gap-2 sm:gap-4 z-10">
+                    <TimeBox value={timeLeft.days} label="Days" max={0} /> {/* Max 0 means full ring */}
+                    <TimeBox value={timeLeft.hours} label="Hrs" max={24} />
+                    <TimeBox value={timeLeft.minutes} label="Mins" max={60} />
+                    <TimeBox value={timeLeft.seconds} label="Secs" max={60} isActive={true} />
+                </div>
+
+                {/* Footer Quote */}
+                <div className="mt-6 text-center z-10 border-t border-slate-100 dark:border-white/5 pt-4">
+                    <p className="text-[10px] sm:text-xs font-medium text-slate-400 dark:text-slate-500 italic">
+                        "Every second brings you closer to that license."
+                    </p>
                 </div>
             </div>
-
-            {/* Timer Grid */}
-            <div className="flex items-center justify-between px-2 gap-1">
-                <TimeUnit value={timeLeft.days} label="Days" />
-                <Separator />
-                <TimeUnit value={timeLeft.hours} label="Hours" />
-                <Separator />
-                <TimeUnit value={timeLeft.minutes} label="Mins" />
-                <Separator />
-                <TimeUnit value={timeLeft.seconds} label="Secs" showCircle={true} />
-            </div>
-
-            {/* Footer Message */}
-            <div className="mt-6 flex items-center justify-center">
-                <div className="px-4 py-1.5 rounded-full bg-slate-50 dark:bg-white/5 border border-slate-100 dark:border-white/5 text-[10px] text-slate-400 font-medium italic">
-                    "Every second brings you closer."
-                </div>
-            </div>
-
-            <style>{`
-                @keyframes heartbeat {
-                    0%, 100% { opacity: 0.3; transform: scale(0.8); }
-                    50% { opacity: 1; transform: scale(1.2); }
-                }
-                .animate-heartbeat {
-                    animation: heartbeat 1s ease-in-out infinite;
-                }
-            `}</style>
         </div>
     );
 };
@@ -616,7 +615,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                  {/* 2. MISSION BOARD */}
                  <MissionBoard />
 
-                 {/* 3. COUNTDOWN WIDGET (Enhanced) */}
+                 {/* 3. COUNTDOWN WIDGET (Redesigned) */}
                  <PNLECountdown />
 
                  {/* 4. MOTIVATION WIDGET (Flex Grow to Align Bottoms) */}
