@@ -1,4 +1,3 @@
-
 export type NavigationItem = 'Dashboard' | 'Planner' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Personal Folder';
 
 export type TaskCategory = 'Review' | 'School' | 'Duty' | 'Personal';
@@ -43,16 +42,19 @@ export interface UserFolder {
   path?: string; // Optional for flattened structures
 }
 
+export type ResourceType = 'drive' | 'youtube' | 'link' | 'notion' | 'note';
+
 export interface UserFile {
   id: string;
-  fileName: string;
-  downloadUrl: string;
-  fileType: string;
-  fileSize: number;
+  fileName: string; // Acts as "Title"
+  downloadUrl: string; // Acts as "Target URL"
+  fileType: ResourceType; // Acts as "Type"
+  fileSize: number; // Legacy, set to 0
   createdAt: string;
   folderId?: string | null;
-  userNotes?: string;
+  userNotes?: string; // Acts as "Content" for sticky notes
   aiSummary?: string;
+  color?: string; // For sticky notes (bg-color class or hex)
 }
 
 export interface ExamRow {
