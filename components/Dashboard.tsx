@@ -468,8 +468,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                     </button>
                 </div>
 
-                {/* 2. DAILY TRIAGE (TASKS) - Reduced Desktop Height for Balance */}
-                <div className={`${glassCard} p-6 flex flex-col h-auto min-h-[300px] lg:min-h-[320px] overflow-hidden`}>
+                {/* 2. DAILY TRIAGE (TASKS) - Responsive Max Height */}
+                <div className={`${glassCard} p-6 flex flex-col h-auto min-h-[300px] transition-all duration-300`}>
                     <div className="flex items-center justify-between mb-6 shrink-0">
                         <div className="flex items-center gap-4">
                             <div className="p-2.5 bg-emerald-500/10 rounded-xl text-emerald-500 relative">
@@ -518,7 +518,8 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                         </button>
                     </form>
 
-                    <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2 min-h-0">
+                    {/* Constrained Height Container for Task List */}
+                    <div className="flex-1 overflow-y-auto space-y-3 custom-scrollbar pr-2 min-h-[200px] max-h-[320px] scroll-smooth">
                         {todaysTasks.length === 0 ? (
                             <div className="h-full flex items-center justify-center py-8">
                                 <GhostEmptyState />
