@@ -550,7 +550,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
                 </div>
 
                 {/* 4. DAILY KNOWLEDGE (Mnemonic / Active Recall) - Increased Height */}
-                <div className="flex-1 flex flex-col gap-4 min-h-[400px]">
+                <div className="flex-1 flex flex-col gap-4 min-h-[420px]">
                    {/* Dedicated Header for Widget Toggle */}
                    <div className="flex items-center justify-between px-2 shrink-0">
                         <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400">
