@@ -250,8 +250,8 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
                 style={{ minHeight: '140px' }}
             >
                 <div className={`transition-all duration-500 h-full ${isMeaningRevealed ? 'opacity-100 blur-0' : 'opacity-20 blur-md grayscale'}`}>
-                    {/* Added pb-10 to prevent text from being hidden behind the footer when scrolled */}
-                    <p className="whitespace-pre-line text-base leading-relaxed font-medium text-slate-700 dark:text-slate-200 pr-2 pb-10">
+                    {/* Increased padding-bottom to 32 (8rem/128px) to absolutely guarantee text clears the footer button when scrolled */}
+                    <p className="whitespace-pre-line text-base leading-relaxed font-medium text-slate-700 dark:text-slate-200 pr-2 pb-32">
                         {todayMnemonic.meaning}
                     </p>
                 </div>
