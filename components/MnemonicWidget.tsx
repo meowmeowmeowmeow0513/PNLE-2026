@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState, useRef, useEffect } from 'react';
 import { Lightbulb, BookOpen, Sparkles, ChevronDown, AlertTriangle, Loader2, Eye, EyeOff, RefreshCw, GraduationCap, ShieldAlert } from 'lucide-react';
 import { mnemonics } from '../data/mnemonicData';
@@ -249,9 +248,9 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
                 onClick={() => setIsMeaningRevealed(!isMeaningRevealed)}
                 style={{ minHeight: '140px' }}
             >
-                <div className={`transition-all duration-500 h-full ${isMeaningRevealed ? 'opacity-100 blur-0' : 'opacity-20 blur-md grayscale'}`}>
-                    {/* Increased padding-bottom to 32 (8rem/128px) to absolutely guarantee text clears the footer button when scrolled */}
-                    <p className="whitespace-pre-line text-base leading-relaxed font-medium text-slate-700 dark:text-slate-200 pr-2 pb-32">
+                <div className={`transition-all duration-500 min-h-full ${isMeaningRevealed ? 'opacity-100 blur-0' : 'opacity-20 blur-md grayscale'}`}>
+                    {/* Extensive padding to ensure text is never hidden behind footer */}
+                    <p className="whitespace-pre-line text-base leading-relaxed font-medium text-slate-700 dark:text-slate-200 pr-2 pb-48">
                         {todayMnemonic.meaning}
                     </p>
                 </div>
