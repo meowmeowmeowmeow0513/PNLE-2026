@@ -17,12 +17,6 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
     toggleTimer, togglePiP
   } = usePomodoro();
 
-  // --- PHANTOM OVERLAY STRATEGY ---
-  // We keep the player in a FIXED position div always mounted.
-  // If we are on the 'Pomodoro Timer' page, we find the #video-anchor element
-  // and match our fixed div's position to it exactly.
-  // If we are NOT on the page, we hide the player (opacity 0, 1x1 pixel) but keep it mounted.
-  
   const [playerStyle, setPlayerStyle] = useState<React.CSSProperties>({
       position: 'fixed',
       bottom: 0,
@@ -34,19 +28,14 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
       zIndex: -1
   });
 
-  const anchorRef = useRef<HTMLElement | null>(null);
-
   useEffect(() => {
     let animationFrameId: number;
 
     const syncPosition = () => {
         const anchor = document.getElementById('video-anchor');
         
-        // 1. If we are on the Pomodoro page AND the anchor exists
         if (activeItem === 'Pomodoro Timer' && anchor) {
             const rect = anchor.getBoundingClientRect();
-            
-            // Only update if dimensions imply visibility
             if (rect.width > 0 && rect.height > 0) {
                 setPlayerStyle({
                     position: 'fixed',
@@ -55,16 +44,15 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                     width: `${rect.width}px`,
                     height: `${rect.height}px`,
                     opacity: 1,
-                    zIndex: 40, // Above normal content, below modals/tooltips
-                    borderRadius: '0.75rem', // Match rounded-xl
+                    zIndex: 40,
+                    borderRadius: '0.75rem',
                     overflow: 'hidden',
                     boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
                     pointerEvents: 'auto',
-                    transition: 'none' // Instant snapping to avoid lag during scroll
+                    transition: 'none'
                 });
             }
         } 
-        // 2. Otherwise, hide it (Phantom Mode)
         else {
             setPlayerStyle({
                 position: 'fixed',
@@ -77,12 +65,10 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                 pointerEvents: 'none'
             });
         }
-
         animationFrameId = requestAnimationFrame(syncPosition);
     };
 
     syncPosition();
-
     return () => cancelAnimationFrame(animationFrameId);
   }, [activeItem]);
 
@@ -92,50 +78,54 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
-  // --- CONTENT FOR PIP WINDOW ---
+  // --- CONTENT FOR PIP WINDOW (Styled to match Main App) ---
   const PiPContent = pipWindow ? createPortal(
-    <div className="flex flex-col items-center justify-center h-full w-full relative p-6">
-        {/* Animated Background Gradient */}
-        <div className={`absolute inset-0 opacity-30 bg-gradient-to-br ${mode === 'focus' ? 'from-pink-600 to-purple-900' : 'from-cyan-500 to-blue-900'} animate-pulse`}></div>
+    <div className="flex flex-col items-center justify-center h-full w-full relative p-6 bg-[#020617] text-white font-sans overflow-hidden">
         
-        {/* Progress Ring Background */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
-             <div className={`w-64 h-64 rounded-full border-4 ${mode === 'focus' ? 'border-pink-500' : 'border-cyan-500'} animate-ping`}></div>
+        {/* Animated Background Mesh */}
+        <div className={`absolute top-[-50%] left-[-50%] w-[200%] h-[200%] opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] ${mode === 'focus' ? 'from-pink-600 via-purple-900 to-transparent' : 'from-cyan-500 via-blue-900 to-transparent'} animate-pulse`}></div>
+        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
+
+        {/* Progress Ring Glow */}
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+             <div className={`w-48 h-48 rounded-full border-2 ${mode === 'focus' ? 'border-pink-500 box-shadow-[0_0_30px_#ec4899]' : 'border-cyan-500 box-shadow-[0_0_30px_#06b6d4]'} animate-ping`}></div>
         </div>
 
         <div className="relative z-10 flex flex-col items-center w-full">
-            {/* Status Pill */}
-            <div className={`mb-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border flex items-center gap-1.5 ${mode === 'focus' ? 'bg-pink-500/10 border-pink-500/20 text-pink-400' : 'bg-cyan-500/10 border-cyan-500/20 text-cyan-400'}`}>
+            {/* Status Badge */}
+            <div className={`mb-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border flex items-center gap-1.5 ${mode === 'focus' ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'}`}>
                 {mode === 'focus' ? <Zap size={10} fill="currentColor" /> : <Coffee size={10} fill="currentColor" />}
                 {mode === 'focus' ? 'Focus Mode' : 'Break Time'}
             </div>
 
-            {/* Time */}
-            <div className="text-6xl font-mono font-black tracking-tighter text-white drop-shadow-2xl tabular-nums">
+            {/* Time Display */}
+            <div className="text-6xl font-mono font-black tracking-tighter text-white drop-shadow-2xl tabular-nums leading-none">
                 {formatTime(timeLeft)}
             </div>
             
-            {/* Task or Goal */}
-            <div className="mt-4 w-full text-center">
+            {/* Focus Task */}
+            <div className="mt-6 w-full text-center">
                 {focusTask ? (
-                    <p className="text-xs font-bold text-slate-300 line-clamp-1 border-b border-white/10 pb-2 mb-2">
-                        {focusTask}
-                    </p>
+                    <div className="inline-block px-4 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
+                        <p className="text-xs font-bold text-white line-clamp-1">
+                            {focusTask}
+                        </p>
+                    </div>
                 ) : (
-                    <div className="h-px w-1/2 bg-white/10 mx-auto mb-3"></div>
+                    <div className="h-px w-12 bg-white/20 mx-auto my-3"></div>
                 )}
-                <p className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-3">
                     Session {sessionsCompleted} / {sessionGoal}
                 </p>
             </div>
 
             {/* Controls */}
-            <div className="mt-6 flex gap-4">
+            <div className="mt-8 flex gap-6 items-center">
                 <button 
                     onClick={toggleTimer} 
-                    className={`w-14 h-14 rounded-full flex items-center justify-center text-white shadow-xl transition-transform hover:scale-110 active:scale-95 ${mode === 'focus' ? 'bg-pink-600 hover:bg-pink-500' : 'bg-cyan-600 hover:bg-cyan-500'}`}
+                    className={`w-16 h-16 rounded-[2rem] flex items-center justify-center text-white shadow-2xl border border-white/10 transition-transform hover:scale-105 active:scale-95 ${mode === 'focus' ? 'bg-gradient-to-br from-pink-600 to-rose-600' : 'bg-gradient-to-br from-cyan-600 to-blue-600'}`}
                 >
-                    {isActive ? <Pause size={24} fill="currentColor" /> : <Play size={24} fill="currentColor" className="ml-1" />}
+                    {isActive ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
                 </button>
             </div>
         </div>
@@ -145,7 +135,6 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
 
   return (
     <>
-        {/* PERMANENT PLAYER CONTAINER (Moving Overlay) */}
         <div style={playerStyle} className="group bg-black">
             <iframe 
                 width="100%" 
@@ -156,8 +145,6 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                 allow="autoplay; encrypted-media; picture-in-picture"
                 className="w-full h-full object-cover"
             />
-            
-            {/* Overlay Button for PiP (Visible only when hovering the player on the Pomodoro page) */}
             {activeItem === 'Pomodoro Timer' && (
                 <button 
                     onClick={togglePiP}
@@ -169,11 +156,9 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
             )}
         </div>
 
-        {/* FLOATING PILL (When Active + Away from Page + NOT PiP) */}
         {activeItem !== 'Pomodoro Timer' && isActive && !pipWindow && (
             <div className="fixed bottom-6 right-6 z-[999] animate-in slide-in-from-bottom-10 fade-in duration-500">
                 <div className="bg-white/10 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/20 dark:border-white/10 p-2 pr-4 rounded-full shadow-2xl flex items-center gap-4 group hover:scale-105 transition-transform cursor-move">
-                    {/* Mini Circle */}
                     <button 
                         onClick={toggleTimer}
                         className={`relative w-12 h-12 flex items-center justify-center rounded-full shadow-lg ${mode === 'focus' ? 'bg-pink-500 text-white' : 'bg-cyan-500 text-white'}`}
@@ -202,8 +187,6 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                 </div>
             </div>
         )}
-
-        {/* PiP Portal Content */}
         {PiPContent}
     </>
   );

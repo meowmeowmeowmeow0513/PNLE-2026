@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -30,7 +29,7 @@ import {
   AlertCircle,
   Check
 } from 'lucide-react';
-import { format, isSameDay, differenceInMinutes, addHours, isPast, isFuture, startOfDay, addMinutes } from 'date-fns';
+import { format, isSameDay, differenceInMinutes, addHours, isPast, isFuture, addMinutes } from 'date-fns';
 
 // --- DAILY DISTRIBUTION WIDGET (Compact Sidebar Version) ---
 const DailyDistribution: React.FC<{ tasks: Task[], date: Date }> = ({ tasks, date }) => {
@@ -222,7 +221,8 @@ const Planner: React.FC = () => {
 
   const handleRollover = async () => {
     // Find unfinished tasks from BEFORE today
-    const todayStart = startOfDay(new Date());
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
     const overdueTasks = tasks.filter(t => {
         const taskStart = new Date(t.start);
         return taskStart < todayStart && !t.completed;

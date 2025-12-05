@@ -70,7 +70,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       return false; // Onboarding not done
     } else {
         // Check if onboarding is done
-        return userSnap.data().hasCompletedOnboarding === true;
+        return userSnap.data()?.hasCompletedOnboarding === true;
     }
   }
 

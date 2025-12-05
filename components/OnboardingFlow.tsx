@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
-import { updateProfile } from 'firebase/auth';
 import { ArrowRight, Trophy, ShieldCheck, Sparkles, User, Loader2, CheckCircle } from 'lucide-react';
 
 const OnboardingFlow: React.FC = () => {
-  const { currentUser, reloadUser, completeOnboarding } = useAuth();
+  const { currentUser, reloadUser, completeOnboarding, updateUserProfile } = useAuth();
   const [step, setStep] = useState(1);
   const [name, setName] = useState(currentUser?.displayName || '');
   const [goal, setGoal] = useState<'top' | 'pass' | null>(null);
@@ -36,15 +35,12 @@ const OnboardingFlow: React.FC = () => {
     setLoading(true);
     
     try {
-      // 1. Update Firebase Auth Profile (Display Name) using Modular SDK
-      await updateProfile(currentUser, {
-        displayName: name
-      });
+      // 1. Update Profile (Auth & Firestore basic info) using Context Method
+      await updateUserProfile(name, currentUser.photoURL);
 
-      // 2. Update Firestore Document
+      // 2. Update Firestore Document with extra fields
       const userRef = doc(db, 'users', currentUser.uid);
       await updateDoc(userRef, {
-        displayName: name,
         goal: goal,
         hasCompletedOnboarding: true,
         onboardingCompletedAt: new Date().toISOString()

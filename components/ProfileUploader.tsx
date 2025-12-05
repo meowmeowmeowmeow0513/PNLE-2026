@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { storage, auth } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { updateProfile } from 'firebase/auth';
+import { useAuth } from '../AuthContext';
 import { Camera, X, Loader, Check } from 'lucide-react';
 
 interface ProfileUploaderProps {
@@ -10,6 +10,7 @@ interface ProfileUploaderProps {
 }
 
 const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onClose, onUploadSuccess }) => {
+  const { updateUserProfile } = useAuth();
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -32,7 +33,8 @@ const ProfileUploader: React.FC<ProfileUploaderProps> = ({ onClose, onUploadSucc
       await uploadBytes(fileRef, file);
       const photoURL = await getDownloadURL(fileRef);
 
-      await updateProfile(auth.currentUser, { photoURL });
+      // Use context method instead of importing updateProfile directly
+      await updateUserProfile(auth.currentUser.displayName || '', photoURL);
       
       onUploadSuccess();
       onClose();
