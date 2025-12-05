@@ -215,7 +215,7 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
 
       {/* Main Content Area */}
       <div className="p-6 pb-24 flex-1 relative z-10 flex flex-col justify-start h-full">
-        <div className="flex items-start justify-between mb-6">
+        <div className="flex items-start justify-between mb-6 shrink-0">
             <div className="flex items-center gap-3">
                 <div className={`p-2.5 bg-white/50 dark:bg-white/10 rounded-xl shadow-sm backdrop-blur-md ${iconColor}`}>
                     <Lightbulb size={22} className="fill-current" />
@@ -232,8 +232,8 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
             </span>
         </div>
 
-        <div className="space-y-6 flex-1 flex flex-col">
-            <div>
+        <div className="space-y-6 flex-1 flex flex-col min-h-0">
+            <div className="shrink-0">
                 <h3 className={`text-2xl sm:text-3xl md:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${textGradient} mb-3 drop-shadow-sm leading-none`}>
                     {todayMnemonic.code}
                 </h3>
@@ -245,18 +245,19 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
 
             {/* Meaning Section with Hide/Reveal Active Recall */}
             <div 
-                className={`bg-white/60 dark:bg-black/20 rounded-2xl p-6 border border-white/40 dark:border-white/5 shadow-inner backdrop-blur-sm flex-1 min-h-[140px] relative overflow-hidden transition-all cursor-pointer group/meaning ring-1 ring-white/10 dark:ring-white/5`}
+                className={`bg-white/60 dark:bg-black/20 rounded-2xl p-6 border border-white/40 dark:border-white/5 shadow-inner backdrop-blur-sm flex-1 relative transition-all cursor-pointer group/meaning ring-1 ring-white/10 dark:ring-white/5 ${isMeaningRevealed ? 'overflow-y-auto custom-scrollbar' : 'overflow-hidden'}`}
                 onClick={() => setIsMeaningRevealed(!isMeaningRevealed)}
+                style={{ minHeight: '140px' }}
             >
                 <div className={`transition-all duration-500 h-full ${isMeaningRevealed ? 'opacity-100 blur-0' : 'opacity-20 blur-md grayscale'}`}>
-                    <p className="whitespace-pre-line text-base leading-relaxed font-medium text-slate-700 dark:text-slate-200">
+                    <p className="whitespace-pre-line text-base leading-relaxed font-medium text-slate-700 dark:text-slate-200 pr-2">
                         {todayMnemonic.meaning}
                     </p>
                 </div>
 
                 {/* Cover for Hidden State */}
                 {!isMeaningRevealed && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10">
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-10 pointer-events-none">
                         <div className={`p-4 rounded-full bg-white/80 dark:bg-white/10 shadow-xl backdrop-blur-md ${iconColor} group-hover/meaning:scale-110 transition-transform`}>
                             <Eye size={28} />
                         </div>
