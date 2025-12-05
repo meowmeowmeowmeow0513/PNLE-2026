@@ -268,7 +268,6 @@ const PNLECountdown = () => {
     const TimeBox = ({ value, label, max, isActive }: { value: number, label: string, max: number, isActive?: boolean }) => {
         const radius = 45;
         const circumference = 2 * Math.PI * radius;
-        // For days, we just show a full ring since max isn't fixed
         const progress = max === 0 ? 1 : value / max; 
         const dashoffset = circumference - (progress * circumference);
         const formattedValue = value.toString().padStart(2, '0');
@@ -276,6 +275,7 @@ const PNLECountdown = () => {
         return (
             <div className="flex flex-col items-center gap-2 relative group/box">
                 <div className="relative w-full aspect-square max-w-[80px] sm:max-w-[100px] flex items-center justify-center">
+                    {/* SVG Ring */}
                     <svg viewBox="0 0 100 100" className="w-full h-full transform -rotate-90 drop-shadow-sm">
                         {/* Track */}
                         <circle cx="50" cy="50" r="45" className="stroke-slate-100 dark:stroke-white/5 fill-white dark:fill-white/5 transition-colors" strokeWidth="6" />
@@ -295,8 +295,9 @@ const PNLECountdown = () => {
                         />
                     </svg>
                     
+                    {/* Value */}
                     <div className="absolute inset-0 flex items-center justify-center flex-col">
-                        <span className={`text-2xl sm:text-3xl font-black tabular-nums tracking-tighter ${
+                        <span className={`text-xl sm:text-3xl font-black tabular-nums tracking-tighter ${
                             isActive 
                             ? 'text-transparent bg-clip-text bg-gradient-to-br from-pink-500 to-rose-600 dark:from-pink-400 dark:to-rose-400' 
                             : 'text-slate-700 dark:text-slate-200'
