@@ -7,16 +7,16 @@ import FolderCard from './FolderCard';
 import { 
   FolderPlus, Home, ChevronRight, Plus, 
   Link as LinkIcon, Youtube, FileText, Globe, 
-  StickyNote, Trash2, Edit2, ExternalLink, HardDrive, Check, Search, GripVertical
+  StickyNote, Trash2, Edit2, ExternalLink, HardDrive, Check, Search, GripVertical, Image as ImageIcon, UploadCloud, Loader2
 } from 'lucide-react';
-import { UserFile, UserFolder, ResourceType } from '../types';
+import { UserFile, UserFolder } from '../types';
 import { format } from 'date-fns';
 
 const PersonalFolder: React.FC = () => {
   const { currentUser } = useAuth();
   const { 
     sortedFolders, sortedFiles, allFolders, breadcrumbs, currentFolderId,
-    navigateToFolder, navigateUp, createFolder, updateFolder, addResource, editResource, moveItem, deleteFile, deleteFolder,
+    navigateToFolder, navigateUp, createFolder, updateFolder, addResource, uploadFile, editResource, moveItem, deleteFile, deleteFolder,
     loading, sortBy, setSortBy 
   } = useFileManager(currentUser?.uid);
   
@@ -50,10 +50,10 @@ const PersonalFolder: React.FC = () => {
       }
   };
 
-  const handleDeleteResource = async (e: React.MouseEvent, id: string) => {
+  const handleDeleteResource = async (e: React.MouseEvent, id: string, url: string) => {
       e.stopPropagation();
       if (confirm("Are you sure you want to delete this resource?")) {
-          await deleteFile(id);
+          await deleteFile(id, url);
       }
   };
 
@@ -107,7 +107,7 @@ const PersonalFolder: React.FC = () => {
              <h2 className="text-3xl font-black text-slate-800 dark:text-white tracking-tight">Personal Folder</h2>
           </div>
           <p className="text-slate-500 dark:text-slate-400 text-sm font-medium max-w-lg">
-              Your private desk. Organize your own notes, external links, and study materials here.
+              Your private desk. Organize your own notes, external links, and uploaded images here.
           </p>
         </div>
         <div className="flex gap-3">
@@ -254,7 +254,7 @@ const PersonalFolder: React.FC = () => {
                                 key={resource.id} 
                                 resource={resource} 
                                 onEdit={() => { setResourceToEdit(resource); setIsResourceModalOpen(true); }}
-                                onDelete={(e) => handleDeleteResource(e, resource.id)}
+                                onDelete={(e) => handleDeleteResource(e, resource.id, resource.downloadUrl)}
                                 onMove={() => handleMoveClick(resource.id, 'file')}
                                 onDragStart={(e) => handleDragStart(e, { id: resource.id, type: 'file', folderId: resource.folderId || null })}
                             />
@@ -274,7 +274,13 @@ const PersonalFolder: React.FC = () => {
                   if (resourceToEdit) {
                       await editResource(resourceToEdit.id, data);
                   } else {
-                      await addResource(data.title, data.type, data.url, data.content, data.color);
+                      if (data.file) {
+                          // Handle upload via hook
+                          const url = await uploadFile(data.file);
+                          await addResource(data.title, data.file.type, url, '', 'yellow');
+                      } else {
+                          await addResource(data.title, data.type, data.url, data.content, data.color);
+                      }
                   }
                   setIsResourceModalOpen(false);
               }}
@@ -306,7 +312,7 @@ const PersonalFolder: React.FC = () => {
   );
 };
 
-// --- INTERNAL COMPONENT: Resource Card (Link vs Note) ---
+// --- INTERNAL COMPONENT: Resource Card (Link vs Note vs Image) ---
 const ResourceCard: React.FC<{ 
     resource: UserFile, 
     onEdit: () => void, 
@@ -316,8 +322,18 @@ const ResourceCard: React.FC<{
 }> = ({ resource, onEdit, onDelete, onMove, onDragStart }) => {
     
     const isNote = resource.fileType === 'note';
+    const isImage = resource.fileType.startsWith('image/');
 
-    // --- STICKY NOTE RENDERER (Enhanced "Washi Tape" Look) ---
+    // Safe URL Parsing Helper (Fixes Black Screen)
+    const getSafeHostname = (url: string) => {
+        try {
+            return new URL(url).hostname.replace('www.', '');
+        } catch {
+            return 'External Resource';
+        }
+    };
+
+    // --- STICKY NOTE RENDERER ---
     if (isNote) {
         const bgColors: Record<string, string> = {
             yellow: 'bg-[#fef9c3] text-yellow-900',
@@ -336,21 +352,38 @@ const ResourceCard: React.FC<{
                 onClick={onEdit}
                 className={`aspect-square p-6 pt-8 rounded-sm shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 hover:rotate-0 flex flex-col justify-between group relative ${theme} ${randomRotate}`}
             >
-                {/* Washi Tape Visual */}
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-16 h-8 bg-white/40 backdrop-blur-sm shadow-sm rotate-1 transform skew-x-12 opacity-80"></div>
-
                 <div className="overflow-hidden flex-1">
                     <h4 className="font-black text-sm mb-2 opacity-90 uppercase tracking-wider border-b border-black/10 pb-1">{resource.fileName}</h4>
-                    <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap font-handwriting opacity-80 line-clamp-6 text-lg">
-                        {resource.userNotes}
-                    </p>
+                    <p className="text-xs font-semibold leading-relaxed whitespace-pre-wrap font-handwriting opacity-80 line-clamp-6 text-lg">{resource.userNotes}</p>
                 </div>
-                
                 <div className="flex justify-between items-end opacity-0 group-hover:opacity-100 transition-opacity mt-2">
                     <span className="text-[10px] font-bold opacity-50">{format(new Date(resource.createdAt), 'MMM d')}</span>
-                    <button onClick={onDelete} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 text-current transition-colors">
-                        <Trash2 size={14} />
-                    </button>
+                    <button onClick={onDelete} className="p-1.5 rounded-full bg-black/10 hover:bg-black/20 text-current transition-colors"><Trash2 size={14} /></button>
+                </div>
+            </div>
+        );
+    }
+
+    // --- IMAGE RENDERER (New) ---
+    if (isImage) {
+        return (
+            <div 
+                draggable
+                onDragStart={onDragStart}
+                className="group bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-lg hover:border-pink-300 dark:hover:border-pink-500 transition-all cursor-pointer flex flex-col h-[160px] overflow-hidden relative"
+            >
+                <div className="flex-1 relative overflow-hidden bg-slate-100 dark:bg-slate-900">
+                    <img src={resource.downloadUrl} alt={resource.fileName} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end p-3">
+                        <p className="text-white text-xs font-medium truncate w-full">{resource.fileName}</p>
+                    </div>
+                </div>
+                
+                {/* Overlay Controls */}
+                <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={onEdit} className="p-1.5 bg-black/50 text-white rounded hover:bg-pink-500 transition-colors"><Edit2 size={12} /></button>
+                    <button onClick={onDelete} className="p-1.5 bg-black/50 text-white rounded hover:bg-red-500 transition-colors"><Trash2 size={12} /></button>
                 </div>
             </div>
         );
@@ -382,27 +415,19 @@ const ResourceCard: React.FC<{
                 <div className="text-center w-full px-2">
                     <h4 className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate w-full">{resource.fileName}</h4>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5 opacity-80 group-hover:opacity-100 transition-opacity">
-                        {new URL(resource.downloadUrl).hostname.replace('www.','')}
+                        {getSafeHostname(resource.downloadUrl)}
                     </p>
                 </div>
             </a>
 
             {/* Quick Actions Overlay (Bottom) */}
             <div className="absolute bottom-0 inset-x-0 p-2 flex justify-between items-center bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm translate-y-full group-hover:translate-y-0 transition-transform duration-200 border-t border-slate-100 dark:border-slate-700">
-                <button onClick={onEdit} className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" title="Edit">
-                    <Edit2 size={14} />
-                </button>
+                <button onClick={onEdit} className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" title="Edit"><Edit2 size={14} /></button>
                 <div className="flex gap-1">
-                    <button onClick={onMove} className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-white rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700" title="Move">
-                        <FolderPlus size={14} />
-                    </button>
-                    <button onClick={onDelete} className="p-2 text-slate-500 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete">
-                        <Trash2 size={14} />
-                    </button>
+                    <button onClick={onDelete} className="p-2 text-slate-500 hover:text-red-500 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20" title="Delete"><Trash2 size={14} /></button>
                 </div>
             </div>
             
-            {/* External Link Indicator */}
             <div className="absolute top-3 right-3 text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
                 <ExternalLink size={14} />
             </div>
@@ -414,23 +439,34 @@ const ResourceCard: React.FC<{
 const ResourceModal: React.FC<{
     isOpen: boolean;
     onClose: () => void;
-    onSave: (data: { title: string, type: ResourceType, url: string, content: string, color: string }) => Promise<void>;
+    onSave: (data: { title: string, type: string, url: string, content: string, color: string, file?: File }) => Promise<void>;
     initialData: UserFile | null;
 }> = ({ isOpen, onClose, onSave, initialData }) => {
-    const [activeTab, setActiveTab] = useState<'link' | 'note'>(initialData?.fileType === 'note' ? 'note' : 'link');
+    const [activeTab, setActiveTab] = useState<'link' | 'note' | 'image'>(
+        initialData?.fileType === 'note' ? 'note' : initialData?.fileType.startsWith('image/') ? 'image' : 'link'
+    );
     const [title, setTitle] = useState(initialData?.fileName || '');
     const [url, setUrl] = useState(initialData?.downloadUrl || '');
     const [content, setContent] = useState(initialData?.userNotes || '');
     const [color, setColor] = useState(initialData?.color || 'yellow');
+    const [file, setFile] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
+    const fileInputRef = useRef<HTMLInputElement>(null);
 
     // Auto-detect type
-    const getLinkType = (urlStr: string): ResourceType => {
+    const getLinkType = (urlStr: string): string => {
         const lower = urlStr.toLowerCase();
         if (lower.includes('youtube.com') || lower.includes('youtu.be')) return 'youtube';
         if (lower.includes('drive.google.com')) return 'drive';
         if (lower.includes('notion.so')) return 'notion';
         return 'link';
+    };
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            setFile(e.target.files[0]);
+            setTitle(e.target.files[0].name);
+        }
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -439,13 +475,15 @@ const ResourceModal: React.FC<{
         try {
             await onSave({
                 title,
-                type: activeTab === 'note' ? 'note' : getLinkType(url),
-                url: activeTab === 'note' ? '' : url,
+                type: activeTab === 'note' ? 'note' : activeTab === 'image' ? 'image' : getLinkType(url),
+                url: activeTab === 'note' || activeTab === 'image' ? '' : url,
                 content: activeTab === 'note' ? content : '',
-                color
+                color,
+                file: activeTab === 'image' && file ? file : undefined
             });
-        } catch (error) {
+        } catch (error: any) {
             console.error(error);
+            alert(error.message || "Failed to save");
         } finally {
             setLoading(false);
         }
@@ -464,84 +502,66 @@ const ResourceModal: React.FC<{
 
                 {!initialData && (
                     <div className="flex bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl mb-6">
-                        <button 
-                            onClick={() => setActiveTab('link')}
-                            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'link' ? 'bg-white dark:bg-slate-800 text-pink-600 shadow-sm' : 'text-slate-500'}`}
-                        >
-                            Save Link
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('note')}
-                            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'note' ? 'bg-white dark:bg-slate-800 text-yellow-600 shadow-sm' : 'text-slate-500'}`}
-                        >
-                            Sticky Note
-                        </button>
+                        <button onClick={() => setActiveTab('link')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'link' ? 'bg-white dark:bg-slate-800 text-pink-600 shadow-sm' : 'text-slate-500'}`}>Link</button>
+                        <button onClick={() => setActiveTab('note')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'note' ? 'bg-white dark:bg-slate-800 text-yellow-600 shadow-sm' : 'text-slate-500'}`}>Note</button>
+                        <button onClick={() => setActiveTab('image')} className={`flex-1 py-2 text-[10px] font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'image' ? 'bg-white dark:bg-slate-800 text-blue-600 shadow-sm' : 'text-slate-500'}`}>Image</button>
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-5">
                     <div>
                         <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Title</label>
-                        <input 
-                            type="text" 
-                            required 
-                            value={title} 
-                            onChange={e => setTitle(e.target.value)} 
-                            placeholder={activeTab === 'link' ? "e.g. Pharma Lecture" : "e.g. Reminder"}
-                            className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
-                        />
+                        <input type="text" required value={title} onChange={e => setTitle(e.target.value)} placeholder="Resource Title" className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50" />
                     </div>
 
-                    {activeTab === 'link' ? (
+                    {activeTab === 'link' && (
                         <div>
                             <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">URL</label>
-                            <input 
-                                type="url" 
-                                required 
-                                value={url} 
-                                onChange={e => setUrl(e.target.value)} 
-                                placeholder="https://..."
-                                className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
-                            />
+                            <input type="url" required value={url} onChange={e => setUrl(e.target.value)} placeholder="https://..." className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50" />
                         </div>
-                    ) : (
+                    )}
+
+                    {activeTab === 'note' && (
                         <>
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Content</label>
-                                <textarea 
-                                    required 
-                                    rows={4}
-                                    value={content} 
-                                    onChange={e => setContent(e.target.value)} 
-                                    placeholder="Type your note here..."
-                                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 resize-none font-handwriting text-lg"
-                                />
+                                <textarea required rows={4} value={content} onChange={e => setContent(e.target.value)} placeholder="Type note..." className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 resize-none font-handwriting text-lg" />
                             </div>
                             <div>
                                 <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Color</label>
                                 <div className="flex gap-3">
                                     {['yellow', 'pink', 'cyan', 'green'].map(c => (
-                                        <button
-                                            key={c}
-                                            type="button"
-                                            onClick={() => setColor(c)}
-                                            className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c ? 'border-slate-500 scale-110' : 'border-transparent'}`}
-                                            style={{ backgroundColor: c === 'yellow' ? '#fef08a' : c === 'pink' ? '#fbcfe8' : c === 'cyan' ? '#a5f3fc' : '#a7f3d0' }}
-                                        >
-                                            {color === c && <Check size={16} className="text-slate-800 mx-auto" />}
-                                        </button>
+                                        <button key={c} type="button" onClick={() => setColor(c)} className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c ? 'border-slate-500 scale-110' : 'border-transparent'}`} style={{ backgroundColor: c === 'yellow' ? '#fef08a' : c === 'pink' ? '#fbcfe8' : c === 'cyan' ? '#a5f3fc' : '#a7f3d0' }}>{color === c && <Check size={16} className="text-slate-800 mx-auto" />}</button>
                                     ))}
                                 </div>
                             </div>
                         </>
                     )}
 
-                    <button 
-                        type="submit" 
-                        disabled={loading}
-                        className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50 mt-4"
-                    >
-                        {loading ? 'Saving...' : 'Save Resource'}
+                    {activeTab === 'image' && (
+                        <div>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Upload (Max 2MB)</label>
+                            <div onClick={() => fileInputRef.current?.click()} className="w-full p-8 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl flex flex-col items-center justify-center cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+                                {file ? (
+                                    <div className="text-center">
+                                        <ImageIcon size={32} className="mx-auto mb-2 text-pink-500" />
+                                        <p className="text-sm font-bold text-slate-700 dark:text-white">{file.name}</p>
+                                        <p className="text-xs">{(file.size / 1024).toFixed(1)} KB</p>
+                                    </div>
+                                ) : (
+                                    <div className="text-center">
+                                        <UploadCloud size={32} className="mx-auto mb-2" />
+                                        <p className="text-sm font-bold">Click to upload image</p>
+                                        <p className="text-xs">PNG, JPG, WEBP</p>
+                                    </div>
+                                )}
+                            </div>
+                            <input type="file" accept="image/*" ref={fileInputRef} onChange={handleFileSelect} className="hidden" />
+                        </div>
+                    )}
+
+                    <button type="submit" disabled={loading} className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50 mt-4 flex items-center justify-center gap-2">
+                        {loading ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : 'Save Resource'}
                     </button>
                 </form>
             </div>
