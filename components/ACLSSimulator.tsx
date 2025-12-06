@@ -198,6 +198,18 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         }
     }, [startTutorial]);
 
+    // Safety Effect: Ensure Phase is Assessment for Charge Steps in Tutorial
+    useEffect(() => {
+        if (isTrainingMode) {
+            const currentAction = TUTORIAL_STEPS[tutorialStep];
+            if (currentAction === 'charge' && phase !== 'assessment') {
+                // If we are at 'Charge' step, force phase to assessment so the button logic works
+                // (Assuming Charge might be blocked by other phases)
+                setPhase('assessment');
+            }
+        }
+    }, [tutorialStep, isTrainingMode, phase]);
+
     // --- IDLE / STRUGGLE DETECTION ---
     useEffect(() => {
         if (phase === 'mission_select' || phase === 'rosc' || phase === 'failed' || isTrainingMode) return;
@@ -290,7 +302,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             const expectedAction = TUTORIAL_STEPS[tutorialStep];
             if (actionId === expectedAction) {
                 if (actionId === 'cycle_btn') {
-                    showFeedback("TRAINING: Correct! Cycle Completed.", "success");
+                    showFeedback("TRAINING: Cycle Complete. Initiating Rhythm Check.", "success");
                 } else if (actionId === 'analyze_btn') {
                     showFeedback("TRAINING: Analyzing Rhythm...", "success");
                 } else {
@@ -328,6 +340,9 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
 
         if (actionId === 'analyze_btn') {
             if (!padsAttached) { isValid = false; errorMsg = "Procedure Error: Connect pads/leads to monitor first."; }
+            // FIX: Allow analysis in Training Mode even if CPR is active (to pass Step 5)
+            // But in Challenge Mode, require cycle completion
+            if (phase === 'cpr' && !isTrainingMode) { isValid = false; errorMsg = "Procedure Error: Do not interrupt CPR for manual analysis. Wait for cycle end."; }
         }
 
         if (actionId === 'amio_btn' || actionId === 'lido_btn') {
@@ -495,6 +510,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
 
     const analyzeRhythm = () => {
         setIsManualAnalysis(true);
+        // Explicitly set phase to check to PAUSE CPR
         setPhase('rhythm_check');
         setShowRhythmCheck(true);
     };
@@ -569,14 +585,33 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         if (isTrainingMode) {
             if (correct) {
                 showFeedback("TRAINING: Correctly Identified.", "success");
-                setTutorialStep(prev => prev + 1);
-                if (!isManualAnalysis) advanceCycleLogic();
+                setTutorialStep(prev => {
+                    const nextStep = prev + 1;
+                    // --- FIX FOR STEP 10 (CHARGE) ---
+                    // Explicitly force phase transition for upcoming Charge step to ensure button is enabled
+                    if (TUTORIAL_STEPS[nextStep] === 'charge') {
+                        setTimeout(() => {
+                            setPhase('assessment');
+                            addLog("COMMAND: Rhythm is Refractory. CHARGE DEFIBRILLATOR.", "system");
+                        }, 100);
+                    }
+                    return nextStep;
+                });
+                
+                // If it was a manual analysis step, we need to return to 'assessment' to continue
+                // If it was a cycle complete step, we proceed to 'advanceCycleLogic'
+                if (!isManualAnalysis) {
+                    advanceCycleLogic();
+                } else {
+                    setPhase('assessment');
+                }
             } else {
                 showFeedback("TRAINING: Incorrect Rhythm. Look closer.", "error");
             }
             return;
         }
 
+        // Challenge Mode Logic
         if (correct) {
             addLog(`Assessment: Rhythm identified as ${selectedRhythmGuess}.`, "success");
             setViability(v => Math.min(100, v + 5));
@@ -598,6 +633,8 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         setCurrentCycle(c => c + 1);
         setCycleTimer(0);
         setShocksInCycle(0);
+        
+        // Ensure phase resets to assessment to allow actions
         setPhase('assessment');
 
         const medsMet = activeScenario.requiredMeds ? activeScenario.requiredMeds.every(m => {
@@ -865,7 +902,8 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                             </button>
                             <button 
                                 onClick={() => validateAction('analyze_btn', analyzeRhythm)}
-                                className={`py-3 rounded-xl font-bold text-[10px] border transition-all flex items-center justify-center bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-yellow-500 text-slate-700 dark:text-white shadow-sm ${getHighlight('analyze_btn')}`}
+                                disabled={phase === 'cpr' && !isTrainingMode} 
+                                className={`py-3 rounded-xl font-bold text-[10px] border transition-all flex items-center justify-center ${(phase === 'cpr' && !isTrainingMode) ? 'bg-slate-100 text-slate-400 border-transparent cursor-not-allowed' : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:border-yellow-500 text-slate-700 dark:text-white shadow-sm'} ${getHighlight('analyze_btn')}`}
                             >
                                 Analyze
                             </button>
@@ -920,10 +958,10 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                     )}
                     <button 
                         onClick={() => validateAction('cycle_btn', triggerCycleAdvance)} 
-                        disabled={phase !== 'cpr' && !(isTrainingMode && (tutorialStep === 9 || tutorialStep === 16 || tutorialStep === 22))} 
+                        disabled={phase !== 'cpr' && !isTrainingMode} 
                         className={`w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 font-black uppercase tracking-widest rounded-2xl shadow-xl disabled:opacity-50 disabled:cursor-not-allowed hover:scale-[1.01] active:scale-95 transition-all ${getHighlight('cycle_btn')}`}
                     >
-                        Complete Cycle (Rhythm Check)
+                        Complete Cycle (Auto-Analyze)
                     </button>
                     {phase === 'cpr' && (
                         <div className="absolute bottom-0 left-0 h-1.5 bg-blue-500 transition-all duration-1000 ease-linear rounded-bl-2xl rounded-br-2xl" style={{ width: `${Math.min(100, (cycleTimer / 240) * 100)}%` }}></div>

@@ -50,7 +50,7 @@ export const TUTORIAL_SCENARIO: ScenarioData = {
     patient: "Training Manikin",
     history: "Standard VFib Cardiac Arrest. Follow the guided steps to learn the Shock -> CPR -> Drug sequence.",
     startRhythm: 'VFIB',
-    clue: "Training Mode Active. Follow the gold highlights.",
+    clue: "Training Mode Active. Click the highlighted buttons.",
     correctCauses: [],
     isTutorial: true,
     algorithm: 'shockable',
@@ -64,27 +64,25 @@ export const TUTORIAL_SCENARIO: ScenarioData = {
 export const TUTORIAL_STEPS = [
     'pulse_check',     // 0: Check Pulse
     'cpr_btn',         // 1: Start CPR
-    'airway_btn',      // 2: Give Oxygen / BVM (NEW POSITION - EARLY)
+    'airway_btn',      // 2: Give Oxygen / BVM
     'attach_pads_btn', // 3: Attach Monitor/Defib
-    'analyze_btn',     // 4: Analyze Rhythm (Manual Check)
+    'analyze_btn',     // 4: Analyze Rhythm (Manual Check - Initial)
     'charge',          // 5: Charge Defib
     'shock_btn',       // 6: Deliver Shock
     'cpr_btn',         // 7: Resume CPR Immediately
     'iv_btn',          // 8: Establish IV/IO Access (During CPR)
-    'cycle_btn',       // 9: Complete 2 min cycle
-    'analyze_btn',     // 10: Check Rhythm (End of Cycle 1)
-    'charge',          // 11: Charge (Persistent VF)
-    'shock_btn',       // 12: Shock
-    'cpr_btn',         // 13: Resume CPR
-    'epi_btn',         // 14: Give Epi (Cycle 2 starts)
-    'airway_btn',      // 15: Consider Advanced Airway (Upgrade from BVM)
-    'cycle_btn',       // 16: Complete Cycle
-    'analyze_btn',     // 17: Check Rhythm
-    'charge',          // 18: Charge
-    'shock_btn',       // 19: Shock
-    'cpr_btn',         // 20: Resume CPR
-    'amio_btn',        // 21: Give Amio (Refractory VF - After 3rd Shock)
-    'cycle_btn'        // 22: Complete Cycle
+    'cycle_btn',       // 9: Complete 2 min cycle -> Triggers Analysis
+    'charge',          // 10: Charge (Persistent VF) - Note: Updated logic prompts this
+    'shock_btn',       // 11: Shock
+    'cpr_btn',         // 12: Resume CPR
+    'epi_btn',         // 13: Give Epi (Cycle 2 starts)
+    'airway_btn',      // 14: Consider Advanced Airway
+    'cycle_btn',       // 15: Complete Cycle -> Triggers Analysis
+    'charge',          // 16: Charge
+    'shock_btn',       // 17: Shock
+    'cpr_btn',         // 18: Resume CPR
+    'amio_btn',        // 19: Give Amio (Refractory VF - After 3rd Shock)
+    'cycle_btn'        // 20: Complete Cycle
 ];
 
 // --- CORE ACLS MISSIONS (Based on 2025 Guidelines) ---

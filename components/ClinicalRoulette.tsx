@@ -1,8 +1,8 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTasks } from '../TaskContext';
 import { SIM_CASES, ClinicalCase } from '../data/simulationData';
-import { Dices, CheckCircle2, Loader2, Info, Brain, Zap, Stethoscope, ClipboardList, FileText, Stamp, Thermometer, User, Activity, AlertTriangle } from 'lucide-react';
+import { Dices, CheckCircle2, Loader2, Info, Brain, Zap, Stethoscope, ClipboardList, FileText, Stamp, Thermometer, User, Activity, AlertTriangle, X, History, Trash2, Calendar, Star, Trophy, Award, ShieldCheck, HeartHandshake } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GoogleGenAI } from "@google/genai";
 
@@ -22,6 +22,13 @@ interface PatientChart {
     statOrders: string[];
 }
 
+interface SavedCaseLog {
+    id: string;
+    timestamp: number;
+    chart: PatientChart;
+    caseType: ClinicalCase;
+}
+
 const ClinicalRoulette: React.FC = () => {
     const { addTask } = useTasks();
     const [isSpinning, setIsSpinning] = useState(false);
@@ -35,6 +42,29 @@ const ClinicalRoulette: React.FC = () => {
 
     // Visual state for the "Slot Machine" effect
     const [displayCase, setDisplayCase] = useState<ClinicalCase | null>(null);
+
+    // Case Log History & XP
+    const [showHistory, setShowHistory] = useState(false);
+    const [rouletteXP, setRouletteXP] = useState(0);
+    const [caseHistory, setCaseHistory] = useState<SavedCaseLog[]>(() => {
+        const saved = localStorage.getItem('clinical_roulette_history_v2');
+        return saved ? JSON.parse(saved) : [];
+    });
+
+    useEffect(() => {
+        localStorage.setItem('clinical_roulette_history_v2', JSON.stringify(caseHistory));
+        setRouletteXP(caseHistory.length);
+    }, [caseHistory]);
+
+    // Rank Logic - NURSING EDITION
+    const getRank = () => {
+        if (rouletteXP >= 30) return { title: 'Charge Nurse', icon: Trophy, color: 'text-amber-500', bg: 'bg-amber-100 dark:bg-amber-500/20' };
+        if (rouletteXP >= 15) return { title: 'Staff Nurse', icon: Award, color: 'text-purple-500', bg: 'bg-purple-100 dark:bg-purple-500/20' };
+        if (rouletteXP >= 5) return { title: 'Nurse Orientee', icon: ShieldCheck, color: 'text-blue-500', bg: 'bg-blue-100 dark:bg-blue-500/20' };
+        return { title: 'Student Nurse', icon: User, color: 'text-slate-500', bg: 'bg-slate-100 dark:bg-slate-800' };
+    };
+    
+    const rank = getRank();
 
     const handleSpin = () => {
         if (isSpinning) return;
@@ -119,6 +149,15 @@ const ClinicalRoulette: React.FC = () => {
         // Stamping animation
         setAcceptStatus('stamped');
         
+        // Add to Local History
+        const newLog: SavedCaseLog = {
+            id: Math.random().toString(36).substr(2, 9),
+            timestamp: Date.now(),
+            chart: patientChart,
+            caseType: selectedCase
+        };
+        setCaseHistory(prev => [newLog, ...prev]);
+
         // Construct detailed text for Planner
         const detailsText = `
 PATIENT: ${patientChart.initials} (${patientChart.ageSex})
@@ -174,7 +213,23 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
             
             {/* Header */}
-            <div className="text-center space-y-4 px-4 pt-4">
+            <div className="text-center space-y-4 px-4 pt-4 relative">
+                <button 
+                    onClick={() => setShowHistory(true)}
+                    className="absolute top-0 right-4 flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 hover:text-purple-500 dark:text-slate-300 transition-colors shadow-sm border border-slate-200 dark:border-slate-700 font-bold text-xs"
+                >
+                    <History size={16} /> Archives ({caseHistory.length})
+                </button>
+
+                {/* Rank Badge */}
+                <div className="flex justify-center">
+                    <div className={`flex items-center gap-2 border border-slate-200 dark:border-slate-800 px-4 py-1.5 rounded-full shadow-sm ${rank.bg}`}>
+                        <rank.icon size={16} className={rank.color} />
+                        <span className={`text-xs font-black uppercase tracking-widest ${rank.color}`}>{rank.title}</span>
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 ml-1">| {rouletteXP} Cases</span>
+                    </div>
+                </div>
+
                 <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 text-white shadow-xl shadow-purple-500/30 mb-2 ring-4 ring-purple-100 dark:ring-purple-900/30">
                     <Dices size={36} />
                 </div>
@@ -389,6 +444,85 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                     </div>
                 </div>
             </div>
+
+            {/* --- HISTORY LOG MODAL --- */}
+            {showHistory && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" onClick={() => setShowHistory(false)}>
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-3xl rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[85vh] animate-zoom-in" onClick={e => e.stopPropagation()}>
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 flex justify-between items-center">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 rounded-lg">
+                                    <ClipboardList size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-lg text-slate-900 dark:text-white">Medical Archives</h3>
+                                    <p className="text-xs text-slate-500">Collected Case Files: {caseHistory.length}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-500"><X size={20} /></button>
+                        </div>
+                        
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 bg-slate-50 dark:bg-slate-950">
+                            {caseHistory.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-full text-slate-400 opacity-60">
+                                    <History size={48} className="mb-4" />
+                                    <p>No saved cases yet.</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    {caseHistory.map((log) => (
+                                        <div key={log.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative group">
+                                            <div className="flex justify-between items-start mb-4">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`p-2 rounded-xl ${getThemeColor(log.caseType.color)}`}>
+                                                        <log.caseType.icon size={18} />
+                                                    </div>
+                                                    <div>
+                                                        <span className="font-bold text-slate-800 dark:text-white block">{log.caseType.short}</span>
+                                                        <span className="text-[10px] uppercase text-slate-400 flex items-center gap-1">
+                                                            <Calendar size={10} /> {new Date(log.timestamp).toLocaleDateString()}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                                <button 
+                                                    onClick={() => setCaseHistory(prev => prev.filter(c => c.id !== log.id))}
+                                                    className="text-slate-300 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors opacity-0 group-hover:opacity-100"
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                            
+                                            <div className="grid grid-cols-2 gap-4 text-xs">
+                                                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                    <div className="font-bold text-slate-500 uppercase text-[10px] mb-1">Patient</div>
+                                                    <div className="font-mono text-slate-800 dark:text-white font-bold text-sm">
+                                                        {log.chart.initials} ({log.chart.ageSex})
+                                                    </div>
+                                                    <div className="text-slate-500 mt-1 truncate">{log.chart.diagnosis}</div>
+                                                </div>
+                                                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                    <div className="font-bold text-slate-500 uppercase text-[10px] mb-1">Vitals Snapshot</div>
+                                                    <div className="font-mono text-slate-700 dark:text-slate-300 space-y-0.5">
+                                                        <div>BP: {log.chart.vitals.bp}</div>
+                                                        <div>HR: {log.chart.vitals.hr}</div>
+                                                        <div>SpO2: {log.chart.vitals.spo2}</div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 italic line-clamp-2">
+                                                    "{log.chart.history}"
+                                                </p>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
