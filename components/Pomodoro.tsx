@@ -1,149 +1,362 @@
-
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee
+    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star
 } from 'lucide-react';
-import { usePomodoro, PresetName, TimerSettings, TimerMode } from './PomodoroContext';
+import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
 import { isWithinInterval } from 'date-fns';
 import confetti from 'canvas-confetti';
 import PomodoroStats from './PomodoroStats';
 
-// --- ANIMATED CAT COMPONENT (Dynamic State) ---
-interface AnimatedCatProps {
-    variant?: 'sleeping' | 'awake' | 'waiting';
+// --- ADVANCED PET STYLES ---
+const petStyles = `
+  /* Keyframes */
+  @keyframes float-breath { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-4px) scale(1.02); } }
+  @keyframes tail-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+  @keyframes tail-wag-fast { 0%, 100% { transform: rotate(-15deg); } 50% { transform: rotate(15deg); } }
+  @keyframes blink-soft { 0%, 45%, 55%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
+  @keyframes ear-wiggle { 0%, 100% { transform: rotate(0); } 10% { transform: rotate(5deg); } 20% { transform: rotate(0); } }
+  @keyframes squish-happy { 0% { transform: scale(1); } 40% { transform: scale(1.15, 0.85) translateY(5px); } 100% { transform: scale(1); } }
+  @keyframes sleep-bubble { 0% { transform: scale(0); opacity: 0; } 50% { opacity: 1; } 100% { transform: scale(1.5) translate(20px, -30px); opacity: 0; } }
+  @keyframes pop-up { 
+      0% { transform: scale(0) translateY(10px) rotate(var(--r)); opacity: 0; } 
+      50% { opacity: 1; } 
+      100% { transform: scale(1) translateY(-60px) rotate(var(--r)); opacity: 0; } 
+  }
+  @keyframes glow-pulse { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,255,255,0.5)); } 50% { filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); } }
+
+  /* Classes */
+  .pet-container { perspective: 1000px; }
+  .pet-breathe { animation: float-breath 4s ease-in-out infinite; transform-origin: bottom center; }
+  .pet-tail-slow { animation: tail-sway 3s ease-in-out infinite; transform-origin: bottom left; }
+  .pet-tail-fast { animation: tail-wag-fast 0.5s ease-in-out infinite; transform-origin: bottom center; }
+  .pet-blink { animation: blink-soft 4s infinite; transform-origin: center; transform-box: fill-box; }
+  .pet-ear-L { animation: ear-wiggle 5s infinite 1s; transform-origin: bottom right; transform-box: fill-box; }
+  .pet-ear-R { animation: ear-wiggle 5s infinite 2s; transform-origin: bottom left; transform-box: fill-box; }
+  .pet-squish { animation: squish-happy 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .zzz-bubble { animation: sleep-bubble 3s linear infinite; }
+  .love-popup { animation: pop-up 0.8s ease-out forwards; }
+  .pet-glow { animation: glow-pulse 3s infinite; }
+`;
+
+// --- INTERACTIVE PET AVATAR ---
+interface PetAvatarProps {
+    type: PetType;
+    status: 'sleeping' | 'awake';
+    onPet: (e: React.MouseEvent) => void;
 }
 
-const AnimatedCat: React.FC<AnimatedCatProps> = ({ variant = 'awake' }) => (
-  <div className="relative w-full h-full flex items-center justify-center">
-    <svg viewBox="0 0 200 200" className="w-40 h-40 drop-shadow-xl overflow-visible">
-      <defs>
-        <linearGradient id="catGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FDF2F8" />
-          <stop offset="100%" stopColor="#FBCFE8" />
-        </linearGradient>
-      </defs>
-      <style>
-        {`
-          @keyframes breathe { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.02); } }
-          @keyframes bounce-happy { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-8px); } }
-          @keyframes blink-soft { 0%, 45%, 55%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
-          @keyframes tail-wag { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
-          @keyframes zzz { 0% { transform: translate(0, 0) scale(0.5); opacity: 0; } 50% { opacity: 1; } 100% { transform: translate(20px, -30px) scale(1.2); opacity: 0; } }
-          
-          .cat-body { transform-origin: center bottom; animation: ${variant === 'sleeping' ? 'breathe 4s ease-in-out infinite' : 'bounce-happy 2s ease-in-out infinite'}; }
-          .cat-eye { transform-origin: center; transform-box: fill-box; animation: ${variant === 'awake' ? 'blink-soft 4s infinite' : 'none'}; }
-          .cat-zzz { animation: zzz 3s linear infinite; }
-        `}
-      </style>
-      
-      {/* ZZZ Particles if Sleeping */}
-      {variant === 'sleeping' && (
-          <g className="text-slate-400 dark:text-slate-500 font-black text-2xl" style={{ transform: 'translate(130px, 60px)' }}>
-              <text x="0" y="0" className="cat-zzz" style={{ animationDelay: '0s' }}>z</text>
-              <text x="15" y="-15" className="cat-zzz" style={{ animationDelay: '1s' }}>z</text>
-              <text x="30" y="-30" className="cat-zzz" style={{ animationDelay: '2s' }}>Z</text>
-          </g>
-      )}
+const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
+    const [isInteracting, setIsInteracting] = useState(false);
 
-      <g className="cat-body">
-          {/* Ears */}
-          <path d="M50 70 L40 20 L90 55 Z" fill="url(#catGradient)" stroke="#F9A8D4" strokeWidth="4" strokeLinejoin="round" />
-          <path d="M150 70 L160 20 L110 55 Z" fill="url(#catGradient)" stroke="#F9A8D4" strokeWidth="4" strokeLinejoin="round" />
-          
-          {/* Head */}
-          <ellipse cx="100" cy="110" rx="80" ry="65" fill="url(#catGradient)" stroke="#F9A8D4" strokeWidth="4" />
-          
-          {/* Face Elements */}
-          {variant === 'sleeping' ? (
-              // Sleeping Eyes
-              <g stroke="#374151" strokeWidth="4" fill="none" strokeLinecap="round">
-                  <path d="M55 105 Q65 115 75 105" />
-                  <path d="M125 105 Q135 115 145 105" />
-              </g>
-          ) : (
-              // Awake Eyes
-              <g fill="#1F2937">
-                  <ellipse cx="65" cy="100" rx="8" ry="10" className="cat-eye" />
-                  <ellipse cx="135" cy="100" rx="8" ry="10" className="cat-eye" style={{ animationDelay: '0.2s' }} />
-                  <circle cx="67" cy="96" r="3" fill="white" />
-                  <circle cx="137" cy="96" r="3" fill="white" />
-              </g>
-          )}
-          
-          {/* Cheeks */}
-          <circle cx="50" cy="120" r="10" fill="#F472B6" opacity="0.4" />
-          <circle cx="150" cy="120" r="10" fill="#F472B6" opacity="0.4" />
+    const handleClick = (e: React.MouseEvent) => {
+        setIsInteracting(true);
+        setTimeout(() => setIsInteracting(false), 300); // Reset after animation
+        onPet(e);
+    };
 
-          {/* Nose & Mouth */}
-          <path d="M95 115 L105 115 L100 122 Z" fill="#EC4899" />
-          <path d="M100 122 Q90 135 80 125 M100 122 Q110 135 120 125" fill="none" stroke="#374151" strokeWidth="3" strokeLinecap="round" />
-      </g>
-    </svg>
-  </div>
-);
+    // --- COSMIC CAT RENDERER (Blob Style) ---
+    const renderCat = () => (
+        <svg viewBox="0 0 200 200" className={`w-48 h-48 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : 'pet-breathe'}`}>
+            <defs>
+                <linearGradient id="catBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#f0abfc" /> {/* Pink-300 */}
+                    <stop offset="100%" stopColor="#c026d3" /> {/* Fuchsia-600 */}
+                </linearGradient>
+                <linearGradient id="catBelly" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#fdf4ff" /> 
+                    <stop offset="100%" stopColor="#fae8ff" /> 
+                </linearGradient>
+                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                    <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
 
-// --- FOCUS PET WIDGET ---
-const FocusPet = () => {
-    const { isActive, mode, timeLeft, timerSettings } = usePomodoro();
-    
-    // Calculate Energy Progress
-    const totalTime = mode === 'focus' ? timerSettings.focus : 1; 
-    const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
-    
-    let variant: 'sleeping' | 'awake' | 'waiting' = 'waiting';
-    let message = "Ready to focus?";
-    let subtext = "I'll keep watch while you study.";
+            {/* Tail */}
+            <path 
+                d="M160 150 Q 190 120 180 100 Q 170 80 150 120" 
+                fill="none" 
+                stroke="#d946ef" 
+                strokeWidth="12" 
+                strokeLinecap="round" 
+                className={status === 'sleeping' ? '' : 'pet-tail-slow'} 
+            />
 
-    if (isActive) {
-        if (mode === 'focus') {
-            variant = 'sleeping';
-            message = "Shh... Focusing...";
-            subtext = "Accumulating XP...";
-        } else {
-            variant = 'awake';
-            message = "Yay! Break Time!";
-            subtext = "Stretch and drink water!";
-        }
-    } else {
-        if (mode === 'focus') {
-            variant = 'waiting';
-            message = "Ready when you are?";
-            subtext = "Press play to start.";
-        } else {
-            variant = 'waiting';
-            message = "Paused Break";
-            subtext = "Don't rest too long!";
-        }
-    }
+            {/* Body (Loaf Shape) */}
+            <g transform="translate(100, 130)">
+                <ellipse cx="0" cy="0" rx="70" ry="50" fill="url(#catBody)" filter="url(#glow)" />
+                <ellipse cx="0" cy="15" rx="40" ry="30" fill="url(#catBelly)" opacity="0.6" />
+            </g>
+
+            {/* Head Group */}
+            <g transform="translate(100, 95)">
+                {/* Ears */}
+                <path d="M-45 -20 L-55 -65 L-15 -35 Z" fill="url(#catBody)" stroke="#a21caf" strokeWidth="4" strokeLinejoin="round" className="pet-ear-L" />
+                <path d="M45 -20 L55 -65 L15 -35 Z" fill="url(#catBody)" stroke="#a21caf" strokeWidth="4" strokeLinejoin="round" className="pet-ear-R" />
+                
+                {/* Head Base */}
+                <ellipse cx="0" cy="0" rx="55" ry="45" fill="url(#catBody)" filter="url(#glow)" />
+                
+                {/* Face */}
+                {status === 'sleeping' ? (
+                    <g fill="none" stroke="#701a75" strokeWidth="3" strokeLinecap="round" transform="translate(0, 5)">
+                        <path d="M-25 0 Q-15 8 -5 0" /> {/* Left Eye Closed */}
+                        <path d="M5 0 Q15 8 25 0" />   {/* Right Eye Closed */}
+                        <path d="M-2 15 Q0 18 2 15" strokeWidth="2" /> {/* Mouth */}
+                    </g>
+                ) : (
+                    <g transform="translate(0, 5)">
+                        {/* Eyes Open */}
+                        <g fill="#4a044e">
+                            <ellipse cx="-20" cy="-5" rx="6" ry="8" className="pet-blink" />
+                            <ellipse cx="20" cy="-5" rx="6" ry="8" className="pet-blink" />
+                            <circle cx="-18" cy="-8" r="2" fill="white" />
+                            <circle cx="22" cy="-8" r="2" fill="white" />
+                        </g>
+                        {/* Cheeks */}
+                        <circle cx="-35" cy="10" r="6" fill="#fbcfe8" opacity="0.6" />
+                        <circle cx="35" cy="10" r="6" fill="#fbcfe8" opacity="0.6" />
+                        {/* Mouth */}
+                        <path d="M-5 12 Q0 16 5 12" fill="none" stroke="#701a75" strokeWidth="3" strokeLinecap="round" />
+                    </g>
+                )}
+            </g>
+            
+            {/* ZZZ Particles */}
+            {status === 'sleeping' && (
+                <g className="zzz-bubble" style={{ transformOrigin: '140px 60px' }}>
+                    <text x="140" y="60" fontSize="24" fill="#a855f7" fontWeight="bold" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>Z</text>
+                </g>
+            )}
+        </svg>
+    );
+
+    // --- SUNNY DOGE RENDERER (Blob Style) ---
+    const renderDog = () => (
+        <svg viewBox="0 0 200 200" className={`w-48 h-48 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : status === 'awake' ? 'animate-bounce-happy' : 'pet-breathe'}`}>
+            <defs>
+                <linearGradient id="dogBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#fcd34d" /> {/* Amber-300 */}
+                    <stop offset="100%" stopColor="#d97706" /> {/* Amber-600 */}
+                </linearGradient>
+                <linearGradient id="dogSnout" x1="0%" y1="0%" x2="0%" y2="100%">
+                    <stop offset="0%" stopColor="#fffbeb" /> 
+                    <stop offset="100%" stopColor="#fef3c7" /> 
+                </linearGradient>
+                <filter id="glowDog" x="-20%" y="-20%" width="140%" height="140%">
+                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                    <feMerge>
+                        <feMergeNode in="coloredBlur" />
+                        <feMergeNode in="SourceGraphic" />
+                    </feMerge>
+                </filter>
+            </defs>
+
+            {/* Tail (Wagging) */}
+            <path 
+                d="M150 140 Q 170 110 180 130" 
+                fill="none" 
+                stroke="#b45309" 
+                strokeWidth="10" 
+                strokeLinecap="round" 
+                className={status === 'sleeping' ? '' : 'pet-tail-fast'} 
+            />
+
+            {/* Body */}
+            <g transform="translate(100, 135)">
+                <rect x="-60" y="-45" width="120" height="90" rx="40" fill="url(#dogBody)" filter="url(#glowDog)" />
+                <ellipse cx="0" cy="10" rx="35" ry="25" fill="url(#dogSnout)" opacity="0.5" />
+            </g>
+
+            {/* Head Group */}
+            <g transform="translate(100, 90)">
+                {/* Ears */}
+                <path d="M-40 -35 L-50 -10 L-25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' ? 'pet-ear-L' : ''} />
+                <path d="M40 -35 L50 -10 L25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' ? 'pet-ear-R' : ''} />
+
+                {/* Head Base */}
+                <rect x="-50" y="-45" width="100" height="90" rx="35" fill="url(#dogBody)" filter="url(#glowDog)" />
+                
+                {/* Snout Area */}
+                <ellipse cx="0" cy="20" rx="35" ry="28" fill="url(#dogSnout)" />
+
+                {/* Face */}
+                {status === 'sleeping' ? (
+                    <g fill="none" stroke="#78350f" strokeWidth="3" strokeLinecap="round" transform="translate(0, -5)">
+                        <path d="M-20 0 Q-10 5 0 0" />
+                        <path d="M0 0 Q10 5 20 0" />
+                        <circle cx="0" cy="15" r="5" fill="#451a03" stroke="none" />
+                    </g>
+                ) : (
+                    <g transform="translate(0, -5)">
+                        {/* Eyes */}
+                        <g fill="#451a03">
+                            <circle cx="-20" cy="-5" r="7" className="pet-blink" />
+                            <circle cx="20" cy="-5" r="7" className="pet-blink" />
+                            <circle cx="-18" cy="-8" r="2.5" fill="white" />
+                            <circle cx="22" cy="-8" r="2.5" fill="white" />
+                        </g>
+                        {/* Nose */}
+                        <path d="M-8 15 Q0 10 8 15 Q0 25 -8 15" fill="#451a03" />
+                        {/* Mouth */}
+                        <path d="M0 25 L0 30 M-10 30 Q0 38 10 30" fill="none" stroke="#451a03" strokeWidth="3" strokeLinecap="round" />
+                        {/* Tongue */}
+                        <path d="M-5 35 Q0 45 5 35" fill="#ef4444" />
+                    </g>
+                )}
+            </g>
+
+            {/* ZZZ Particles */}
+            {status === 'sleeping' && (
+                <g className="zzz-bubble" style={{ transformOrigin: '140px 50px' }}>
+                    <text x="140" y="50" fontSize="24" fill="#f59e0b" fontWeight="bold" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>Z</text>
+                </g>
+            )}
+        </svg>
+    );
 
     return (
-        <div className="flex-1 flex flex-col bg-white/60 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm relative overflow-hidden group min-h-[180px]">
+        <div 
+            className="relative transition-transform hover:scale-105 active:scale-95" 
+            onClick={handleClick}
+            title="Pet me!"
+        >
+            <style>{petStyles}</style>
+            {type === 'cat' ? renderCat() : renderDog()}
+        </div>
+    );
+};
+
+// --- MAIN WIDGET ---
+const FocusPetWidget = () => {
+    const { isActive, mode, timeLeft, timerSettings, petType, setPetType } = usePomodoro();
+    const [hearts, setHearts] = useState<{ id: number, x: number, y: number, r: number, content: React.ReactNode }[]>([]);
+    
+    // Combo System
+    const [combo, setCombo] = useState(0);
+    const comboTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+    // Calculate Energy Progress
+    const totalTime = mode === 'focus' ? timerSettings.focus : (mode === 'shortBreak' ? timerSettings.shortBreak : timerSettings.longBreak); 
+    const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
+    
+    let status: 'sleeping' | 'awake' = 'awake';
+    let message = "Let's focus!";
+    
+    if (isActive) {
+        if (mode === 'focus') {
+            status = 'sleeping';
+            message = "Focusing...";
+        } else {
+            status = 'awake';
+            message = "Break Time!";
+        }
+    } else {
+        status = 'awake';
+        message = "Ready?";
+    }
+
+    const handlePetClick = (e: React.MouseEvent) => {
+        // Increment Combo
+        setCombo(prev => prev + 1);
+        if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
+        comboTimeoutRef.current = setTimeout(() => setCombo(0), 2000);
+
+        const rect = (e.target as HTMLElement).getBoundingClientRect();
+        // Generate random offset around the click
+        const x = e.clientX - rect.left + (Math.random() * 60 - 30); 
+        const y = e.clientY - rect.top - 20;
+        const r = Math.random() * 30 - 15; // Random rotation
+        
+        const id = Date.now() + Math.random();
+        
+        // Randomize content based on combo
+        let content = <Heart size={20} fill="currentColor" />;
+        if (combo > 5 && Math.random() > 0.7) content = <span className="text-xs font-black">XP+</span>;
+        if (combo > 10 && Math.random() > 0.8) content = <Star size={24} fill="currentColor" className="text-yellow-400" />;
+        if (petType === 'cat' && Math.random() > 0.9) content = <span className="text-xs font-bold">Mew!</span>;
+        if (petType === 'dog' && Math.random() > 0.9) content = <span className="text-xs font-bold">Woof!</span>;
+
+        setHearts(prev => [...prev, { id, x, y, r, content }]);
+        
+        // Remove heart after animation
+        setTimeout(() => {
+            setHearts(prev => prev.filter(h => h.id !== id));
+        }, 800);
+    };
+
+    return (
+        <div className="flex-1 flex flex-col bg-white/60 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm relative overflow-hidden group min-h-[220px]">
             {/* Background Decor */}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-pink-500/5 rounded-full blur-3xl pointer-events-none"></div>
+            <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-[60px] pointer-events-none transition-colors duration-1000 ${petType === 'cat' ? 'bg-pink-500/20' : 'bg-amber-500/20'}`}></div>
             
-            <div className="flex-1 relative z-10 flex flex-col items-center justify-center">
-                <AnimatedCat variant={variant} />
+            {/* Pet Toggle Switch */}
+            <div className="absolute top-3 right-3 z-30 flex bg-white/80 dark:bg-black/40 rounded-full p-1 border border-white/20 backdrop-blur-md shadow-sm">
+                <button 
+                    onClick={() => setPetType('cat')}
+                    className={`p-2 rounded-full transition-all ${petType === 'cat' ? 'bg-pink-100 text-pink-600 dark:bg-pink-500/20 dark:text-pink-300 shadow-sm scale-110' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                    title="Switch to Cat"
+                >
+                    <Cat size={16} />
+                </button>
+                <button 
+                    onClick={() => setPetType('dog')}
+                    className={`p-2 rounded-full transition-all ${petType === 'dog' ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-300 shadow-sm scale-110' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
+                    title="Switch to Dog"
+                >
+                    <Dog size={16} />
+                </button>
+            </div>
+
+            {/* Combo Counter */}
+            {combo > 1 && (
+                <div className="absolute top-4 left-4 z-30 animate-bounce">
+                    <span className="bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-1 rounded-full shadow-lg border-2 border-white transform -rotate-6 inline-block">
+                        {combo}x COMBO!
+                    </span>
+                </div>
+            )}
+
+            <div className="flex-1 relative z-10 flex flex-col items-center justify-center mt-4">
+                {/* Floating Particles Container */}
+                <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
+                    {hearts.map(h => (
+                        <div 
+                            key={h.id} 
+                            className="absolute love-popup text-pink-500 dark:text-pink-400 drop-shadow-md font-bold"
+                            style={{ left: h.x, top: h.y, '--r': `${h.r}deg` } as any}
+                        >
+                            {h.content}
+                        </div>
+                    ))}
+                </div>
+
+                <PetAvatar type={petType} status={status} onPet={handlePetClick} />
                 
-                <div className="text-center mt-[-10px] relative z-20">
-                    <h4 className="text-sm font-bold text-slate-800 dark:text-white transition-colors duration-300">{message}</h4>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 font-medium">{subtext}</p>
+                <div className="text-center -mt-2 relative z-20 pointer-events-none">
+                    <h4 className="text-sm font-black text-slate-800 dark:text-white transition-colors duration-300 tracking-tight bg-white/50 dark:bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm shadow-sm border border-white/20">
+                        {message}
+                    </h4>
                 </div>
             </div>
 
             {/* Focus Energy Bar */}
-            <div className="mt-3 relative z-10">
-                <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                    <span className="flex items-center gap-1"><Zap size={10} className="text-amber-400 fill-current" /> Focus Energy</span>
+            <div className="mt-4 relative z-10">
+                <div className="flex justify-between items-center text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                    <span className="flex items-center gap-1"><Zap size={10} className="text-amber-400 fill-current" /> Energy</span>
                     <span>{Math.round(progress)}%</span>
                 </div>
-                <div className="h-2 w-full bg-slate-200 dark:bg-slate-700/50 rounded-full overflow-hidden border border-slate-100 dark:border-white/5">
+                <div className="h-2.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden border border-slate-200 dark:border-white/5 shadow-inner">
                     <div 
-                        className="h-full bg-gradient-to-r from-amber-400 to-pink-500 shadow-[0_0_10px_rgba(236,72,153,0.5)] transition-all duration-1000 ease-linear"
+                        className={`h-full bg-gradient-to-r shadow-[0_0_15px_rgba(236,72,153,0.4)] transition-all duration-1000 ease-linear ${petType === 'cat' ? 'from-pink-400 to-fuchsia-500' : 'from-amber-400 to-orange-500'}`}
                         style={{ width: `${progress}%` }}
                     >
-                        <div className="absolute inset-0 bg-white/30 w-full h-full animate-[shimmer_2s_infinite]"></div>
+                        <div className="absolute inset-0 bg-white/30 w-full h-full animate-[shimmer_1.5s_infinite]"></div>
                     </div>
                 </div>
             </div>
@@ -323,7 +536,7 @@ const Pomodoro: React.FC = () => {
             <div className="mt-12 flex items-center gap-6">
                 <button 
                     onClick={handleStopClick} 
-                    className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all active:scale-95"
+                    className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 transition-all active:scale-95 shadow-sm"
                     title="Stop Session"
                 >
                     <RotateCcw size={24} />
@@ -342,7 +555,7 @@ const Pomodoro: React.FC = () => {
 
                 <button 
                     onClick={skipForward} 
-                    className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95"
+                    className="p-4 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-200 dark:hover:bg-slate-700 transition-all active:scale-95 shadow-sm"
                     title="Skip"
                 >
                     <SkipForward size={24} />
@@ -435,7 +648,7 @@ const Pomodoro: React.FC = () => {
              </div>
 
              {/* 4. FOCUS COMPANION PET (Fills space) */}
-             <FocusPet />
+             <FocusPetWidget />
 
              {/* 5. Video Anchor */}
              <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group shrink-0">
@@ -487,16 +700,16 @@ const Pomodoro: React.FC = () => {
           </div>
       )}
 
-      {/* --- BREAK MODAL (Cat) --- */}
+      {/* --- BREAK MODAL (Simple Notification) --- */}
       {showBreakModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
               <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in" onClick={e => e.stopPropagation()}>
-                  <div className="w-32 h-32 mb-4">
-                      <AnimatedCat variant="awake" />
+                  <div className="w-20 h-20 bg-pink-100 dark:bg-pink-500/20 rounded-full flex items-center justify-center mb-4 text-pink-500">
+                      <Coffee size={32} />
                   </div>
-                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-2 mb-2 tracking-tight">Let's Rest!</h3>
+                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-2 mb-2 tracking-tight">Time for a Break!</h3>
                   <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8">You've earned this moment. Breathe.</p>
-                  <button onClick={() => { setShowBreakModal(false); toggleTimer(); }} className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transform active:scale-95 transition-transform">Start Break</button>
+                  <button onClick={() => { setShowBreakModal(false); toggleTimer(); }} className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transform active:scale-95 transition-transform">Start Break Timer</button>
                   <button onClick={() => { setShowBreakModal(false); skipForward(); }} className="text-xs text-slate-400 font-bold uppercase mt-4 hover:text-slate-600 dark:hover:text-white">Skip Rest</button>
               </div>
           </div>
