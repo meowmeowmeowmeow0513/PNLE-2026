@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Sparkles, ArrowRight, Plus, Check, Square, Calendar, ArrowUpRight, Rocket, Trash2, CheckSquare, Quote, Clock, Activity, GripVertical, Zap, HeartPulse, Lightbulb, BrainCircuit, BookOpen, MapPin } from 'lucide-react';
-import { NavigationItem } from '../types';
+import { NavigationItem, TaskPriority } from '../types';
 import StreakWidget from './StreakWidget';
 import MissionBoard from './MissionBoard';
 import MotivationWidget from './MotivationWidget';
@@ -382,6 +382,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   }, [trackAction, stats, streakLoading]);
   
   const today = new Date();
+  
+  const priorityWeight: Record<TaskPriority, number> = { 'High': 3, 'Medium': 2, 'Low': 1 };
+
   const todaysTasks = allTasks
     .filter(t => {
       try {
@@ -389,7 +392,18 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
         return isSameDay(new Date(t.start), today);
       } catch (e) { return false; }
     })
-    .sort((a, b) => (a.completed === b.completed ? 0 : a.completed ? 1 : -1));
+    .sort((a, b) => {
+        // 1. Completion Status (Completed tasks go to bottom)
+        if (a.completed !== b.completed) return a.completed ? 1 : -1;
+        
+        // 2. Priority (Higher weight first)
+        const weightA = priorityWeight[a.priority] || 0;
+        const weightB = priorityWeight[b.priority] || 0;
+        if (weightA !== weightB) return weightB - weightA;
+        
+        // 3. Time (Earlier time first)
+        return new Date(a.start).getTime() - new Date(b.start).getTime();
+    });
 
   const completedCount = todaysTasks.filter(t => t.completed).length;
   const totalCount = todaysTasks.length;

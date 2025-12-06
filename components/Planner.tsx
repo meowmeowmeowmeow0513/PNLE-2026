@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import FullCalendar from '@fullcalendar/react';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -602,7 +603,7 @@ const Planner: React.FC = () => {
   }));
 
   return (
-    <div className="h-[calc(100vh-140px)] flex flex-col gap-6 animate-fade-in pb-4 font-sans text-slate-900 dark:text-slate-100 relative">
+    <div className="flex flex-col gap-6 animate-fade-in pb-20 lg:pb-4 font-sans text-slate-900 dark:text-slate-100 relative h-auto lg:h-[calc(100vh-140px)]">
       
       {/* 
          PREMIUM CSS INJECTION 
@@ -737,21 +738,21 @@ const Planner: React.FC = () => {
           </div>
       )}
 
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 h-full overflow-hidden">
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-4 gap-6 h-full lg:overflow-hidden">
         
         {/* LEFT: CALENDAR (3 Cols) */}
-        <div className="lg:col-span-3 flex flex-col bg-white dark:bg-[#0f172a]/50 backdrop-blur-3xl rounded-[2rem] shadow-xl shadow-slate-200/60 dark:shadow-black/50 border border-white/50 dark:border-slate-700/50 overflow-hidden relative transition-colors duration-500">
+        <div className="lg:col-span-3 flex flex-col bg-white dark:bg-[#0f172a]/50 backdrop-blur-3xl rounded-[2rem] shadow-xl shadow-slate-200/60 dark:shadow-black/50 border border-white/50 dark:border-slate-700/50 overflow-hidden relative transition-colors duration-500 h-[600px] lg:h-full">
             
             {/* Custom Toolbar */}
-            <div className="flex flex-col gap-4 px-8 py-6 border-b border-slate-100 dark:border-slate-700/50">
-                <div className="flex md:flex-row flex-col items-center justify-between gap-4">
+            <div className="flex flex-col gap-4 px-4 sm:px-8 py-6 border-b border-slate-100 dark:border-slate-700/50">
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                     {/* Month Title */}
-                    <div className="flex items-center gap-5">
-                        <div className="w-14 h-14 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-pink-500/25 transform hover:rotate-6 transition-transform duration-300">
+                    <div className="flex items-center gap-3 sm:gap-5 w-full sm:w-auto">
+                        <div className="w-12 h-12 sm:w-14 sm:h-14 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-pink-500/25 transform hover:rotate-6 transition-transform duration-300 shrink-0">
                             <CalendarIcon size={24} />
                         </div>
                         <div>
-                            <h2 className="text-3xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
+                            <h2 className="text-2xl sm:text-3xl font-black text-slate-800 dark:text-white leading-none tracking-tight">
                                 {format(currentDate, 'MMMM yyyy')}
                             </h2>
                             <div className="flex items-center gap-2 mt-1.5 opacity-60">
@@ -764,7 +765,7 @@ const Planner: React.FC = () => {
                     </div>
 
                     {/* Controls */}
-                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700">
+                    <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800/50 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-700 w-full sm:w-auto justify-center sm:justify-start">
                         <div className="flex items-center">
                             <button onClick={handlePrev} className="p-2.5 rounded-xl hover:bg-white dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition-all hover:shadow-sm">
                                 <ChevronLeft size={18} strokeWidth={2.5} />
@@ -797,16 +798,16 @@ const Planner: React.FC = () => {
                 </div>
 
                 {/* --- QUICK SHIFT TOOLBAR --- */}
-                <div className="w-full bg-slate-50 dark:bg-slate-800/30 rounded-xl p-2 flex items-center justify-center gap-4 border border-slate-100 dark:border-slate-700/30">
-                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2 hidden sm:block">Quick Duty:</span>
+                <div className="w-full bg-slate-50 dark:bg-slate-800/30 rounded-xl p-2 flex items-center gap-4 border border-slate-100 dark:border-slate-700/30 overflow-x-auto">
+                     <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-2 hidden sm:block shrink-0">Quick Duty:</span>
                      
-                     <button onClick={() => handleAddShift('AM')} className="flex items-center gap-2 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-500/20 dark:hover:bg-yellow-500/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-xs font-bold transition-colors">
+                     <button onClick={() => handleAddShift('AM')} className="flex items-center gap-2 px-3 py-1.5 bg-yellow-100 hover:bg-yellow-200 dark:bg-yellow-500/20 dark:hover:bg-yellow-500/30 text-yellow-700 dark:text-yellow-400 rounded-lg text-xs font-bold transition-colors whitespace-nowrap shrink-0">
                         <Sun size={14} /> AM (6-2)
                      </button>
-                     <button onClick={() => handleAddShift('PM')} className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/20 dark:hover:bg-orange-500/30 text-orange-700 dark:text-orange-400 rounded-lg text-xs font-bold transition-colors">
+                     <button onClick={() => handleAddShift('PM')} className="flex items-center gap-2 px-3 py-1.5 bg-orange-100 hover:bg-orange-200 dark:bg-orange-500/20 dark:hover:bg-orange-500/30 text-orange-700 dark:text-orange-400 rounded-lg text-xs font-bold transition-colors whitespace-nowrap shrink-0">
                         <Sunset size={14} /> PM (2-10)
                      </button>
-                     <button onClick={() => handleAddShift('NOC')} className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold transition-colors">
+                     <button onClick={() => handleAddShift('NOC')} className="flex items-center gap-2 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 dark:bg-blue-500/20 dark:hover:bg-blue-500/30 text-blue-700 dark:text-blue-300 rounded-lg text-xs font-bold transition-colors whitespace-nowrap shrink-0">
                         <Moon size={14} /> NOC (10-6)
                      </button>
                 </div>
@@ -850,7 +851,7 @@ const Planner: React.FC = () => {
         </div>
 
         {/* RIGHT: AGENDA SIDEBAR (1 Col) - Flex layout for Balance Widget */}
-        <div className="lg:col-span-1 flex flex-col bg-white dark:bg-[#0f172a]/50 backdrop-blur-3xl rounded-[2rem] shadow-xl shadow-slate-200/60 dark:shadow-black/50 border border-white/50 dark:border-slate-700/50 overflow-hidden h-full relative z-20">
+        <div className="lg:col-span-1 flex flex-col bg-white dark:bg-[#0f172a]/50 backdrop-blur-3xl rounded-[2rem] shadow-xl shadow-slate-200/60 dark:shadow-black/50 border border-white/50 dark:border-slate-700/50 overflow-hidden h-full min-h-[500px] relative z-20">
             
             {/* Header */}
             <div className="p-6 border-b border-slate-100 dark:border-slate-700/50 bg-slate-50/50 dark:bg-slate-800/20 relative shrink-0">
