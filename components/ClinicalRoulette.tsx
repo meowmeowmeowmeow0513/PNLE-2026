@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTasks } from '../TaskContext';
 import { SIM_CASES, ClinicalCase } from '../data/simulationData';
-import { Dices, CheckCircle2, Loader2, Info, Brain, Zap, Stethoscope, ClipboardList, FileText, Stamp, Thermometer, User, Activity, AlertTriangle, X, History, Trash2, Calendar, Star, Trophy, Award, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Dices, CheckCircle2, Loader2, Info, Brain, Zap, Stethoscope, ClipboardList, FileText, Stamp, Thermometer, User, Activity, AlertTriangle, X, History, Trash2, Calendar, Star, Trophy, Award, ShieldCheck, HeartHandshake, Maximize2, FileOutput, AlertCircle } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { GoogleGenAI } from "@google/genai";
 
@@ -45,10 +45,16 @@ const ClinicalRoulette: React.FC = () => {
 
     // Case Log History & XP
     const [showHistory, setShowHistory] = useState(false);
+    const [viewLog, setViewLog] = useState<SavedCaseLog | null>(null); // For detailed modal
     const [rouletteXP, setRouletteXP] = useState(0);
     const [caseHistory, setCaseHistory] = useState<SavedCaseLog[]>(() => {
-        const saved = localStorage.getItem('clinical_roulette_history_v2');
-        return saved ? JSON.parse(saved) : [];
+        try {
+            const saved = localStorage.getItem('clinical_roulette_history_v2');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            console.error("Failed to load history", e);
+            return [];
+        }
     });
 
     useEffect(() => {
@@ -65,6 +71,12 @@ const ClinicalRoulette: React.FC = () => {
     };
     
     const rank = getRank();
+
+    // Helper to safely get icon (handles localStorage serialization loss)
+    const getCaseIcon = (caseId: string) => {
+        const found = SIM_CASES.find(c => c.id === caseId);
+        return found ? found.icon : FileText;
+    };
 
     const handleSpin = () => {
         if (isSpinning) return;
@@ -149,14 +161,21 @@ const ClinicalRoulette: React.FC = () => {
         // Stamping animation
         setAcceptStatus('stamped');
         
-        // Add to Local History
+        // Add to Local History (Max 10 Limit)
         const newLog: SavedCaseLog = {
             id: Math.random().toString(36).substr(2, 9),
             timestamp: Date.now(),
             chart: patientChart,
             caseType: selectedCase
         };
-        setCaseHistory(prev => [newLog, ...prev]);
+        
+        setCaseHistory(prev => {
+            const updated = [newLog, ...prev];
+            if (updated.length > 10) {
+                return updated.slice(0, 10); // Keep only top 10
+            }
+            return updated;
+        });
 
         // Construct detailed text for Planner
         const detailsText = `
@@ -208,6 +227,9 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
     };
 
     const activeCase = selectedCase || displayCase;
+
+    // Determine detailed view icon safely
+    const DetailedIcon = viewLog ? getCaseIcon(viewLog.caseType.id) : FileText;
 
     return (
         <div className="max-w-6xl mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
@@ -456,7 +478,15 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                 </div>
                                 <div>
                                     <h3 className="font-bold text-lg text-slate-900 dark:text-white">Medical Archives</h3>
-                                    <p className="text-xs text-slate-500">Collected Case Files: {caseHistory.length}</p>
+                                    <div className="flex items-center gap-2 text-xs">
+                                        <span className="text-slate-500">Capacity: {caseHistory.length} / 10</span>
+                                        {caseHistory.length >= 10 && (
+                                            <span className="text-amber-500 font-bold flex items-center gap-1">
+                                                <AlertCircle size={12} /> Limit Reached
+                                            </span>
+                                        )}
+                                    </div>
+                                    <p className="text-[10px] text-slate-400 mt-0.5">Oldest cases are automatically removed.</p>
                                 </div>
                             </div>
                             <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-500"><X size={20} /></button>
@@ -470,55 +500,157 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                 </div>
                             ) : (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    {caseHistory.map((log) => (
-                                        <div key={log.id} className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative group">
-                                            <div className="flex justify-between items-start mb-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className={`p-2 rounded-xl ${getThemeColor(log.caseType.color)}`}>
-                                                        <log.caseType.icon size={18} />
-                                                    </div>
-                                                    <div>
-                                                        <span className="font-bold text-slate-800 dark:text-white block">{log.caseType.short}</span>
-                                                        <span className="text-[10px] uppercase text-slate-400 flex items-center gap-1">
-                                                            <Calendar size={10} /> {new Date(log.timestamp).toLocaleDateString()}
-                                                        </span>
+                                    {caseHistory.map((log) => {
+                                        const Icon = getCaseIcon(log.caseType.id);
+                                        return (
+                                            <div 
+                                                key={log.id} 
+                                                onClick={() => setViewLog(log)}
+                                                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 shadow-sm hover:shadow-md transition-all relative group cursor-pointer hover:border-purple-300 dark:hover:border-purple-600"
+                                            >
+                                                <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <Maximize2 size={16} className="text-slate-400 hover:text-purple-500" />
+                                                </div>
+
+                                                <div className="flex justify-between items-start mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className={`p-2 rounded-xl ${getThemeColor(log.caseType.color)}`}>
+                                                            <Icon size={18} />
+                                                        </div>
+                                                        <div>
+                                                            <span className="font-bold text-slate-800 dark:text-white block">{log.caseType.short}</span>
+                                                            <span className="text-[10px] uppercase text-slate-400 flex items-center gap-1">
+                                                                <Calendar size={10} /> {new Date(log.timestamp).toLocaleDateString()}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                                <button 
-                                                    onClick={() => setCaseHistory(prev => prev.filter(c => c.id !== log.id))}
-                                                    className="text-slate-300 hover:text-red-500 p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors opacity-0 group-hover:opacity-100"
-                                                >
-                                                    <Trash2 size={16} />
-                                                </button>
-                                            </div>
-                                            
-                                            <div className="grid grid-cols-2 gap-4 text-xs">
-                                                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
-                                                    <div className="font-bold text-slate-500 uppercase text-[10px] mb-1">Patient</div>
-                                                    <div className="font-mono text-slate-800 dark:text-white font-bold text-sm">
-                                                        {log.chart.initials} ({log.chart.ageSex})
+                                                
+                                                <div className="grid grid-cols-2 gap-4 text-xs">
+                                                    <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                        <div className="font-bold text-slate-500 uppercase text-[10px] mb-1">Patient</div>
+                                                        <div className="font-mono text-slate-800 dark:text-white font-bold text-sm">
+                                                            {log.chart.initials} ({log.chart.ageSex})
+                                                        </div>
+                                                        <div className="text-slate-500 mt-1 truncate">{log.chart.diagnosis}</div>
                                                     </div>
-                                                    <div className="text-slate-500 mt-1 truncate">{log.chart.diagnosis}</div>
-                                                </div>
-                                                <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
-                                                    <div className="font-bold text-slate-500 uppercase text-[10px] mb-1">Vitals Snapshot</div>
-                                                    <div className="font-mono text-slate-700 dark:text-slate-300 space-y-0.5">
-                                                        <div>BP: {log.chart.vitals.bp}</div>
-                                                        <div>HR: {log.chart.vitals.hr}</div>
-                                                        <div>SpO2: {log.chart.vitals.spo2}</div>
+                                                    <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-100 dark:border-slate-700">
+                                                        <div className="font-bold text-slate-500 uppercase text-[10px] mb-1">Vitals Snapshot</div>
+                                                        <div className="font-mono text-slate-700 dark:text-slate-300 space-y-0.5">
+                                                            <div>BP: {log.chart?.vitals?.bp || '--'}</div>
+                                                            <div>HR: {log.chart?.vitals?.hr || '--'}</div>
+                                                            <div>SpO2: {log.chart?.vitals?.spo2 || '--'}</div>
+                                                        </div>
                                                     </div>
                                                 </div>
+                                                
+                                                <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 italic line-clamp-1 flex-1">
+                                                        "{log.chart?.history}"
+                                                    </p>
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); setCaseHistory(prev => prev.filter(c => c.id !== log.id)); }}
+                                                        className="text-slate-300 hover:text-red-500 p-1.5 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
                                             </div>
-                                            
-                                            <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 italic line-clamp-2">
-                                                    "{log.chart.history}"
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* --- DETAILED VIEW MODAL --- */}
+            {viewLog && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" onClick={() => setViewLog(null)}>
+                    <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] animate-zoom-in" onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header */}
+                        <div className={`p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center ${getThemeColor(viewLog.caseType.color)} bg-opacity-20 dark:bg-opacity-10`}>
+                            <div className="flex items-center gap-4">
+                                <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm text-slate-700 dark:text-white">
+                                    <DetailedIcon size={24} /> 
+                                </div>
+                                <div>
+                                    <h3 className="font-black text-xl leading-none text-slate-900 dark:text-white">{viewLog.caseType.short}</h3>
+                                    <p className="text-xs font-bold uppercase opacity-70 mt-1">Archived: {new Date(viewLog.timestamp).toLocaleString()}</p>
+                                </div>
+                            </div>
+                            <button onClick={() => setViewLog(null)} className="p-2 bg-white/50 hover:bg-white dark:bg-black/20 dark:hover:bg-black/40 rounded-full transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Scrollable Content */}
+                        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6 bg-slate-50 dark:bg-slate-950">
+                            
+                            {/* Patient Info */}
+                            <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                <div>
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Patient</span>
+                                    <span className="text-2xl font-mono font-black text-slate-900 dark:text-white">{viewLog.chart?.initials || 'UNK'}</span>
+                                    <span className="text-sm font-bold text-slate-500 ml-2">{viewLog.chart?.ageSex || '--'}</span>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1">Diagnosis</span>
+                                    <span className="text-sm font-bold text-slate-800 dark:text-white bg-slate-100 dark:bg-slate-800 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                                        {viewLog.chart?.diagnosis || 'Pending'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Vitals Grid */}
+                            <div className="grid grid-cols-3 sm:grid-cols-5 gap-3">
+                                {[
+                                    { l: 'BP', v: viewLog.chart?.vitals?.bp, c: 'text-slate-800 dark:text-white' },
+                                    { l: 'HR', v: viewLog.chart?.vitals?.hr, c: parseInt(viewLog.chart?.vitals?.hr || '0') > 100 ? 'text-red-500' : 'text-slate-800 dark:text-white' },
+                                    { l: 'RR', v: viewLog.chart?.vitals?.rr, c: 'text-slate-800 dark:text-white' },
+                                    { l: 'Temp', v: viewLog.chart?.vitals?.temp, c: 'text-slate-800 dark:text-white' },
+                                    { l: 'SpO2', v: (viewLog.chart?.vitals?.spo2 || '') + '%', c: parseInt(viewLog.chart?.vitals?.spo2 || '100') < 94 ? 'text-blue-500' : 'text-slate-800 dark:text-white' },
+                                ].map((item, i) => (
+                                    <div key={i} className="bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800 text-center shadow-sm">
+                                        <div className="text-[9px] font-black text-slate-400 uppercase tracking-wider mb-1">{item.l}</div>
+                                        <div className={`font-mono font-bold text-lg ${item.c}`}>{item.v || '--'}</div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Clinical Notes */}
+                            <div className="space-y-4">
+                                <div>
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <Info size={12} /> Chief Complaint & History
+                                    </h4>
+                                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+                                        <p className="font-bold text-slate-800 dark:text-white mb-2">"{viewLog.chart?.chiefComplaint}"</p>
+                                        <p className="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                                            {viewLog.chart?.history}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-2">
+                                        <AlertTriangle size={12} className="text-red-500" /> Stat Orders
+                                    </h4>
+                                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden">
+                                        {viewLog.chart?.statOrders?.map((order, i) => (
+                                            <div key={i} className="p-4 border-b border-slate-100 dark:border-slate-800 last:border-0 flex items-start gap-3">
+                                                <div className="mt-1 w-4 h-4 rounded-full border-2 border-slate-300 dark:border-slate-600 flex items-center justify-center shrink-0">
+                                                    <div className="w-2 h-2 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+                                                </div>
+                                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{order}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
+
                         </div>
                     </div>
                 </div>
