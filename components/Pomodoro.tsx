@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
@@ -239,7 +240,7 @@ const FocusPetWidget = () => {
     
     // Combo System
     const [combo, setCombo] = useState(0);
-    const comboTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+    const comboTimeoutRef = useRef<number | null>(null);
 
     // Calculate Energy Progress
     const totalTime = mode === 'focus' ? timerSettings.focus : (mode === 'shortBreak' ? timerSettings.shortBreak : timerSettings.longBreak); 
@@ -265,7 +266,7 @@ const FocusPetWidget = () => {
         // Increment Combo
         setCombo(prev => prev + 1);
         if (comboTimeoutRef.current) clearTimeout(comboTimeoutRef.current);
-        comboTimeoutRef.current = setTimeout(() => setCombo(0), 2000);
+        comboTimeoutRef.current = window.setTimeout(() => setCombo(0), 2000);
 
         const rect = (e.target as HTMLElement).getBoundingClientRect();
         // Generate random offset around the click
@@ -592,39 +593,20 @@ const Pomodoro: React.FC = () => {
                 </div>
              </div>
 
-             {/* 2. Target & Goal (Combined for space) */}
-             <div className="relative z-50">
-                 {/* Target Input */}
-                 <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm backdrop-blur-md mb-3">
-                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 flex items-center gap-2"><Brain size={10} /> Target</h3>
-                    <div className="relative">
-                        <input 
-                            type="text" 
-                            value={focusTask}
-                            onChange={(e) => setFocusTask(e.target.value)}
-                            onFocus={() => setShowTaskDropdown(true)}
-                            onBlur={() => setTimeout(() => setShowTaskDropdown(false), 200)}
-                            placeholder="What are you working on?"
-                            className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-lg px-3 py-2 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
-                        />
-                        {/* Absolute Dropdown */}
-                        {showTaskDropdown && incompleteTasks.length > 0 && (
-                            <div className="absolute top-full left-0 w-full mt-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-[100] max-h-48 overflow-y-auto custom-scrollbar p-1">
-                                {incompleteTasks.map(t => (
-                                    <button key={t.id} onClick={() => setFocusTask(t.title)} className="w-full text-left px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-pink-50 dark:hover:bg-pink-900/20 truncate rounded-lg transition-colors mb-0.5 last:mb-0">
-                                        {t.title}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                 </div>
-
-                 {/* Goal Slider (Compact) */}
-                 <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-sm backdrop-blur-md relative z-10">
-                    <div className="flex justify-between items-center mb-1">
-                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2"><Target size={10} /> Goal</h3>
-                        <span className="text-[10px] font-bold text-pink-500">{sessionsCompleted}/{sessionGoal}</span>
+             {/* 2. Session Control (Merged Target & Goal) */}
+             <div className="bg-white/80 dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 rounded-2xl p-4 shadow-sm backdrop-blur-md relative z-50 flex flex-col gap-4">
+                 
+                 {/* Top: Goal Slider */}
+                 <div>
+                    <div className="flex justify-between items-center mb-2">
+                        <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 flex items-center gap-2">
+                            <Target size={12} /> Session Goal
+                        </h3>
+                        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
+                             <span className="text-[10px] font-bold text-pink-500">{sessionsCompleted}</span>
+                             <span className="text-[8px] text-slate-400">/</span>
+                             <span className="text-[10px] font-bold text-slate-600 dark:text-slate-300">{sessionGoal}</span>
+                        </div>
                     </div>
                     <input 
                         type="range" min="1" max="12" step="1"
@@ -633,10 +615,43 @@ const Pomodoro: React.FC = () => {
                         className="w-full h-1.5 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-pink-500"
                     />
                  </div>
+
+                 {/* Bottom: Task Input */}
+                 <div className="relative">
+                    <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 flex items-center gap-2">
+                        <Brain size={12} /> Focus Target
+                    </h3>
+                    <div className="relative group">
+                        <div className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-pink-500 transition-colors">
+                            <Brain size={14} />
+                        </div>
+                        <input 
+                            type="text" 
+                            value={focusTask}
+                            onChange={(e) => setFocusTask(e.target.value)}
+                            onFocus={() => setShowTaskDropdown(true)}
+                            onBlur={() => setTimeout(() => setShowTaskDropdown(false), 200)}
+                            placeholder="What are you working on?"
+                            className="w-full bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all"
+                        />
+                        {/* Dropdown */}
+                        {showTaskDropdown && incompleteTasks.length > 0 && (
+                            <div className="absolute top-full left-0 w-full mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-[100] max-h-48 overflow-y-auto custom-scrollbar p-1 animate-in slide-in-from-top-2 fade-in">
+                                {incompleteTasks.map(t => (
+                                    <button key={t.id} onClick={() => setFocusTask(t.title)} className="w-full text-left px-3 py-2.5 text-xs font-medium text-slate-700 dark:text-slate-200 hover:bg-pink-50 dark:hover:bg-pink-900/20 truncate rounded-lg transition-colors mb-0.5 last:mb-0 flex items-center gap-2">
+                                        <div className={`w-1.5 h-1.5 rounded-full ${t.priority === 'High' ? 'bg-red-500' : 'bg-slate-300'}`}></div>
+                                        {t.title}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                 </div>
+
              </div>
 
              {/* 3. Media Controls (Compact) */}
-             <div className="grid grid-cols-2 gap-2">
+             <div className="grid grid-cols-2 gap-2 relative z-10">
                 <button onClick={toggleBrownNoise} className={`py-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-inner' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-300'}`}>
                     <Waves size={16} className={isBrownNoiseOn ? 'animate-pulse' : ''} />
                     <span className="text-[9px] font-bold uppercase">{isBrownNoiseOn ? 'Noise On' : 'No Sound'}</span>

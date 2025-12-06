@@ -1,6 +1,7 @@
+
 import { initializeApp } from "firebase/app";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider, setPersistence, browserLocalPersistence, inMemoryPersistence } from "firebase/auth";
+import { getFirestore, initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -15,10 +16,24 @@ const firebaseConfig = {
 // Initialize Firebase (Modular)
 const app = initializeApp(firebaseConfig);
 
-// Initialize Services
-export const auth = getAuth(app);
-export const db = getFirestore(app);
-export const storage = getStorage(app, "gs://pnle-review-companion.firebasestorage.app");
-export const googleProvider = new GoogleAuthProvider();
+// Initialize Auth with Persistence
+const auth = getAuth(app);
+// Attempt to set local persistence (best for mobile/web apps)
+setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.warn("Auth persistence failed, falling back to memory:", error);
+  setPersistence(auth, inMemoryPersistence);
+});
 
+// Initialize Firestore with offline support
+// Using initializeFirestore instead of getFirestore allows configuring settings
+const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+});
+
+const storage = getStorage(app, "gs://pnle-review-companion.firebasestorage.app");
+const googleProvider = new GoogleAuthProvider();
+
+export { auth, db, storage, googleProvider };
 export default app;
