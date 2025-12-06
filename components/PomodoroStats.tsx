@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePomodoro, PomodoroSession } from './PomodoroContext';
-import { Activity, Trash2, Clock, PieChart as PieIcon, BarChart3, Info, X, Target, Calendar, CheckCircle2, ShieldCheck } from 'lucide-react';
+import { Activity, Trash2, Clock, PieChart as PieIcon, BarChart3, Info, X, Target, Calendar, CheckCircle2, ShieldCheck, BarChart2 } from 'lucide-react';
 import { format, isSameDay, subDays, startOfDay, isAfter } from 'date-fns';
 
 const DailyPieChart = ({ focusTime, breakTime }: { focusTime: number, breakTime: number }) => {
@@ -55,7 +55,7 @@ const DailyPieChart = ({ focusTime, breakTime }: { focusTime: number, breakTime:
   );
 };
 
-// New Weekly Overview Component
+// Weekly Overview Component (Main Widget)
 const WeeklyOverview = ({ history }: { history: PomodoroSession[] }) => {
     // Generate last 7 days
     const days = Array.from({ length: 7 }, (_, i) => {
@@ -154,22 +154,8 @@ const PomodoroStats: React.FC = () => {
             <DailyPieChart focusTime={focusTime} breakTime={breakTime} />
         </div>
 
-        {/* --- INTEGRITY SCORE (NEW) --- */}
-        <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 shrink-0 flex items-center justify-between">
-            <div className="flex flex-col">
-                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Integrity Score</span>
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Accountability</span>
-            </div>
-            <div className="flex items-center gap-2">
-                <ShieldCheck size={20} className={focusIntegrity > 80 ? 'text-emerald-500' : focusIntegrity > 50 ? 'text-amber-500' : 'text-red-500'} />
-                <span className={`text-2xl font-black ${focusIntegrity > 80 ? 'text-emerald-500' : focusIntegrity > 50 ? 'text-amber-500' : 'text-red-500'}`}>
-                    {focusIntegrity}%
-                </span>
-            </div>
-        </div>
-
-        {/* --- WEEKLY BALANCE --- */}
-        <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-3xl p-5 overflow-hidden shrink-0 relative">
+        {/* --- WEEKLY BALANCE (Secondary) --- */}
+        <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-3xl p-5 overflow-hidden shrink-0 relative flex flex-col justify-between min-h-[140px]">
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 opacity-60">
                     <BarChart3 size={14} className="text-slate-400" />
@@ -185,76 +171,20 @@ const PomodoroStats: React.FC = () => {
             </div>
             
             <WeeklyOverview history={sessionHistory} />
+        </div>
 
-            {/* ACCOUNTABILITY INFO MODAL (CENTERED PORTAL) */}
-            {showWeeklyInfo && createPortal(
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onClick={() => setShowWeeklyInfo(false)}>
-                    <div className="bg-white dark:bg-slate-900 w-full max-w-sm md:max-w-md rounded-[2rem] p-6 shadow-2xl border border-white/20 relative animate-zoom-in" onClick={e => e.stopPropagation()}>
-                        
-                        {/* Header */}
-                        <div className="flex justify-between items-start mb-6">
-                            <div className="flex items-center gap-3">
-                                <div className="p-3 bg-pink-50 dark:bg-pink-500/20 text-pink-500 rounded-xl">
-                                    <Target size={20} />
-                                </div>
-                                <div>
-                                    <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Accountability</h3>
-                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">7-Day Performance Report</p>
-                                </div>
-                            </div>
-                            <button onClick={() => setShowWeeklyInfo(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        {/* Grid Stats */}
-                        <div className="grid grid-cols-2 gap-4 mb-6">
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-between h-24">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Hours</span>
-                                <span className="text-2xl font-black text-slate-900 dark:text-white">
-                                    {(weeklyFocusMinutes / 60).toFixed(1)}<span className="text-sm text-slate-400 font-bold ml-1">hr</span>
-                                </span>
-                            </div>
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-between h-24">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Daily Avg</span>
-                                <span className="text-2xl font-black text-slate-900 dark:text-white">
-                                    {Math.round(weeklyFocusMinutes / 7)}<span className="text-sm text-slate-400 font-bold ml-1">min</span>
-                                </span>
-                            </div>
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-between h-24">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Consistency</span>
-                                <div className="flex items-center gap-2">
-                                    <Calendar size={18} className="text-purple-500" />
-                                    <span className="text-xl font-black text-slate-900 dark:text-white">
-                                        {activeDays}<span className="text-slate-400 text-sm">/7 days</span>
-                                    </span>
-                                </div>
-                            </div>
-                            <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-between h-24">
-                                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completion</span>
-                                <div className="flex items-center gap-2">
-                                    <CheckCircle2 size={18} className="text-emerald-500" />
-                                    <span className="text-xl font-black text-slate-900 dark:text-white">
-                                        {sessionHistory.filter(s => s.type === 'focus' && isAfter(new Date(s.startTime), subDays(new Date(), 7))).length} <span className="text-sm text-slate-400">sessions</span>
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Insight Footer */}
-                        <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-500/20">
-                            <p className="text-xs text-blue-800 dark:text-blue-200 font-medium leading-relaxed flex gap-3">
-                                <Info size={16} className="shrink-0 mt-0.5 text-blue-500" />
-                                <span>
-                                    <strong>Consistency beats intensity.</strong> A steady routine (even 30 mins/day) builds long-term retention better than cramming. Keep the bar chart steady!
-                                </span>
-                            </p>
-                        </div>
-
-                    </div>
-                </div>,
-                document.body
-            )}
+        {/* --- INTEGRITY SCORE (Compact) --- */}
+        <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 shrink-0 flex items-center justify-between">
+            <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Integrity Score</span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Accountability</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <ShieldCheck size={20} className={focusIntegrity > 80 ? 'text-emerald-500' : focusIntegrity > 50 ? 'text-amber-500' : 'text-red-500'} />
+                <span className={`text-2xl font-black ${focusIntegrity > 80 ? 'text-emerald-500' : focusIntegrity > 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {focusIntegrity}%
+                </span>
+            </div>
         </div>
 
         {/* --- SESSION LOG --- */}
@@ -304,6 +234,76 @@ const PomodoroStats: React.FC = () => {
                 )}
             </div>
         </div>
+
+        {/* ACCOUNTABILITY INFO MODAL (CENTERED PORTAL) */}
+        {showWeeklyInfo && createPortal(
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onClick={() => setShowWeeklyInfo(false)}>
+                <div className="bg-white dark:bg-slate-900 w-full max-w-sm md:max-w-md rounded-[2rem] p-6 shadow-2xl border border-white/20 relative animate-zoom-in" onClick={e => e.stopPropagation()}>
+                    
+                    {/* Header */}
+                    <div className="flex justify-between items-start mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-pink-50 dark:bg-pink-500/20 text-pink-500 rounded-xl">
+                                <Target size={20} />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-slate-900 dark:text-white uppercase tracking-tight">Accountability</h3>
+                                <p className="text-xs text-slate-500 dark:text-slate-400 font-bold uppercase tracking-wider">7-Day Performance Report</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowWeeklyInfo(false)} className="p-2 bg-slate-100 dark:bg-slate-800 rounded-full text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors">
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* Grid Stats */}
+                    <div className="grid grid-cols-2 gap-4 mb-6">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-between h-24">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Hours</span>
+                            <span className="text-2xl font-black text-slate-900 dark:text-white">
+                                {(weeklyFocusMinutes / 60).toFixed(1)}<span className="text-sm text-slate-400 font-bold ml-1">hr</span>
+                            </span>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-between h-24">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Daily Avg</span>
+                            <span className="text-2xl font-black text-slate-900 dark:text-white">
+                                {Math.round(weeklyFocusMinutes / 7)}<span className="text-sm text-slate-400 font-bold ml-1">min</span>
+                            </span>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-between h-24">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Consistency</span>
+                            <div className="flex items-center gap-2">
+                                <Calendar size={18} className="text-purple-500" />
+                                <span className="text-xl font-black text-slate-900 dark:text-white">
+                                    {activeDays}<span className="text-slate-400 text-sm">/7 days</span>
+                                </span>
+                            </div>
+                        </div>
+                        <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-700/50 flex flex-col justify-between h-24">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Completion</span>
+                            <div className="flex items-center gap-2">
+                                <CheckCircle2 size={18} className="text-emerald-500" />
+                                <span className="text-xl font-black text-slate-900 dark:text-white">
+                                    {sessionHistory.filter(s => s.type === 'focus' && isAfter(new Date(s.startTime), subDays(new Date(), 7))).length} <span className="text-sm text-slate-400">sessions</span>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Insight Footer */}
+                    <div className="bg-blue-50 dark:bg-blue-900/10 p-4 rounded-2xl border border-blue-100 dark:border-blue-500/20">
+                        <p className="text-xs text-blue-800 dark:text-blue-200 font-medium leading-relaxed flex gap-3">
+                            <Info size={16} className="shrink-0 mt-0.5 text-blue-500" />
+                            <span>
+                                <strong>Consistency beats intensity.</strong> A steady routine (even 30 mins/day) builds long-term retention better than cramming. Keep the bar chart steady!
+                            </span>
+                        </p>
+                    </div>
+
+                </div>
+            </div>,
+            document.body
+        )}
     </div>
   );
 };

@@ -208,7 +208,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
             {activeItem === 'Pomodoro Timer' && (
                 <button 
                     onClick={togglePiP}
-                    className="absolute top-3 right-3 p-2 bg-black/60 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-pink-500 backdrop-blur-md z-50"
+                    className="absolute top-3 right-3 p-2 bg-black/60 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-pink-50 backdrop-blur-md z-50"
                     title="Pop Out Widget"
                 >
                     <MonitorPlay size={16} />

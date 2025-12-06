@@ -8,7 +8,7 @@ import { isSameDay } from 'date-fns';
 
 export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
 export type PetType = 'cat' | 'dog';
-export type SoundscapeType = 'brown' | 'rain' | 'cafe' | 'forest';
+export type SoundscapeType = 'brown' | 'white'; // Restricted as requested
 
 export interface TimerSettings {
   focus: number;
@@ -67,6 +67,7 @@ interface PomodoroContextType {
   deleteSession: (id: string) => Promise<void>;
   setPetType: (type: PetType) => void;
   setPetName: (name: string) => void; // Smart setter based on type
+  getPetMessage: (status: 'focus' | 'break' | 'idle' | 'complete') => string;
 }
 
 const PomodoroContext = createContext<PomodoroContextType | undefined>(undefined);
@@ -102,7 +103,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       return saved ? JSON.parse(saved) : DEFAULT_PRESETS.custom;
   });
 
-  // --- PET STATE ---
+  // --- PET STATE (Separate Names) ---
   const [petType, setPetTypeState] = useState<PetType>(() => {
       const saved = localStorage.getItem('pomodoro_pet_type');
       return (saved as PetType) || 'cat';
@@ -148,7 +149,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const startTimeRef = useRef<string | null>(null); // Track when session actually started
 
   const audioCtxRef = useRef<AudioContext | null>(null);
-  const brownNoiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
+  const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const alarmIntervalRef = useRef<number | null>(null);
 
   // --- DATABASE SYNC ---
@@ -383,6 +384,27 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
   }
 
+  // --- PET MESSAGING ---
+  const getPetMessage = (status: 'focus' | 'break' | 'idle' | 'complete') => {
+      if (petType === 'cat') {
+          switch(status) {
+              case 'focus': return "Shh... I'm hunting (studying)...";
+              case 'break': return "Meow! Time to stretch!";
+              case 'complete': return "Purrfect! You did it!";
+              case 'idle': return "Ready when you are, human!";
+              default: return "Meow?";
+          }
+      } else {
+          switch(status) {
+              case 'focus': return "Guarding your focus! Grrr...";
+              case 'break': return "Woof! Play time!";
+              case 'complete': return "Good job! You're a good boy/girl!";
+              case 'idle': return "Let's go! I'm ready!";
+              default: return "Woof?";
+          }
+      }
+  };
+
   // --- AUDIO ---
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -393,55 +415,75 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     return audioCtxRef.current;
   };
 
-  const playBrownNoise = () => {
+  const playNoise = () => {
     try {
         const ctx = initAudio();
         const bufferSize = 2 * ctx.sampleRate;
         const buffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
         const data = buffer.getChannelData(0);
-        let lastOut = 0;
-        for (let i = 0; i < bufferSize; i++) {
-            const white = Math.random() * 2 - 1;
-            data[i] = (lastOut + (0.02 * white)) / 1.02;
-            lastOut = data[i];
-            data[i] *= 3.5; 
+        
+        if (soundscape === 'white') {
+            // White Noise Generation
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+        } else {
+            // Brown Noise Generation
+            let lastOut = 0;
+            for (let i = 0; i < bufferSize; i++) {
+                const white = Math.random() * 2 - 1;
+                data[i] = (lastOut + (0.02 * white)) / 1.02;
+                lastOut = data[i];
+                data[i] *= 3.5; // Gain compensation
+            }
         }
+
         const source = ctx.createBufferSource();
         source.buffer = buffer;
         source.loop = true;
+        
+        // Filter mainly for brown noise to smooth it out further
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = 400;
+        filter.frequency.value = soundscape === 'white' ? 1000 : 400;
+        
         const gain = ctx.createGain();
-        gain.gain.value = 0.15;
+        gain.gain.value = soundscape === 'white' ? 0.05 : 0.15; // White noise is harsher, needs lower gain
+        
         source.connect(filter);
         filter.connect(gain);
         gain.connect(ctx.destination);
         source.start();
-        brownNoiseNodeRef.current = source;
-    } catch (e) {}
+        noiseNodeRef.current = source;
+    } catch (e) {
+        console.error("Audio generation failed", e);
+    }
   };
 
-  const stopBrownNoise = () => {
-    brownNoiseNodeRef.current?.stop();
-    brownNoiseNodeRef.current = null;
+  const stopNoise = () => {
+    noiseNodeRef.current?.stop();
+    noiseNodeRef.current = null;
   };
 
   const toggleBrownNoise = () => {
     if (isBrownNoiseOn) {
-      stopBrownNoise();
+      stopNoise();
       setIsBrownNoiseOn(false);
     } else {
-      playBrownNoise();
+      playNoise();
       setIsBrownNoiseOn(true);
     }
   };
 
   const setSoundscape = (type: SoundscapeType) => {
       setSoundscapeState(type);
-      // For now, all types trigger the generated noise, but UI shows selection
-      if (!isBrownNoiseOn) {
-          toggleBrownNoise();
+      // Restart noise if currently playing to switch type
+      if (isBrownNoiseOn) {
+          stopNoise();
+          // Small timeout to allow stop to process
+          setTimeout(() => {
+              playNoise();
+          }, 50);
       }
   }
 
@@ -481,7 +523,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       if ('documentPictureInPicture' in window) {
           try {
               // @ts-ignore
-              // Smaller default size for cleaner Mini Mode
+              // Smaller default size for cleaner Mini Mode (220px)
               const win = await window.documentPictureInPicture.requestWindow({ width: 220, height: 220 });
               // Copy styles
               Array.from(document.styleSheets).forEach((styleSheet) => {
@@ -509,7 +551,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   useEffect(() => {
       return () => {
-          stopBrownNoise();
+          stopNoise();
           stopAlarm();
           if (timerIdRef.current) clearInterval(timerIdRef.current);
       };
@@ -550,7 +592,8 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     skipForward,
     deleteSession,
     setPetType,
-    setPetName
+    setPetName,
+    getPetMessage
   };
 
   return (

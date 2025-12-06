@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud, ShieldCheck
+    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud, ShieldCheck, ArrowRight, XCircle
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType, SoundscapeType } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
@@ -252,7 +252,7 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, hasHalo, onPet, sca
 
 // --- ENHANCED NOTIFICATION WINDOW ---
 const NotificationWindow = () => {
-    const { completionEvent, clearCompletionEvent, petType, petName, focusIntegrity } = usePomodoro();
+    const { completionEvent, clearCompletionEvent, petType, petName, focusIntegrity, toggleTimer, stopSessionEarly, getPetMessage } = usePomodoro();
     const [show, setShow] = useState(false);
     const [animationState, setAnimationState] = useState<'enter' | 'idle' | 'exit'>('enter');
 
@@ -264,17 +264,29 @@ const NotificationWindow = () => {
             if (completionEvent.type === 'focus_complete' || completionEvent.type === 'goal_complete') {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 });
             }
-
-            const timer = setTimeout(() => {
-                setAnimationState('exit');
-                setTimeout(() => {
-                    setShow(false);
-                    clearCompletionEvent();
-                }, 400); // Wait for exit animation
-            }, 4000); // Display time
-            return () => clearTimeout(timer);
         }
-    }, [completionEvent, clearCompletionEvent]);
+    }, [completionEvent]);
+
+    const handleClose = () => {
+        setAnimationState('exit');
+        setTimeout(() => {
+            setShow(false);
+            clearCompletionEvent();
+        }, 400);
+    };
+
+    const handleContinue = () => {
+        // Starts the next timer phase immediately
+        handleClose();
+        setTimeout(() => {
+            toggleTimer();
+        }, 450);
+    };
+
+    const handleEndSession = () => {
+        handleClose();
+        stopSessionEarly(true); // Stop and save if anything pending
+    };
 
     if (!show) return null;
 
@@ -284,35 +296,48 @@ const NotificationWindow = () => {
     let accentColor = "text-yellow-500";
     let petStatus: 'celebrating' | 'awake' | 'sleeping' = 'celebrating';
     let sunburstColor = "bg-yellow-400";
+    let petChat = "";
+    
+    // Action Logic
+    let primaryAction = "Continue";
+    let secondaryAction = "Dismiss";
+    let showSecondary = true;
 
     if (completionEvent.type === 'focus_complete') {
         title = "Session Complete!";
-        message = `Amazing focus, ${petName} is cheering for you!`;
+        message = `Amazing focus! Take a breather.`;
+        petChat = getPetMessage('complete');
         bgColor = "from-pink-50 to-white dark:from-pink-900/40 dark:to-slate-900";
         accentColor = "text-pink-500";
         sunburstColor = "bg-pink-400";
+        primaryAction = "Start Break";
     } else if (completionEvent.type === 'break_complete') {
-        title = "Time to Focus!";
-        message = "Batteries recharged. Let's crush it!";
+        title = "Break Over!";
+        message = "Batteries recharged. Let's get back to work!";
+        petChat = getPetMessage('break');
         bgColor = "from-cyan-50 to-white dark:from-cyan-900/40 dark:to-slate-900";
         accentColor = "text-cyan-500";
         petStatus = 'awake';
         sunburstColor = "bg-cyan-400";
+        primaryAction = "Start Focus";
     } else if (completionEvent.type === 'goal_complete') {
         title = "Goal Crushed!";
-        message = "You are absolutely unstoppable today!";
+        message = "You are absolutely unstoppable today! Session goal met.";
+        petChat = "Wow! You're on fire!";
         bgColor = "from-amber-50 to-white dark:from-amber-900/40 dark:to-slate-900";
         accentColor = "text-amber-500";
         sunburstColor = "bg-amber-400";
+        primaryAction = "Keep Going";
+        secondaryAction = "End Session";
     }
 
     return (
-        <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
             {/* Backdrop Blur */}
-            <div className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-500 ${animationState === 'enter' ? 'opacity-100' : 'opacity-0'}`}></div>
+            <div className={`absolute inset-0 bg-black/60 backdrop-blur-md transition-opacity duration-500 ${animationState === 'enter' ? 'opacity-100' : 'opacity-0'}`} onClick={handleClose}></div>
             
             {/* Main Card */}
-            <div className={`relative z-10 w-80 bg-gradient-to-br ${bgColor} rounded-[2.5rem] p-8 shadow-2xl border border-white/20 transform transition-all duration-500 cubic-bezier(0.34, 1.56, 0.64, 1) ${animationState === 'enter' ? 'scale-100 translate-y-0 opacity-100' : 'scale-75 translate-y-10 opacity-0'}`}>
+            <div className={`relative z-10 w-[90%] max-w-sm md:max-w-md bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl rounded-[2.5rem] p-8 shadow-2xl border border-white/20 dark:border-white/10 transform transition-all duration-500 cubic-bezier(0.34, 1.56, 0.64, 1) flex flex-col items-center overflow-hidden ${animationState === 'enter' ? 'scale-100 translate-y-0 opacity-100' : 'scale-75 translate-y-10 opacity-0'}`}>
                 
                 {/* Sunburst Background Effect */}
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] pointer-events-none opacity-10 dark:opacity-20 animate-[spin_20s_linear_infinite]">
@@ -321,24 +346,53 @@ const NotificationWindow = () => {
                      ))}
                 </div>
 
+                {/* Close X */}
+                <button onClick={handleClose} className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white transition-colors z-20">
+                    <XCircle size={24} />
+                </button>
+
                 {/* Pet Container */}
-                <div className="relative -mt-16 mb-4 flex justify-center">
+                <div className="relative -mt-4 mb-6 flex justify-center w-full">
+                    {/* Pet Chat Bubble */}
+                    <div className="absolute -top-4 right-0 bg-white dark:bg-slate-800 px-3 py-1.5 rounded-xl rounded-bl-none shadow-lg border border-slate-100 dark:border-slate-700 animate-bounce z-20">
+                        <p className="text-xs font-bold text-slate-700 dark:text-slate-200 whitespace-nowrap">{petChat}</p>
+                    </div>
+
                     <div className="relative z-10 filter drop-shadow-2xl">
-                        <PetAvatar type={petType} status={petStatus} scale={1.5} hasHalo={focusIntegrity > 90} />
+                        <PetAvatar type={petType} status={petStatus} scale={1.3} hasHalo={focusIntegrity > 90} />
                     </div>
                     {/* Sparkles */}
                     <Sparkles className={`absolute top-0 right-10 ${accentColor} animate-bounce`} size={24} />
                     <Star className={`absolute bottom-0 left-10 text-yellow-400 animate-pulse`} size={20} fill="currentColor" />
                 </div>
                 
-                <div className="text-center relative z-10">
-                    <h3 className={`text-3xl font-black ${accentColor} leading-tight mb-2 drop-shadow-sm`}>{title}</h3>
-                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300 leading-relaxed">{message}</p>
+                <div className="text-center relative z-10 w-full">
+                    <h3 className={`text-3xl font-black ${accentColor} leading-tight mb-3 drop-shadow-sm`}>{title}</h3>
+                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300 leading-relaxed mb-8 px-4">{message}</p>
                     
+                    {/* Action Buttons */}
+                    <div className="flex flex-col gap-3 w-full">
+                        <button 
+                            onClick={handleContinue}
+                            className={`w-full py-4 rounded-2xl font-black uppercase tracking-widest text-white shadow-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-2 ${completionEvent.type === 'break_complete' ? 'bg-cyan-500 hover:bg-cyan-400' : completionEvent.type === 'focus_complete' ? 'bg-pink-500 hover:bg-pink-400' : 'bg-amber-500 hover:bg-amber-400'}`}
+                        >
+                            <Play size={18} fill="currentColor" /> {primaryAction}
+                        </button>
+                        
+                        {showSecondary && (
+                            <button 
+                                onClick={completionEvent.type === 'goal_complete' ? handleEndSession : handleClose}
+                                className="w-full py-3 rounded-2xl font-bold text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors text-sm uppercase tracking-wider"
+                            >
+                                {secondaryAction}
+                            </button>
+                        )}
+                    </div>
+
                     {/* Integrity Bonus Badge */}
                     {completionEvent.type === 'focus_complete' && (
-                        <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-black/20 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-wider border border-emerald-200 dark:border-emerald-500/30 shadow-sm backdrop-blur-md">
-                            <ShieldCheck size={14} className="fill-emerald-100 dark:fill-emerald-900" /> +Integrity Boost
+                        <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider border border-emerald-500/20">
+                            <ShieldCheck size={12} className="fill-emerald-500/20" /> +Integrity Boost
                         </div>
                     )}
                 </div>
@@ -349,7 +403,7 @@ const NotificationWindow = () => {
 
 // --- MAIN WIDGET ---
 const FocusPetWidget = () => {
-    const { isActive, mode, timeLeft, timerSettings, petType, setPetType, petName, setPetName, focusIntegrity } = usePomodoro();
+    const { isActive, mode, timeLeft, timerSettings, petType, setPetType, petName, setPetName, focusIntegrity, getPetMessage } = usePomodoro();
     const [hearts, setHearts] = useState<{ id: number, x: number, y: number, r: number, content: React.ReactNode }[]>([]);
     
     // Rename State
@@ -370,19 +424,19 @@ const FocusPetWidget = () => {
     const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
     
     let status: 'sleeping' | 'awake' | 'celebrating' = 'awake';
-    let message = `Let's focus, ${petName}!`;
+    let message = getPetMessage('idle');
     
     if (isActive) {
         if (mode === 'focus') {
             status = 'sleeping';
-            message = "Shh... Focusing...";
+            message = getPetMessage('focus');
         } else {
             status = 'awake';
-            message = "Yay! Break Time!";
+            message = getPetMessage('break');
         }
     } else {
         status = 'awake';
-        message = `Ready, ${petName}?`;
+        message = getPetMessage('idle');
     }
 
     const handlePetClick = (e: React.MouseEvent) => {
@@ -548,11 +602,10 @@ const SoundscapeControl = () => {
     const { isBrownNoiseOn, toggleBrownNoise, soundscape, setSoundscape } = usePomodoro();
     const [isOpen, setIsOpen] = useState(false);
 
+    // Restricted options as requested: Brown and White only.
     const options: { id: SoundscapeType, label: string, icon: any }[] = [
         { id: 'brown', label: 'Brown Noise', icon: Waves },
-        { id: 'rain', label: 'Rainy Day', icon: CloudRain },
-        { id: 'cafe', label: 'Coffee Shop', icon: Coffee },
-        { id: 'forest', label: 'Forest', icon: Cloud },
+        { id: 'white', label: 'White Noise', icon: Cloud },
     ];
 
     const current = options.find(o => o.id === soundscape) || options[0];
@@ -575,10 +628,11 @@ const SoundscapeControl = () => {
                 <Settings size={10} />
             </button>
 
+            {/* Changed from top-full to bottom-full to open UPWARDS as requested, to avoid pet coverage */}
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in slide-in-from-bottom-2">
+                    <div className="absolute bottom-full mb-2 left-0 right-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in slide-in-from-bottom-2">
                         {options.map(opt => (
                             <button
                                 key={opt.id}
