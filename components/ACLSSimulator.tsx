@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import confetti from 'canvas-confetti';
@@ -74,7 +73,7 @@ const SimpleMarkdown = ({ text }: { text: string }) => {
 
 // --- SUB-COMPONENTS ---
 
-const MissionCard = ({ mission, onClick }: { mission: ScenarioData, onClick: () => void }) => (
+const MissionCard: React.FC<{ mission: ScenarioData; onClick: () => void }> = ({ mission, onClick }) => (
     <button
         onClick={onClick}
         className={`relative w-full text-left p-6 rounded-[2rem] border transition-all duration-300 group overflow-hidden ${

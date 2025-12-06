@@ -7,6 +7,7 @@ import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from '
 import { isSameDay } from 'date-fns';
 
 export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
+export type PetType = 'cat' | 'dog';
 
 export interface TimerSettings {
   focus: number;
@@ -37,6 +38,7 @@ interface PomodoroContextType {
   focusTask: string;
   isBrownNoiseOn: boolean;
   pipWindow: Window | null;
+  petType: PetType;
   
   // Stats & History
   sessionHistory: PomodoroSession[];
@@ -54,6 +56,7 @@ interface PomodoroContextType {
   stopAlarm: () => void;
   skipForward: () => void;
   deleteSession: (id: string) => Promise<void>;
+  setPetType: (type: PetType) => void;
 }
 
 const PomodoroContext = createContext<PomodoroContextType | undefined>(undefined);
@@ -87,6 +90,11 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [customSettings, setCustomState] = useState<TimerSettings>(() => {
       const saved = localStorage.getItem('pomodoro_custom_settings');
       return saved ? JSON.parse(saved) : DEFAULT_PRESETS.custom;
+  });
+
+  const [petType, setPetTypeState] = useState<PetType>(() => {
+      const saved = localStorage.getItem('pomodoro_pet_type');
+      return (saved as PetType) || 'cat';
   });
 
   const [timerSettings, setTimerSettings] = useState<TimerSettings>(DEFAULT_PRESETS.classic);
@@ -308,6 +316,11 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
   };
 
+  const setPetType = (type: PetType) => {
+      setPetTypeState(type);
+      localStorage.setItem('pomodoro_pet_type', type);
+  }
+
   // --- AUDIO ---
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -442,6 +455,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     focusTask,
     isBrownNoiseOn,
     pipWindow,
+    petType,
     sessionHistory,
     dailyProgress,
     toggleTimer,
@@ -455,7 +469,8 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     togglePiP,
     stopAlarm,
     skipForward,
-    deleteSession
+    deleteSession,
+    setPetType
   };
 
   return (
