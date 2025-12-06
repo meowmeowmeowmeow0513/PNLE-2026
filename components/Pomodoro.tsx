@@ -27,6 +27,7 @@ const petStyles = `
   }
   @keyframes glow-pulse { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,255,255,0.5)); } 50% { filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); } }
   @keyframes halo-spin { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.1); } 100% { transform: rotate(360deg) scale(1); } }
+  @keyframes sunburst { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
   /* Classes */
   .pet-container { perspective: 1000px; }
@@ -40,6 +41,7 @@ const petStyles = `
   .zzz-bubble { animation: sleep-bubble 3s linear infinite; }
   .love-popup { animation: pop-up 0.8s ease-out forwards; }
   .pet-glow { animation: glow-pulse 3s infinite; }
+  .sunburst-spin { animation: sunburst 20s linear infinite; }
 `;
 
 // --- INTERACTIVE PET AVATAR ---
@@ -248,7 +250,7 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, hasHalo, onPet, sca
     );
 };
 
-// --- CUTESY NOTIFICATION WINDOW (CENTERED) ---
+// --- ENHANCED NOTIFICATION WINDOW ---
 const NotificationWindow = () => {
     const { completionEvent, clearCompletionEvent, petType, petName, focusIntegrity } = usePomodoro();
     const [show, setShow] = useState(false);
@@ -260,7 +262,7 @@ const NotificationWindow = () => {
             setAnimationState('enter');
             
             if (completionEvent.type === 'focus_complete' || completionEvent.type === 'goal_complete') {
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, zIndex: 9999 });
             }
 
             const timer = setTimeout(() => {
@@ -268,8 +270,8 @@ const NotificationWindow = () => {
                 setTimeout(() => {
                     setShow(false);
                     clearCompletionEvent();
-                }, 300); // Wait for exit animation
-            }, 3500);
+                }, 400); // Wait for exit animation
+            }, 4000); // Display time
             return () => clearTimeout(timer);
         }
     }, [completionEvent, clearCompletionEvent]);
@@ -278,47 +280,65 @@ const NotificationWindow = () => {
 
     let title = "";
     let message = "";
-    let icon = <Star size={24} className="text-yellow-400" />;
-    let bgColor = "bg-white dark:bg-slate-900";
+    let bgColor = "from-white to-slate-50 dark:from-slate-900 dark:to-slate-800";
+    let accentColor = "text-yellow-500";
     let petStatus: 'celebrating' | 'awake' | 'sleeping' = 'celebrating';
+    let sunburstColor = "bg-yellow-400";
 
     if (completionEvent.type === 'focus_complete') {
         title = "Session Complete!";
-        message = `${petName} is super proud of you!`;
-        icon = <Zap size={24} className="text-pink-500" />;
-        bgColor = "bg-gradient-to-br from-pink-50 to-white dark:from-pink-900/20 dark:to-slate-900";
+        message = `Amazing focus, ${petName} is cheering for you!`;
+        bgColor = "from-pink-50 to-white dark:from-pink-900/40 dark:to-slate-900";
+        accentColor = "text-pink-500";
+        sunburstColor = "bg-pink-400";
     } else if (completionEvent.type === 'break_complete') {
-        title = "Break Over!";
-        message = "Ready to focus again?";
-        icon = <Coffee size={24} className="text-blue-500" />;
-        bgColor = "bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-slate-900";
+        title = "Time to Focus!";
+        message = "Batteries recharged. Let's crush it!";
+        bgColor = "from-cyan-50 to-white dark:from-cyan-900/40 dark:to-slate-900";
+        accentColor = "text-cyan-500";
         petStatus = 'awake';
+        sunburstColor = "bg-cyan-400";
     } else if (completionEvent.type === 'goal_complete') {
         title = "Goal Crushed!";
-        message = "You are absolutely unstoppable!";
-        icon = <Trophy size={24} className="text-amber-500" />;
-        bgColor = "bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-900";
+        message = "You are absolutely unstoppable today!";
+        bgColor = "from-amber-50 to-white dark:from-amber-900/40 dark:to-slate-900";
+        accentColor = "text-amber-500";
+        sunburstColor = "bg-amber-400";
     }
 
     return (
         <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
-            {/* Backdrop Blur just for the timer area */}
-            <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${animationState === 'enter' ? 'opacity-100' : 'opacity-0'}`}></div>
+            {/* Backdrop Blur */}
+            <div className={`absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity duration-500 ${animationState === 'enter' ? 'opacity-100' : 'opacity-0'}`}></div>
             
-            <div className={`relative z-10 w-64 ${bgColor} rounded-[2rem] p-6 shadow-2xl border border-white/20 transform transition-all duration-300 ${animationState === 'enter' ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}>
-                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20">
-                    <PetAvatar type={petType} status={petStatus} scale={0.8} hasHalo={focusIntegrity > 90} />
+            {/* Main Card */}
+            <div className={`relative z-10 w-80 bg-gradient-to-br ${bgColor} rounded-[2.5rem] p-8 shadow-2xl border border-white/20 transform transition-all duration-500 cubic-bezier(0.34, 1.56, 0.64, 1) ${animationState === 'enter' ? 'scale-100 translate-y-0 opacity-100' : 'scale-75 translate-y-10 opacity-0'}`}>
+                
+                {/* Sunburst Background Effect */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] pointer-events-none opacity-10 dark:opacity-20 animate-[spin_20s_linear_infinite]">
+                     {[...Array(12)].map((_, i) => (
+                         <div key={i} className={`absolute top-1/2 left-1/2 w-full h-8 ${sunburstColor} -translate-y-1/2 origin-left`} style={{ transform: `rotate(${i * 30}deg)` }}></div>
+                     ))}
+                </div>
+
+                {/* Pet Container */}
+                <div className="relative -mt-16 mb-4 flex justify-center">
+                    <div className="relative z-10 filter drop-shadow-2xl">
+                        <PetAvatar type={petType} status={petStatus} scale={1.5} hasHalo={focusIntegrity > 90} />
+                    </div>
+                    {/* Sparkles */}
+                    <Sparkles className={`absolute top-0 right-10 ${accentColor} animate-bounce`} size={24} />
+                    <Star className={`absolute bottom-0 left-10 text-yellow-400 animate-pulse`} size={20} fill="currentColor" />
                 </div>
                 
-                <div className="mt-8 text-center">
-                    <div className="flex justify-center mb-2">{icon}</div>
-                    <h3 className="text-xl font-black text-slate-800 dark:text-white leading-tight mb-1">{title}</h3>
-                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed px-2">{message}</p>
+                <div className="text-center relative z-10">
+                    <h3 className={`text-3xl font-black ${accentColor} leading-tight mb-2 drop-shadow-sm`}>{title}</h3>
+                    <p className="text-sm font-bold text-slate-600 dark:text-slate-300 leading-relaxed">{message}</p>
                     
                     {/* Integrity Bonus Badge */}
                     {completionEvent.type === 'focus_complete' && (
-                        <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider border border-emerald-200 dark:border-emerald-500/30">
-                            <ShieldCheck size={12} /> +Integrity
+                        <div className="mt-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/50 dark:bg-black/20 text-emerald-600 dark:text-emerald-400 text-xs font-black uppercase tracking-wider border border-emerald-200 dark:border-emerald-500/30 shadow-sm backdrop-blur-md">
+                            <ShieldCheck size={14} className="fill-emerald-100 dark:fill-emerald-900" /> +Integrity Boost
                         </div>
                     )}
                 </div>

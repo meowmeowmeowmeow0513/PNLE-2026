@@ -481,7 +481,8 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       if ('documentPictureInPicture' in window) {
           try {
               // @ts-ignore
-              const win = await window.documentPictureInPicture.requestWindow({ width: 300, height: 300 });
+              // Smaller default size for cleaner Mini Mode
+              const win = await window.documentPictureInPicture.requestWindow({ width: 220, height: 220 });
               // Copy styles
               Array.from(document.styleSheets).forEach((styleSheet) => {
                 try {

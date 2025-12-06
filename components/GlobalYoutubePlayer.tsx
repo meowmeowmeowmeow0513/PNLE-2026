@@ -122,39 +122,39 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
   // Calculate Progress for Ring
   const totalTime = mode === 'focus' ? timerSettings.focus : (mode === 'shortBreak' ? timerSettings.shortBreak : timerSettings.longBreak);
   const progress = timeLeft / totalTime;
-  const radius = 90;
+  const radius = 65; // Smaller radius for 220px window
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress * circumference);
 
   // --- CONTENT FOR PIP WINDOW (Styled to match Main App) ---
   const PiPContent = pipWindow ? createPortal(
-    <div className={`flex flex-col items-center justify-center h-full w-full relative p-4 font-sans overflow-hidden ${mode === 'focus' ? 'bg-[#020617]' : 'bg-[#0f172a]'}`}>
+    <div className={`flex flex-col items-center justify-center h-full w-full relative p-2 font-sans overflow-hidden ${mode === 'focus' ? 'bg-[#020617]' : 'bg-[#0f172a]'}`}>
         
         {/* Animated Background Mesh */}
         <div className={`absolute top-[-50%] left-[-50%] w-[200%] h-[200%] opacity-30 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] ${mode === 'focus' ? 'from-pink-600 via-purple-900 to-transparent' : 'from-cyan-500 via-blue-900 to-transparent'} animate-pulse`}></div>
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
 
-        <div className="relative z-10 flex flex-col items-center w-full h-full justify-between py-2">
+        <div className="relative z-10 flex flex-col items-center w-full h-full justify-between py-1">
             
             {/* Top Bar: Task & Status */}
             <div className="w-full flex items-center justify-between px-2">
-                 <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${mode === 'focus' ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'}`}>
-                    {mode === 'focus' ? <Zap size={10} fill="currentColor" /> : <Coffee size={10} fill="currentColor" />}
+                 <div className={`flex items-center gap-1 px-1.5 py-0.5 rounded-full text-[9px] font-bold uppercase tracking-widest border ${mode === 'focus' ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'}`}>
+                    {mode === 'focus' ? <Zap size={8} fill="currentColor" /> : <Coffee size={8} fill="currentColor" />}
                     {mode === 'focus' ? 'Focus' : 'Break'}
                 </div>
-                <div className="text-[10px] text-slate-400 font-mono">
+                <div className="text-[9px] text-slate-400 font-mono">
                     {sessionsCompleted}/{sessionGoal}
                 </div>
             </div>
 
             {/* Central Ring & Time */}
-            <div className="relative flex items-center justify-center my-2">
-                 <svg width="200" height="200" className="transform -rotate-90">
-                    <circle cx="100" cy="100" r="90" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="transparent" />
+            <div className="relative flex items-center justify-center my-1">
+                 <svg width="140" height="140" className="transform -rotate-90">
+                    <circle cx="70" cy="70" r="65" stroke="rgba(255,255,255,0.1)" strokeWidth="6" fill="transparent" />
                     <circle 
-                        cx="100" cy="100" r="90" 
+                        cx="70" cy="70" r="65" 
                         stroke={mode === 'focus' ? '#ec4899' : '#06b6d4'} 
-                        strokeWidth="8" 
+                        strokeWidth="6" 
                         fill="transparent" 
                         strokeLinecap="round" 
                         strokeDasharray={circumference} 
@@ -164,10 +164,10 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
                  </svg>
                  
                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                     <div className="mb-2">
+                     <div className="mb-1 transform scale-75 origin-center">
                          <MiniPet type={petType} mode={mode} />
                      </div>
-                     <span className="text-4xl font-mono font-black tracking-tighter text-white drop-shadow-lg leading-none">
+                     <span className="text-3xl font-mono font-black tracking-tighter text-white drop-shadow-lg leading-none">
                         {formatTime(timeLeft)}
                      </span>
                  </div>
@@ -177,15 +177,15 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
             <div className="flex gap-4 items-center">
                 <button 
                     onClick={toggleTimer} 
-                    className={`w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg border border-white/20 transition-transform hover:scale-105 active:scale-95 ${mode === 'focus' ? 'bg-gradient-to-br from-pink-600 to-rose-600' : 'bg-gradient-to-br from-cyan-600 to-blue-600'}`}
+                    className={`w-10 h-10 rounded-full flex items-center justify-center text-white shadow-lg border border-white/20 transition-transform hover:scale-105 active:scale-95 ${mode === 'focus' ? 'bg-gradient-to-br from-pink-600 to-rose-600' : 'bg-gradient-to-br from-cyan-600 to-blue-600'}`}
                 >
-                    {isActive ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
+                    {isActive ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" className="ml-0.5" />}
                 </button>
             </div>
             
             {focusTask && (
-                <div className="w-full text-center mt-2 px-4">
-                    <p className="text-[10px] font-bold text-white/60 truncate">{focusTask}</p>
+                <div className="w-full text-center mt-1 px-4">
+                    <p className="text-[9px] font-bold text-white/60 truncate">{focusTask}</p>
                 </div>
             )}
         </div>
