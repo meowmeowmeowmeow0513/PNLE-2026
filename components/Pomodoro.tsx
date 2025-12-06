@@ -2,9 +2,9 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone
+    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud
 } from 'lucide-react';
-import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType } from './PomodoroContext';
+import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType, SoundscapeType } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
 import { isWithinInterval } from 'date-fns';
 import confetti from 'canvas-confetti';
@@ -26,6 +26,7 @@ const petStyles = `
       100% { transform: scale(1) translateY(-60px) rotate(var(--r)); opacity: 0; } 
   }
   @keyframes glow-pulse { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,255,255,0.5)); } 50% { filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); } }
+  @keyframes halo-spin { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.1); } 100% { transform: rotate(360deg) scale(1); } }
 
   /* Classes */
   .pet-container { perspective: 1000px; }
@@ -44,22 +45,28 @@ const petStyles = `
 // --- INTERACTIVE PET AVATAR ---
 interface PetAvatarProps {
     type: PetType;
-    status: 'sleeping' | 'awake';
-    onPet: (e: React.MouseEvent) => void;
+    status: 'sleeping' | 'awake' | 'celebrating';
+    hasHalo?: boolean;
+    onPet?: (e: React.MouseEvent) => void;
+    scale?: number;
 }
 
-const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
+const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, hasHalo, onPet, scale = 1 }) => {
     const [isInteracting, setIsInteracting] = useState(false);
 
     const handleClick = (e: React.MouseEvent) => {
-        setIsInteracting(true);
-        setTimeout(() => setIsInteracting(false), 300); // Reset after animation
-        onPet(e);
+        if (onPet) {
+            setIsInteracting(true);
+            setTimeout(() => setIsInteracting(false), 300); 
+            onPet(e);
+        }
     };
+
+    const containerClass = `w-40 h-40 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : status === 'celebrating' ? 'animate-bounce' : 'pet-breathe'}`;
 
     // --- COSMIC CAT RENDERER (Blob Style) ---
     const renderCat = () => (
-        <svg viewBox="0 0 200 200" className={`w-40 h-40 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : 'pet-breathe'}`}>
+        <svg viewBox="0 0 200 200" className={containerClass} style={{ transform: `scale(${scale})` }}>
             <defs>
                 <linearGradient id="catBody" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#f0abfc" /> {/* Pink-300 */}
@@ -77,6 +84,10 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
                     </feMerge>
                 </filter>
             </defs>
+
+            {hasHalo && (
+                <ellipse cx="100" cy="60" rx="40" ry="10" fill="none" stroke="#fbbf24" strokeWidth="4" className="animate-[halo-spin_4s_linear_infinite]" style={{ transformOrigin: '100px 60px' }} />
+            )}
 
             {/* Tail */}
             <path 
@@ -139,7 +150,7 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
 
     // --- SUNNY DOGE RENDERER (Blob Style) ---
     const renderDog = () => (
-        <svg viewBox="0 0 200 200" className={`w-40 h-40 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : status === 'awake' ? 'animate-bounce-happy' : 'pet-breathe'}`}>
+        <svg viewBox="0 0 200 200" className={containerClass} style={{ transform: `scale(${scale})` }}>
             <defs>
                 <linearGradient id="dogBody" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#fcd34d" /> {/* Amber-300 */}
@@ -157,6 +168,10 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
                     </feMerge>
                 </filter>
             </defs>
+
+            {hasHalo && (
+                <ellipse cx="100" cy="50" rx="40" ry="10" fill="none" stroke="#fbbf24" strokeWidth="4" className="animate-[halo-spin_4s_linear_infinite]" style={{ transformOrigin: '100px 50px' }} />
+            )}
 
             {/* Tail (Wagging) */}
             <path 
@@ -177,8 +192,8 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
             {/* Head Group */}
             <g transform="translate(100, 90)">
                 {/* Ears */}
-                <path d="M-40 -35 L-50 -10 L-25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' ? 'pet-ear-L' : ''} />
-                <path d="M40 -35 L50 -10 L25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' ? 'pet-ear-R' : ''} />
+                <path d="M-40 -35 L-50 -10 L-25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' || status === 'celebrating' ? 'pet-ear-L' : ''} />
+                <path d="M40 -35 L50 -10 L25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' || status === 'celebrating' ? 'pet-ear-R' : ''} />
 
                 {/* Head Base */}
                 <rect x="-50" y="-45" width="100" height="90" rx="35" fill="url(#dogBody)" filter="url(#glowDog)" />
@@ -233,9 +248,48 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
     );
 };
 
+// --- CUTESY TRANSITION OVERLAY ---
+const TransitionOverlay = () => {
+    const { completionEvent, petType, petName } = usePomodoro();
+    const [show, setShow] = useState(false);
+    const [message, setMessage] = useState('');
+    const [subMessage, setSubMessage] = useState('');
+
+    useEffect(() => {
+        if (completionEvent.type) {
+            setShow(true);
+            if (completionEvent.type === 'focus_complete') {
+                setMessage("Session Complete!");
+                setSubMessage(`Great job, ${petName} is proud!`);
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            } else {
+                setMessage("Back to Work!");
+                setSubMessage(`Let's focus now!`);
+            }
+            const timer = setTimeout(() => setShow(false), 3500);
+            return () => clearTimeout(timer);
+        }
+    }, [completionEvent, petName]);
+
+    if (!show) return null;
+
+    return (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none">
+            <div className="absolute inset-0 bg-black/40 backdrop-blur-md animate-in fade-in"></div>
+            <div className="relative z-10 animate-in zoom-in duration-300 flex flex-col items-center">
+                <div className="mb-4 drop-shadow-2xl filter brightness-110">
+                    <PetAvatar type={petType} status="celebrating" scale={1.5} hasHalo={true} />
+                </div>
+                <h2 className="text-4xl font-black text-white drop-shadow-lg stroke-black mb-2 text-center">{message}</h2>
+                <p className="text-xl font-bold text-white/90 drop-shadow-md">{subMessage}</p>
+            </div>
+        </div>
+    );
+};
+
 // --- MAIN WIDGET ---
 const FocusPetWidget = () => {
-    const { isActive, mode, timeLeft, timerSettings, petType, setPetType, petName, setPetName } = usePomodoro();
+    const { isActive, mode, timeLeft, timerSettings, petType, setPetType, petName, setPetName, focusIntegrity } = usePomodoro();
     const [hearts, setHearts] = useState<{ id: number, x: number, y: number, r: number, content: React.ReactNode }[]>([]);
     
     // Rename State
@@ -255,7 +309,7 @@ const FocusPetWidget = () => {
     const totalTime = mode === 'focus' ? timerSettings.focus : (mode === 'shortBreak' ? timerSettings.shortBreak : timerSettings.longBreak); 
     const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
     
-    let status: 'sleeping' | 'awake' = 'awake';
+    let status: 'sleeping' | 'awake' | 'celebrating' = 'awake';
     let message = `Let's focus, ${petName}!`;
     
     if (isActive) {
@@ -401,7 +455,7 @@ const FocusPetWidget = () => {
                     )}
                 </div>
 
-                <PetAvatar type={petType} status={status} onPet={handlePetClick} />
+                <PetAvatar type={petType} status={status} onPet={handlePetClick} hasHalo={focusIntegrity > 90} />
                 
                 <div className="text-center -mt-2 relative z-20 pointer-events-none">
                     <h4 className="text-sm font-black text-slate-800 dark:text-white transition-colors duration-300 tracking-tight bg-white/50 dark:bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm shadow-sm border border-white/20">
@@ -429,10 +483,63 @@ const FocusPetWidget = () => {
     );
 };
 
+// --- SOUNDSCAPE CONTROL UI ---
+const SoundscapeControl = () => {
+    const { isBrownNoiseOn, toggleBrownNoise, soundscape, setSoundscape } = usePomodoro();
+    const [isOpen, setIsOpen] = useState(false);
+
+    const options: { id: SoundscapeType, label: string, icon: any }[] = [
+        { id: 'brown', label: 'Brown Noise', icon: Waves },
+        { id: 'rain', label: 'Rainy Day', icon: CloudRain },
+        { id: 'cafe', label: 'Coffee Shop', icon: Coffee },
+        { id: 'forest', label: 'Forest', icon: Cloud },
+    ];
+
+    const current = options.find(o => o.id === soundscape) || options[0];
+
+    return (
+        <div className="relative">
+            <button 
+                onClick={toggleBrownNoise} 
+                className={`w-full py-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-inner' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-300'}`}
+            >
+                <div className="flex items-center gap-2">
+                    <current.icon size={16} className={isBrownNoiseOn ? 'animate-pulse' : ''} />
+                    <span className="text-[9px] font-bold uppercase">{isBrownNoiseOn ? 'On' : 'Off'}</span>
+                </div>
+            </button>
+            <button 
+                onClick={() => setIsOpen(!isOpen)}
+                className="absolute right-1 top-1 bottom-1 w-6 flex items-center justify-center hover:bg-black/5 rounded dark:hover:bg-white/5 text-slate-400"
+            >
+                <Settings size={10} />
+            </button>
+
+            {isOpen && (
+                <>
+                    <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
+                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in slide-in-from-top-2">
+                        {options.map(opt => (
+                            <button
+                                key={opt.id}
+                                onClick={() => { setSoundscape(opt.id); setIsOpen(false); }}
+                                className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-bold rounded-lg transition-colors ${soundscape === opt.id ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-900/20 dark:text-indigo-300' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-white/5'}`}
+                            >
+                                <opt.icon size={14} />
+                                {opt.label}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
+        </div>
+    );
+};
+
 const Pomodoro: React.FC = () => {
   const { 
-    mode, timeLeft, isActive, activePreset, timerSettings, sessionGoal, sessionsCompleted, focusTask, isBrownNoiseOn,
-    toggleTimer, resetTimer, stopSessionEarly, setPreset, setSessionGoal, setFocusTask, toggleBrownNoise, skipForward, togglePiP, setCustomSettings
+    mode, timeLeft, isActive, activePreset, timerSettings, sessionGoal, sessionsCompleted, focusTask,
+    toggleTimer, resetTimer, stopSessionEarly, setPreset, setSessionGoal, setFocusTask, skipForward, togglePiP, setCustomSettings
   } = usePomodoro();
 
   const { tasks } = useTasks();
@@ -567,6 +674,10 @@ const Pomodoro: React.FC = () => {
 
         {/* CENTER: THE RING */}
         <div className="lg:col-span-6 flex flex-col items-center justify-center order-1 lg:order-2 py-8 lg:py-0 relative">
+            
+            {/* OVERLAY for Transition */}
+            <TransitionOverlay />
+
             <div className="relative group cursor-pointer" onClick={toggleTimer}>
                 {/* Outer Glow Ring */}
                 <div className={`absolute inset-0 rounded-full border-[1px] opacity-10 transform scale-110 pointer-events-none ${isFocus ? 'border-pink-500' : 'border-cyan-500'}`}></div>
@@ -716,10 +827,7 @@ const Pomodoro: React.FC = () => {
 
              {/* 3. Media Controls (Compact) */}
              <div className="grid grid-cols-2 gap-2 relative z-10">
-                <button onClick={toggleBrownNoise} className={`py-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-inner' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-300'}`}>
-                    <Waves size={16} className={isBrownNoiseOn ? 'animate-pulse' : ''} />
-                    <span className="text-[9px] font-bold uppercase">{isBrownNoiseOn ? 'Noise On' : 'No Sound'}</span>
-                </button>
+                <SoundscapeControl />
                 <button onClick={togglePiP} className="py-2 rounded-xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1 transition-all shadow-sm">
                     <MonitorPlay size={16} />
                     <span className="text-[9px] font-bold uppercase">Mini Mode</span>
@@ -751,7 +859,7 @@ const Pomodoro: React.FC = () => {
                       </div>
                       <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">End Session Early?</h3>
                       <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-6">
-                          You still have time left. Ending now will stop the timer.
+                          Quitting now will reduce your <span className="text-pink-500 font-bold">Focus Integrity</span>. Are you sure?
                       </p>
                       
                       <div className="flex flex-col gap-3 w-full">
@@ -759,13 +867,13 @@ const Pomodoro: React.FC = () => {
                               onClick={() => handleEarlyExit('save')}
                               className="w-full py-3 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-2"
                           >
-                              <Save size={18} /> Complete & Save Progress
+                              <Save size={18} /> Complete & Save (Safe)
                           </button>
                           <button 
                               onClick={() => handleEarlyExit('discard')}
                               className="w-full py-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-red-100 dark:hover:bg-red-900/20 hover:text-red-500 rounded-xl font-bold flex items-center justify-center gap-2"
                           >
-                              <X size={18} /> Discard Session
+                              <X size={18} /> Discard & Lose Integrity
                           </button>
                           <button 
                               onClick={() => handleEarlyExit('resume')}

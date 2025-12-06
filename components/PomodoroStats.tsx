@@ -2,7 +2,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePomodoro, PomodoroSession } from './PomodoroContext';
-import { Activity, Trash2, Clock, PieChart as PieIcon, BarChart3, Info, X, Target, Calendar, CheckCircle2 } from 'lucide-react';
+import { Activity, Trash2, Clock, PieChart as PieIcon, BarChart3, Info, X, Target, Calendar, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { format, isSameDay, subDays, startOfDay, isAfter } from 'date-fns';
 
 const DailyPieChart = ({ focusTime, breakTime }: { focusTime: number, breakTime: number }) => {
@@ -111,7 +111,7 @@ const WeeklyOverview = ({ history }: { history: PomodoroSession[] }) => {
 };
 
 const PomodoroStats: React.FC = () => {
-  const { sessionHistory, deleteSession } = usePomodoro();
+  const { sessionHistory, deleteSession, focusIntegrity } = usePomodoro();
   const [showWeeklyInfo, setShowWeeklyInfo] = useState(false);
 
   const today = new Date();
@@ -154,7 +154,21 @@ const PomodoroStats: React.FC = () => {
             <DailyPieChart focusTime={focusTime} breakTime={breakTime} />
         </div>
 
-        {/* --- WEEKLY BALANCE (NEW) --- */}
+        {/* --- INTEGRITY SCORE (NEW) --- */}
+        <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-2xl p-4 shrink-0 flex items-center justify-between">
+            <div className="flex flex-col">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Integrity Score</span>
+                <span className="text-sm font-bold text-slate-700 dark:text-slate-300">Accountability</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <ShieldCheck size={20} className={focusIntegrity > 80 ? 'text-emerald-500' : focusIntegrity > 50 ? 'text-amber-500' : 'text-red-500'} />
+                <span className={`text-2xl font-black ${focusIntegrity > 80 ? 'text-emerald-500' : focusIntegrity > 50 ? 'text-amber-500' : 'text-red-500'}`}>
+                    {focusIntegrity}%
+                </span>
+            </div>
+        </div>
+
+        {/* --- WEEKLY BALANCE --- */}
         <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-3xl p-5 overflow-hidden shrink-0 relative">
             <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 opacity-60">

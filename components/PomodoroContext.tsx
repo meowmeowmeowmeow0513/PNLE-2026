@@ -8,6 +8,7 @@ import { isSameDay } from 'date-fns';
 
 export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
 export type PetType = 'cat' | 'dog';
+export type SoundscapeType = 'brown' | 'rain' | 'cafe' | 'forest';
 
 export interface TimerSettings {
   focus: number;
@@ -37,11 +38,14 @@ interface PomodoroContextType {
   sessionsCompleted: number;
   focusTask: string;
   isBrownNoiseOn: boolean;
+  soundscape: SoundscapeType;
   pipWindow: Window | null;
   petType: PetType;
   petName: string; // Dynamic getter based on type
   catName: string;
   dogName: string;
+  focusIntegrity: number; // 0-100 Score for accountability
+  completionEvent: { type: 'focus_complete' | 'break_complete' | null, timestamp: number };
   
   // Stats & History
   sessionHistory: PomodoroSession[];
@@ -55,6 +59,7 @@ interface PomodoroContextType {
   setSessionGoal: (goal: number) => void;
   setFocusTask: (task: string) => void;
   toggleBrownNoise: () => void;
+  setSoundscape: (type: SoundscapeType) => void;
   togglePiP: () => Promise<void>;
   stopAlarm: () => void;
   skipForward: () => void;
@@ -121,9 +126,16 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
   const [focusTask, setFocusTask] = useState('');
   
-  const [pipWindow, setPipWindow] = useState<Window | null>(null);
+  // Audio & Ambience
   const [isBrownNoiseOn, setIsBrownNoiseOn] = useState(false);
+  const [soundscape, setSoundscapeState] = useState<SoundscapeType>('brown');
   
+  const [pipWindow, setPipWindow] = useState<Window | null>(null);
+  
+  // --- ACCOUNTABILITY & EVENTS ---
+  const [focusIntegrity, setFocusIntegrity] = useState(100); // 0-100%
+  const [completionEvent, setCompletionEvent] = useState<{ type: 'focus_complete' | 'break_complete' | null, timestamp: number }>({ type: null, timestamp: 0 });
+
   // --- ANALYTICS STATE ---
   const [sessionHistory, setSessionHistory] = useState<PomodoroSession[]>([]);
   const [dailyProgress, setDailyProgress] = useState(0);
@@ -248,6 +260,9 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
             saveSession(elapsed, 'focus');
             trackAction('finish_pomodoro');
             setSessionsCompleted(prev => prev + 1);
+            setFocusIntegrity(prev => Math.min(100, prev + 5)); // Reward integrity
+            // Trigger Animation Event
+            setCompletionEvent({ type: 'focus_complete', timestamp: Date.now() });
         }
         
         if ((sessionsCompleted + 1) % 4 === 0) {
@@ -262,6 +277,9 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         if (!wasSkipped) saveSession(elapsed, mode);
         nextMode = 'focus';
         nextTime = timerSettings.focus;
+        if (!wasSkipped) {
+             setCompletionEvent({ type: 'break_complete', timestamp: Date.now() });
+        }
     }
 
     setMode(nextMode);
@@ -296,6 +314,9 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       
       if (save) {
           await saveSession(elapsed, mode);
+      } else {
+          // Penalize integrity for discarding valuable time
+          setFocusIntegrity(prev => Math.max(0, prev - 10));
       }
 
       // Reset to Focus Mode fresh start
@@ -401,6 +422,14 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     }
   };
 
+  const setSoundscape = (type: SoundscapeType) => {
+      setSoundscapeState(type);
+      // For now, all types trigger the generated noise, but UI shows selection
+      if (!isBrownNoiseOn) {
+          toggleBrownNoise();
+      }
+  }
+
   const startAlarmLoop = () => {
       const play = () => {
           const ctx = initAudio();
@@ -480,11 +509,14 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     sessionsCompleted,
     focusTask,
     isBrownNoiseOn,
+    soundscape,
     pipWindow,
     petType,
     petName,
     catName,
     dogName,
+    focusIntegrity,
+    completionEvent,
     sessionHistory,
     dailyProgress,
     toggleTimer,
@@ -495,6 +527,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     setSessionGoal,
     setFocusTask,
     toggleBrownNoise,
+    setSoundscape,
     togglePiP,
     stopAlarm,
     skipForward,
