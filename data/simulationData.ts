@@ -1,5 +1,5 @@
 
-import { HeartPulse, Activity, Zap, Droplets, Wind, ShieldAlert, Filter, AlertTriangle, Skull, Thermometer, Syringe, Brain } from 'lucide-react';
+import { HeartPulse, Activity, Zap, Droplets, Wind, ShieldAlert, Filter, AlertTriangle, Skull, Thermometer, Syringe, Brain, Baby, Users } from 'lucide-react';
 
 export type Rhythm = 'NSR' | 'VFIB' | 'ASYSTOLE' | 'PEA' | 'VT' | 'TORSADES' | 'BRADYCARDIA';
 
@@ -30,6 +30,15 @@ export interface ClinicalCase {
     category: string; // Replacement for difficulty
 }
 
+export interface QuizQuestion {
+    id: string;
+    category: string; // NP1-5 or ACLS
+    question: string;
+    options: string[];
+    correctAnswer: number; // Index
+    explanation: string;
+}
+
 export const H_AND_TS = [
     { id: 'hypovolemia', label: 'Hypovolemia', hint: 'Check fluid status/blood loss' },
     { id: 'hypoxia', label: 'Hypoxia', hint: 'Check airway/O2 sat' },
@@ -46,7 +55,7 @@ export const H_AND_TS = [
 
 export const TUTORIAL_SCENARIO: ScenarioData = {
     id: 999,
-    title: "Basic Training",
+    title: "Skills Lab: Basic Training",
     patient: "Training Manikin",
     history: "Standard VFib Cardiac Arrest. Follow the guided steps to learn the Shock -> CPR -> Drug sequence.",
     startRhythm: 'VFIB',
@@ -90,7 +99,7 @@ export const SCENARIOS: ScenarioData[] = [
     // SHOCKABLE PATH
     { 
         id: 1, 
-        title: "Refractory VFib",
+        title: "Code Blue: ER",
         patient: "55M, Post-MI", 
         history: "Collapsed in waiting room. No pulse. Monitor shows chaotic VFib. Refractory to initial defib.", 
         startRhythm: 'VFIB',
@@ -105,7 +114,7 @@ export const SCENARIOS: ScenarioData[] = [
     },
     { 
         id: 2, 
-        title: "Pulseless VT",
+        title: "Code Blue: Dialysis Unit",
         patient: "42F, Renal Failure", 
         history: "Found unresponsive during dialysis. Monitor shows Wide Complex Tachycardia.", 
         startRhythm: 'VT',
@@ -122,7 +131,7 @@ export const SCENARIOS: ScenarioData[] = [
     // NON-SHOCKABLE PATH
     { 
         id: 3, 
-        title: "Asystole (Flatline)",
+        title: "Code Blue: Ward 3",
         patient: "78M, Full Code", 
         history: "Unresponsive. Monitor shows flatline in 2 leads. No electrical activity.", 
         startRhythm: 'ASYSTOLE',
@@ -137,7 +146,7 @@ export const SCENARIOS: ScenarioData[] = [
     },
     { 
         id: 4, 
-        title: "PEA Arrest",
+        title: "Code Blue: Trauma Room",
         patient: "25M, Trauma", 
         history: "Car accident. Monitor shows Sinus Rhythm, but patient has NO PULSE.", 
         startRhythm: 'PEA',
@@ -216,5 +225,89 @@ export const SIM_CASES: ClinicalCase[] = [
         color: 'red',
         description: 'MONA protocol, ECG interpretation, and Cath Lab coordination.',
         category: 'Cardiovascular'
+    }
+];
+
+// --- SLE QUIZZES (10 High-Yield Items) ---
+export const SIDE_QUEST_QUIZZES: QuizQuestion[] = [
+    {
+        id: 'q1',
+        category: 'ACLS - Pharmacology',
+        question: "During a code, the team leader orders Adenosine 6mg IV push. What is the PRIORITY nursing action during administration?",
+        options: ["Dilute with 10mL saline", "Administer via slow IV push", "Follow immediately with 20mL saline flush", "Check BP before administration"],
+        correctAnswer: 2,
+        explanation: "Adenosine has an extremely short half-life (<10s). It must be slammed (rapid push) and followed immediately by a flush to reach the heart."
+    },
+    {
+        id: 'q2',
+        category: 'ACLS - Rhythm',
+        question: "You identify Ventricular Fibrillation (VFib) on the monitor. There is no pulse. You have just delivered the first shock. What is the IMMEDIATE next step?",
+        options: ["Check for a pulse", "Check the rhythm", "Administer Epinephrine", "Resume high-quality CPR"],
+        correctAnswer: 3,
+        explanation: "After a shock, ALWAYS resume CPR immediately for 2 minutes. Do not check rhythm or pulse until the cycle ends to maximize perfusion."
+    },
+    {
+        id: 'q3',
+        category: 'Emergency - Electrolytes',
+        question: "A dialysis patient arrives in cardiac arrest. The ECG shows a 'Sine Wave' pattern (wide QRS merging with T). What is the suspected cause and treatment?",
+        options: ["Hypokalemia / Potassium", "Hyperkalemia / Calcium Gluconate", "Hypocalcemia / Magnesium", "Hypercalcemia / Fluids"],
+        correctAnswer: 1,
+        explanation: "Sine waves indicate severe Hyperkalemia. Calcium Gluconate is the priority to stabilize the cardiac membrane, followed by Insulin/Glucose."
+    },
+    {
+        id: 'q4',
+        category: 'Emergency - Trauma',
+        question: "A trauma patient has distended neck veins, tracheal deviation to the left, and absent breath sounds on the right. What is the indicated intervention?",
+        options: ["Intubation", "Needle Decompression", "Chest Tube Insertion", "Pericardiocentesis"],
+        correctAnswer: 1,
+        explanation: "Signs of Tension Pneumothorax. Immediate Needle Decompression (thoracostomy) is required to relieve pressure before a chest tube."
+    },
+    {
+        id: 'q5',
+        category: 'ACLS - Pharmacology',
+        question: "What is the maximum single dose of Atropine allowed for symptomatic bradycardia?",
+        options: ["0.5 mg", "1.0 mg", "3.0 mg", "0.04 mg/kg"],
+        correctAnswer: 2,
+        explanation: "Current guidelines state Atropine 1mg bolus, repeat every 3-5 mins, up to a maximum total dose of 3mg."
+    },
+    {
+        id: 'q6',
+        category: 'Critical Care - Neuro',
+        question: "A post-ROSC patient is comatose. Targeted Temperature Management (TTM) is ordered. What is the target temperature range?",
+        options: ["30°C - 32°C", "32°C - 36°C", "36°C - 37.5°C", "37°C - 39°C"],
+        correctAnswer: 1,
+        explanation: "TTM targets 32°C to 36°C for at least 24 hours to improve neurological outcomes (neuroprotection) after cardiac arrest."
+    },
+    {
+        id: 'q7',
+        category: 'Emergency - DKA',
+        question: "A DKA patient is receiving Insulin IV. Their Potassium is 3.3 mEq/L. What is the nurse's priority?",
+        options: ["Increase Insulin rate", "Hold Insulin and notify MD", "Continue Insulin and give K+", "Give Dextrose 50%"],
+        correctAnswer: 1,
+        explanation: "Insulin drives Potassium into cells, worsening hypokalemia. If K < 3.3, hold insulin and replace K+ to prevent fatal arrhythmias."
+    },
+    {
+        id: 'q8',
+        category: 'ACLS - Rhythm',
+        question: "A patient is in Torsades de Pointes. They have a pulse but are unstable. Apart from cardioversion, what medication is first-line?",
+        options: ["Amiodarone", "Lidocaine", "Magnesium Sulfate", "Adenosine"],
+        correctAnswer: 2,
+        explanation: "Magnesium Sulfate (1-2g IV) is the specific treatment for Torsades de Pointes (Polymorphic VT), usually caused by low Magnesium."
+    },
+    {
+        id: 'q9',
+        category: 'Emergency - Stroke',
+        question: "A patient presents with signs of stroke starting 2 hours ago. CT scan is negative for bleed. What is the priority intervention?",
+        options: ["Heparin Infusion", "Aspirin 325mg", "tPA (Alteplase)", "Mannitol"],
+        correctAnswer: 2,
+        explanation: "Ischemic stroke within the 3-4.5 hour window is eligible for tPA (thrombolytics) to dissolve the clot. This is the priority after ruling out bleed."
+    },
+    {
+        id: 'q10',
+        category: 'Emergency - Shock',
+        question: "In Septic Shock, what is the 'Hour-1 Bundle' priority for hypotension refractory to fluids?",
+        options: ["Dobutamine", "Norepinephrine", "Epinephrine", "Milrinone"],
+        correctAnswer: 1,
+        explanation: "Norepinephrine (Levophed) is the first-line vasopressor for Septic Shock to maintain MAP > 65mmHg."
     }
 ];

@@ -29,11 +29,11 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
                             <HeartPulse size={40} className="text-white" />
                         </div>
                         <h2 className="text-2xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none mb-2">
-                            December <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">Quest</span>
+                            The <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 to-purple-500">SLE</span>
                         </h2>
                         <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/50 dark:bg-white/10 rounded-full border border-slate-200 dark:border-white/10 mt-2">
                             <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">Live Now</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">Live</span>
                         </div>
                     </div>
 
@@ -50,24 +50,28 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
                         </div>
 
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white mb-4">
-                            Welcome back, Future RN.
+                            Simulation Learning Experience
                         </h3>
                         
                         <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                             <p>
-                                The wait is over. The <strong className="text-pink-500">ACLS Simulator</strong> is now online in your dashboard.
+                                The <strong className="text-pink-500">December Edition</strong> is now online.
                             </p>
                             <p>
-                                Test your ability to manage cardiac arrest scenarios in real-time. Can you secure ROSC and save the patient?
+                                Complete daily Code Blue sims and quizzes to unlock exclusive rank badges:
                             </p>
                             <ul className="space-y-2 mt-2">
                                 <li className="flex items-center gap-2">
-                                    <Star size={14} className="text-yellow-400" fill="currentColor" />
-                                    <span>Master the Algorithms</span>
+                                    <Star size={14} className="text-emerald-400" fill="currentColor" />
+                                    <span>The Vital Sign Warrior</span>
                                 </li>
                                 <li className="flex items-center gap-2">
-                                    <Star size={14} className="text-yellow-400" fill="currentColor" />
-                                    <span>Earn XP & Climb Ranks</span>
+                                    <Star size={14} className="text-purple-400" fill="currentColor" />
+                                    <span>The IV Sniper</span>
+                                </li>
+                                <li className="flex items-center gap-2">
+                                    <Star size={14} className="text-amber-400" fill="currentColor" />
+                                    <span>ACLS GOAT (Max Rank)</span>
                                 </li>
                             </ul>
                         </div>

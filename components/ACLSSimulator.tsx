@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { GoogleGenAI } from "@google/genai";
 import confetti from 'canvas-confetti';
@@ -23,7 +24,8 @@ import {
     Timer,
     Cable,
     Wind,
-    Lightbulb
+    Lightbulb,
+    Star
 } from 'lucide-react';
 import ECGMonitor from './ECGMonitor';
 import ACLSReference from './ACLSReference';
@@ -73,7 +75,7 @@ const SimpleMarkdown = ({ text }: { text: string }) => {
 
 // --- SUB-COMPONENTS ---
 
-const MissionCard: React.FC<{ mission: ScenarioData; onClick: () => void }> = ({ mission, onClick }) => (
+const MissionCard: React.FC<{ mission: ScenarioData; onClick: () => void; isMastered?: boolean }> = ({ mission, onClick, isMastered }) => (
     <button
         onClick={onClick}
         className={`relative w-full text-left p-6 rounded-[2rem] border transition-all duration-300 group overflow-hidden ${
@@ -92,9 +94,15 @@ const MissionCard: React.FC<{ mission: ScenarioData; onClick: () => void }> = ({
                 <div className={`p-3 rounded-2xl shadow-lg ${mission.algorithm === 'shockable' ? 'bg-red-500 text-white shadow-red-500/30' : 'bg-blue-500 text-white shadow-blue-500/30'}`}>
                     {mission.algorithm === 'shockable' ? <Zap size={20} /> : <Activity size={20} />}
                 </div>
-                <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
-                    {mission.focus}
-                </span>
+                {isMastered ? (
+                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-yellow-400 text-yellow-900 shadow-sm flex items-center gap-1">
+                        <Star size={10} fill="currentColor" /> Mastered
+                    </span>
+                ) : (
+                    <span className="px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                        {mission.focus}
+                    </span>
+                )}
             </div>
             
             <h3 className="text-xl font-black text-slate-900 dark:text-white mb-2 leading-tight group-hover:text-slate-700 dark:group-hover:text-slate-200 transition-colors">
@@ -136,9 +144,10 @@ const CodeStats = ({ stats, cycle }: { stats: any, cycle: number }) => (
 interface ACLSSimulatorProps {
     startTutorial?: boolean;
     onTutorialEnd?: () => void;
+    onScenarioComplete?: (id: number) => void;
 }
 
-const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorialEnd }) => {
+const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorialEnd, onScenarioComplete }) => {
     const [phase, setPhase] = useState<GamePhase>('mission_select');
     const [isTrainingMode, setIsTrainingMode] = useState(false);
     const [tutorialStep, setTutorialStep] = useState(0); 
@@ -202,8 +211,6 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         if (isTrainingMode) {
             const currentAction = TUTORIAL_STEPS[tutorialStep];
             if (currentAction === 'charge' && phase !== 'assessment') {
-                // If we are at 'Charge' step, force phase to assessment so the button logic works
-                // (Assuming Charge might be blocked by other phases)
                 setPhase('assessment');
             }
         }
@@ -227,16 +234,16 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         if (phase === 'cpr') return; // Don't interrupt CPR
 
         let hint = "";
-        if (!padsAttached) hint = "Suzy: Don't forget to attach the pads/monitor leads!";
+        if (!padsAttached) hint = "Instructor: Don't forget to attach the pads/monitor leads!";
         else if (rhythm === 'VFIB' || rhythm === 'VT') {
-            if (energy === 0) hint = "Suzy: Shockable rhythm detected. Charge the defibrillator.";
-            else if (energy === 200) hint = "Suzy: Defib charged. Clear and Shock!";
+            if (energy === 0) hint = "Instructor: Shockable rhythm detected. Charge the defibrillator.";
+            else if (energy === 200) hint = "Instructor: Defib charged. Clear and Shock!";
         } 
         else if (rhythm === 'PEA') {
-            hint = "Suzy: Monitor shows a rhythm, but no pulse? This is PEA. Think H's and T's.";
+            hint = "Instructor: Monitor shows a rhythm, but no pulse? This is PEA. Think H's and T's.";
         }
         else if (rhythm === 'ASYSTOLE') {
-            hint = "Suzy: Flatline. Confirm in leads. Give Epinephrine ASAP.";
+            hint = "Instructor: Flatline. Confirm in leads. Give Epinephrine ASAP.";
         }
         
         if (hint) addLog(hint, "hint");
@@ -339,8 +346,6 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
 
         if (actionId === 'analyze_btn') {
             if (!padsAttached) { isValid = false; errorMsg = "Procedure Error: Connect pads/leads to monitor first."; }
-            // FIX: Allow analysis in Training Mode even if CPR is active (to pass Step 5)
-            // But in Challenge Mode, require cycle completion
             if (phase === 'cpr' && !isTrainingMode) { isValid = false; errorMsg = "Procedure Error: Do not interrupt CPR for manual analysis. Wait for cycle end."; }
         }
 
@@ -399,7 +404,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             addLog("TRAINING MODE: Guided Protocol Activated.", "system");
             addLog("INSTRUCTOR: Follow the highlighted cues.", "info");
         } else {
-            addLog("SUZY: CHALLENGE MODE READY.", "system");
+            addLog("CODE BLUE TEAM ACTIVATED.", "system");
             addLog(`PATIENT: ${scenario.patient}. HX: ${scenario.history}`, "alert");
         }
     };
@@ -411,15 +416,25 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             setPulse(true);
             const finalHR = Math.floor(Math.random() * (100 - 60 + 1)) + 60; // Random HR between 60 and 100
             setRoscHeartRate(finalHR);
-            addLog(`SUZY: Spontaneous pulse palpable! HR ${finalHR}, BP 110/70.`, "success");
+            addLog(`Vitals: Spontaneous pulse palpable! HR ${finalHR}, BP 110/70.`, "success");
             addLog("SYSTEM: ROSC ACHIEVED. CODE ENDED.", "success");
             confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
+            
+            // --- GAMIFICATION CALLBACK ---
+            // If it's a real scenario (not tutorial) and successful
+            if (!activeScenario.isTutorial && onScenarioComplete) {
+                // Award points via callback to DecemberQuest parent
+                // Check if already mastered is handled by parent, we just signal success
+                // We add a slight delay for dramatic effect
+                setTimeout(() => onScenarioComplete(activeScenario.id), 1000);
+            }
+
             if (activeScenario.isTutorial && onTutorialEnd) onTutorialEnd();
         } else {
             setRhythm('ASYSTOLE');
             setPulse(false);
             setRoscHeartRate(0);
-            addLog("SUZY: No cardiac activity. Viability 0%.", "alert");
+            addLog("Vitals: No cardiac activity. Viability 0%.", "alert");
             addLog("SYSTEM: PATIENT EXPIRED.", "alert");
         }
         
@@ -438,7 +453,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             const logSummary = logs.map(l => `[${l.time}] ${l.text}`).join('\n');
 
             const prompt = `
-            Act as "Suzy", an expert ACLS Instructor.
+            Act as an Expert Clinical Instructor for Nursing Students.
             
             Scenario: ${activeScenario.patient} - ${activeScenario.history} (${activeScenario.startRhythm})
             Outcome: ${outcome === 'rosc' ? 'SURVIVAL' : 'DEATH'}
@@ -470,7 +485,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             setDebriefContent(result.text || "Analysis failed.");
         } catch (e) {
             console.error("AI Debrief Failed", e);
-            setDebriefContent("Could not connect to Suzy's AI core.");
+            setDebriefContent("Could not connect to debrief system.");
         } finally {
             setDebriefLoading(false);
         }
@@ -661,11 +676,11 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         // Nuanced feedback for specific scenarios
         if (activeScenario.id === 4 && rhythm === 'PEA') { // PEA Case
              addLog(`Monitor: Rhythm appears organized (NSR-like).`, "info");
-             addLog(`Suzy: Do not trust the monitor. Check Pulse!`, "hint");
+             addLog(`Instructor: Do not trust the monitor. Check Pulse!`, "hint");
         } else if (activeScenario.id === 2 && rhythm === 'VT' && currentCycle > 1) { // pVT
              // Hints for causes if sticking around
              if (Math.random() > 0.6) {
-                 addLog("Suzy: Wide complex persists. Check electrolytes? (Hyperkalemia/Magnesium)", "hint");
+                 addLog("Instructor: Wide complex persists. Check electrolytes? (Hyperkalemia/Magnesium)", "hint");
              } else {
                  addLog(`Monitor: Rhythm is ${rhythm}. Pulse Check?`, "info");
              }
@@ -693,6 +708,16 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         return step === 'analyze_btn' || step === 'cycle_btn' ? 'identify_btn' : '';
     };
 
+    // Helper to check mastery
+    const isMastered = (id: number) => {
+        const saved = localStorage.getItem('december_quest_state_v2');
+        if (saved) {
+            const data = JSON.parse(saved);
+            return data.scenariosMastered?.includes(id);
+        }
+        return false;
+    }
+
     if (phase === 'mission_select') {
         const shockable = SCENARIOS.filter(s => s.algorithm === 'shockable');
         const nonShockable = SCENARIOS.filter(s => s.algorithm === 'nonshockable');
@@ -716,7 +741,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                                    <GraduationCap size={32} className="text-white" />
                                </div>
                                <div>
-                                   <h2 className="text-2xl font-black text-white uppercase tracking-tight">Basic Training</h2>
+                                   <h2 className="text-2xl font-black text-white uppercase tracking-tight">Skills Lab</h2>
                                    <p className="text-white/90 font-bold text-sm mt-1">Guided Simulation • Learn the Sequence</p>
                                </div>
                            </div>
@@ -734,7 +759,12 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                            <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Shockable Rhythms</h2>
                        </div>
                        {shockable.map(mission => (
-                           <MissionCard key={mission.id} mission={mission} onClick={() => launchScenario(mission)} />
+                           <MissionCard 
+                                key={mission.id} 
+                                mission={mission} 
+                                onClick={() => launchScenario(mission)} 
+                                isMastered={isMastered(mission.id)}
+                           />
                        ))}
                    </div>
 
@@ -744,7 +774,12 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                            <h2 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight">Non-Shockable</h2>
                        </div>
                        {nonShockable.map(mission => (
-                           <MissionCard key={mission.id} mission={mission} onClick={() => launchScenario(mission)} />
+                           <MissionCard 
+                                key={mission.id} 
+                                mission={mission} 
+                                onClick={() => launchScenario(mission)} 
+                                isMastered={isMastered(mission.id)}
+                           />
                        ))}
                    </div>
                </div>
@@ -1056,7 +1091,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                             {debriefLoading ? (
                                 <div className="flex flex-col items-center justify-center py-12 gap-4 text-slate-400 animate-pulse">
                                     <BrainCircuit size={48} />
-                                    <p className="font-mono text-sm">SUZY IS GENERATING REPORT...</p>
+                                    <p className="font-mono text-sm">INSTRUCTOR IS GENERATING REPORT...</p>
                                 </div>
                             ) : (
                                 <div className="prose dark:prose-invert max-w-none">
