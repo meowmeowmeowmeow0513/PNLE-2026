@@ -73,7 +73,7 @@ const ACLSReference: React.FC<ACLSReferenceProps> = ({ onClose }) => {
                                     </div>
                                 </div>
                                 <div className="flex flex-wrap gap-2 text-[10px] font-bold text-emerald-800 dark:text-emerald-300 w-full sm:w-auto">
-                                    <span className="px-2 py-1 bg-white dark:bg-slate-900 rounded-md border border-emerald-500/20 shadow-sm flex-1 sm:flex-none text-center">Push Hard (>2 in)</span>
+                                    <span className="px-2 py-1 bg-white dark:bg-slate-900 rounded-md border border-emerald-500/20 shadow-sm flex-1 sm:flex-none text-center">Push Hard ({'>'}2 in)</span>
                                     <span className="px-2 py-1 bg-white dark:bg-slate-900 rounded-md border border-emerald-500/20 shadow-sm flex-1 sm:flex-none text-center">Push Fast (100-120)</span>
                                     <span className="px-2 py-1 bg-white dark:bg-slate-900 rounded-md border border-emerald-500/20 shadow-sm flex-1 sm:flex-none text-center">Allow Recoil</span>
                                 </div>
