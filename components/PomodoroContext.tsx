@@ -45,7 +45,8 @@ interface PomodoroContextType {
   catName: string;
   dogName: string;
   focusIntegrity: number; // 0-100 Score for accountability
-  completionEvent: { type: 'focus_complete' | 'break_complete' | null, timestamp: number };
+  completionEvent: { type: 'focus_complete' | 'break_complete' | 'goal_complete' | null, timestamp: number };
+  clearCompletionEvent: () => void;
   
   // Stats & History
   sessionHistory: PomodoroSession[];
@@ -134,7 +135,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   
   // --- ACCOUNTABILITY & EVENTS ---
   const [focusIntegrity, setFocusIntegrity] = useState(100); // 0-100%
-  const [completionEvent, setCompletionEvent] = useState<{ type: 'focus_complete' | 'break_complete' | null, timestamp: number }>({ type: null, timestamp: 0 });
+  const [completionEvent, setCompletionEvent] = useState<{ type: 'focus_complete' | 'break_complete' | 'goal_complete' | null, timestamp: number }>({ type: null, timestamp: 0 });
 
   // --- ANALYTICS STATE ---
   const [sessionHistory, setSessionHistory] = useState<PomodoroSession[]>([]);
@@ -254,15 +255,25 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     // Logic for next state
     let nextMode: TimerMode = 'focus';
     let nextTime = timerSettings.focus;
+    let eventType: 'focus_complete' | 'break_complete' | 'goal_complete' = 'break_complete';
 
     if (mode === 'focus') {
         if (!wasSkipped) {
             saveSession(elapsed, 'focus');
             trackAction('finish_pomodoro');
-            setSessionsCompleted(prev => prev + 1);
+            
+            const newCompleted = sessionsCompleted + 1;
+            setSessionsCompleted(newCompleted);
             setFocusIntegrity(prev => Math.min(100, prev + 5)); // Reward integrity
+            
+            if (newCompleted % sessionGoal === 0 && newCompleted > 0) {
+                eventType = 'goal_complete';
+            } else {
+                eventType = 'focus_complete';
+            }
+            
             // Trigger Animation Event
-            setCompletionEvent({ type: 'focus_complete', timestamp: Date.now() });
+            setCompletionEvent({ type: eventType, timestamp: Date.now() });
         }
         
         if ((sessionsCompleted + 1) % 4 === 0) {
@@ -274,12 +285,12 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         }
     } else {
         // Break ending
-        if (!wasSkipped) saveSession(elapsed, mode);
+        if (!wasSkipped) {
+            saveSession(elapsed, mode);
+            setCompletionEvent({ type: 'break_complete', timestamp: Date.now() });
+        }
         nextMode = 'focus';
         nextTime = timerSettings.focus;
-        if (!wasSkipped) {
-             setCompletionEvent({ type: 'break_complete', timestamp: Date.now() });
-        }
     }
 
     setMode(nextMode);
@@ -289,6 +300,10 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     if (!wasSkipped) {
        startAlarmLoop();
     }
+  };
+
+  const clearCompletionEvent = () => {
+      setCompletionEvent({ type: null, timestamp: 0 });
   };
 
   // --- PUBLIC ACTIONS ---
@@ -517,6 +532,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     dogName,
     focusIntegrity,
     completionEvent,
+    clearCompletionEvent,
     sessionHistory,
     dailyProgress,
     toggleTimer,

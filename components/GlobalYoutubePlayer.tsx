@@ -2,19 +2,60 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { NavigationItem } from '../types';
-import { usePomodoro } from './PomodoroContext';
+import { usePomodoro, PetType } from './PomodoroContext';
 import { 
-    Pause, Play, MonitorPlay, Maximize2, Zap, Coffee 
+    Pause, Play, MonitorPlay, Maximize2, Zap, Coffee, Cat, Dog 
 } from 'lucide-react';
 
 interface GlobalYoutubePlayerProps {
   activeItem: NavigationItem;
 }
 
+// Mini Pet Component for PiP
+const MiniPet = ({ type, mode }: { type: PetType, mode: string }) => {
+    const isSleep = mode !== 'focus';
+    
+    // Simple SVG representation for PiP
+    if (type === 'cat') {
+        return (
+            <svg viewBox="0 0 100 100" className="w-16 h-16 drop-shadow-lg">
+                <circle cx="50" cy="50" r="40" fill={isSleep ? "#f0abfc" : "#e879f9"} />
+                <path d="M20 20 L30 50 L50 40 Z" fill="#d946ef" />
+                <path d="M80 20 L70 50 L50 40 Z" fill="#d946ef" />
+                {isSleep ? (
+                    <text x="50" y="60" fontSize="30" textAnchor="middle" fill="#86198f">Zzz</text>
+                ) : (
+                    <g fill="#86198f">
+                        <circle cx="35" cy="45" r="5" />
+                        <circle cx="65" cy="45" r="5" />
+                        <path d="M45 60 Q50 65 55 60" fill="none" stroke="#86198f" strokeWidth="3" />
+                    </g>
+                )}
+            </svg>
+        );
+    }
+    return (
+        <svg viewBox="0 0 100 100" className="w-16 h-16 drop-shadow-lg">
+            <circle cx="50" cy="50" r="40" fill={isSleep ? "#fcd34d" : "#fbbf24"} />
+            <path d="M20 30 L30 50 L50 40 Z" fill="#b45309" />
+            <path d="M80 30 L70 50 L50 40 Z" fill="#b45309" />
+            {isSleep ? (
+                <text x="50" y="60" fontSize="30" textAnchor="middle" fill="#78350f">Zzz</text>
+            ) : (
+                <g fill="#78350f">
+                    <circle cx="35" cy="45" r="5" />
+                    <circle cx="65" cy="45" r="5" />
+                    <path d="M40 60 Q50 70 60 60" fill="none" stroke="#78350f" strokeWidth="3" />
+                </g>
+            )}
+        </svg>
+    );
+};
+
 const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem }) => {
   const { 
     timeLeft, isActive, mode, pipWindow, focusTask, sessionsCompleted, sessionGoal,
-    toggleTimer, togglePiP
+    toggleTimer, togglePiP, timerSettings, petType
   } = usePomodoro();
 
   const [playerStyle, setPlayerStyle] = useState<React.CSSProperties>({
@@ -78,56 +119,75 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
       return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
   };
 
+  // Calculate Progress for Ring
+  const totalTime = mode === 'focus' ? timerSettings.focus : (mode === 'shortBreak' ? timerSettings.shortBreak : timerSettings.longBreak);
+  const progress = timeLeft / totalTime;
+  const radius = 90;
+  const circumference = 2 * Math.PI * radius;
+  const strokeDashoffset = circumference - (progress * circumference);
+
   // --- CONTENT FOR PIP WINDOW (Styled to match Main App) ---
   const PiPContent = pipWindow ? createPortal(
-    <div className="flex flex-col items-center justify-center h-full w-full relative p-6 bg-[#020617] text-white font-sans overflow-hidden">
+    <div className={`flex flex-col items-center justify-center h-full w-full relative p-4 font-sans overflow-hidden ${mode === 'focus' ? 'bg-[#020617]' : 'bg-[#0f172a]'}`}>
         
         {/* Animated Background Mesh */}
-        <div className={`absolute top-[-50%] left-[-50%] w-[200%] h-[200%] opacity-20 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] ${mode === 'focus' ? 'from-pink-600 via-purple-900 to-transparent' : 'from-cyan-500 via-blue-900 to-transparent'} animate-pulse`}></div>
+        <div className={`absolute top-[-50%] left-[-50%] w-[200%] h-[200%] opacity-30 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] ${mode === 'focus' ? 'from-pink-600 via-purple-900 to-transparent' : 'from-cyan-500 via-blue-900 to-transparent'} animate-pulse`}></div>
         <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 pointer-events-none mix-blend-overlay"></div>
 
-        {/* Progress Ring Glow */}
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
-             <div className={`w-48 h-48 rounded-full border-2 ${mode === 'focus' ? 'border-pink-500 box-shadow-[0_0_30px_#ec4899]' : 'border-cyan-500 box-shadow-[0_0_30px_#06b6d4]'} animate-ping`}></div>
-        </div>
-
-        <div className="relative z-10 flex flex-col items-center w-full">
-            {/* Status Badge */}
-            <div className={`mb-4 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border flex items-center gap-1.5 ${mode === 'focus' ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'}`}>
-                {mode === 'focus' ? <Zap size={10} fill="currentColor" /> : <Coffee size={10} fill="currentColor" />}
-                {mode === 'focus' ? 'Focus Mode' : 'Break Time'}
-            </div>
-
-            {/* Time Display */}
-            <div className="text-6xl font-mono font-black tracking-tighter text-white drop-shadow-2xl tabular-nums leading-none">
-                {formatTime(timeLeft)}
-            </div>
+        <div className="relative z-10 flex flex-col items-center w-full h-full justify-between py-2">
             
-            {/* Focus Task */}
-            <div className="mt-6 w-full text-center">
-                {focusTask ? (
-                    <div className="inline-block px-4 py-2 bg-white/5 rounded-xl border border-white/10 backdrop-blur-sm">
-                        <p className="text-xs font-bold text-white line-clamp-1">
-                            {focusTask}
-                        </p>
-                    </div>
-                ) : (
-                    <div className="h-px w-12 bg-white/20 mx-auto my-3"></div>
-                )}
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-3">
-                    Session {sessionsCompleted} / {sessionGoal}
-                </p>
+            {/* Top Bar: Task & Status */}
+            <div className="w-full flex items-center justify-between px-2">
+                 <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border ${mode === 'focus' ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' : 'bg-cyan-500/10 border-cyan-500/30 text-cyan-400'}`}>
+                    {mode === 'focus' ? <Zap size={10} fill="currentColor" /> : <Coffee size={10} fill="currentColor" />}
+                    {mode === 'focus' ? 'Focus' : 'Break'}
+                </div>
+                <div className="text-[10px] text-slate-400 font-mono">
+                    {sessionsCompleted}/{sessionGoal}
+                </div>
+            </div>
+
+            {/* Central Ring & Time */}
+            <div className="relative flex items-center justify-center my-2">
+                 <svg width="200" height="200" className="transform -rotate-90">
+                    <circle cx="100" cy="100" r="90" stroke="rgba(255,255,255,0.1)" strokeWidth="8" fill="transparent" />
+                    <circle 
+                        cx="100" cy="100" r="90" 
+                        stroke={mode === 'focus' ? '#ec4899' : '#06b6d4'} 
+                        strokeWidth="8" 
+                        fill="transparent" 
+                        strokeLinecap="round" 
+                        strokeDasharray={circumference} 
+                        strokeDashoffset={strokeDashoffset} 
+                        className="transition-all duration-300 ease-linear"
+                    />
+                 </svg>
+                 
+                 <div className="absolute inset-0 flex flex-col items-center justify-center">
+                     <div className="mb-2">
+                         <MiniPet type={petType} mode={mode} />
+                     </div>
+                     <span className="text-4xl font-mono font-black tracking-tighter text-white drop-shadow-lg leading-none">
+                        {formatTime(timeLeft)}
+                     </span>
+                 </div>
             </div>
 
             {/* Controls */}
-            <div className="mt-8 flex gap-6 items-center">
+            <div className="flex gap-4 items-center">
                 <button 
                     onClick={toggleTimer} 
-                    className={`w-16 h-16 rounded-[2rem] flex items-center justify-center text-white shadow-2xl border border-white/10 transition-transform hover:scale-105 active:scale-95 ${mode === 'focus' ? 'bg-gradient-to-br from-pink-600 to-rose-600' : 'bg-gradient-to-br from-cyan-600 to-blue-600'}`}
+                    className={`w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg border border-white/20 transition-transform hover:scale-105 active:scale-95 ${mode === 'focus' ? 'bg-gradient-to-br from-pink-600 to-rose-600' : 'bg-gradient-to-br from-cyan-600 to-blue-600'}`}
                 >
-                    {isActive ? <Pause size={28} fill="currentColor" /> : <Play size={28} fill="currentColor" className="ml-1" />}
+                    {isActive ? <Pause size={20} fill="currentColor" /> : <Play size={20} fill="currentColor" className="ml-1" />}
                 </button>
             </div>
+            
+            {focusTask && (
+                <div className="w-full text-center mt-2 px-4">
+                    <p className="text-[10px] font-bold text-white/60 truncate">{focusTask}</p>
+                </div>
+            )}
         </div>
     </div>,
     pipWindow.document.body

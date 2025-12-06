@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud
+    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud, ShieldCheck
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType, SoundscapeType } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
@@ -248,40 +248,80 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, hasHalo, onPet, sca
     );
 };
 
-// --- CUTESY TRANSITION OVERLAY ---
-const TransitionOverlay = () => {
-    const { completionEvent, petType, petName } = usePomodoro();
+// --- CUTESY NOTIFICATION WINDOW (CENTERED) ---
+const NotificationWindow = () => {
+    const { completionEvent, clearCompletionEvent, petType, petName, focusIntegrity } = usePomodoro();
     const [show, setShow] = useState(false);
-    const [message, setMessage] = useState('');
-    const [subMessage, setSubMessage] = useState('');
+    const [animationState, setAnimationState] = useState<'enter' | 'idle' | 'exit'>('enter');
 
     useEffect(() => {
         if (completionEvent.type) {
             setShow(true);
-            if (completionEvent.type === 'focus_complete') {
-                setMessage("Session Complete!");
-                setSubMessage(`Great job, ${petName} is proud!`);
+            setAnimationState('enter');
+            
+            if (completionEvent.type === 'focus_complete' || completionEvent.type === 'goal_complete') {
                 confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            } else {
-                setMessage("Back to Work!");
-                setSubMessage(`Let's focus now!`);
             }
-            const timer = setTimeout(() => setShow(false), 3500);
+
+            const timer = setTimeout(() => {
+                setAnimationState('exit');
+                setTimeout(() => {
+                    setShow(false);
+                    clearCompletionEvent();
+                }, 300); // Wait for exit animation
+            }, 3500);
             return () => clearTimeout(timer);
         }
-    }, [completionEvent, petName]);
+    }, [completionEvent, clearCompletionEvent]);
 
     if (!show) return null;
 
+    let title = "";
+    let message = "";
+    let icon = <Star size={24} className="text-yellow-400" />;
+    let bgColor = "bg-white dark:bg-slate-900";
+    let petStatus: 'celebrating' | 'awake' | 'sleeping' = 'celebrating';
+
+    if (completionEvent.type === 'focus_complete') {
+        title = "Session Complete!";
+        message = `${petName} is super proud of you!`;
+        icon = <Zap size={24} className="text-pink-500" />;
+        bgColor = "bg-gradient-to-br from-pink-50 to-white dark:from-pink-900/20 dark:to-slate-900";
+    } else if (completionEvent.type === 'break_complete') {
+        title = "Break Over!";
+        message = "Ready to focus again?";
+        icon = <Coffee size={24} className="text-blue-500" />;
+        bgColor = "bg-gradient-to-br from-blue-50 to-white dark:from-blue-900/20 dark:to-slate-900";
+        petStatus = 'awake';
+    } else if (completionEvent.type === 'goal_complete') {
+        title = "Goal Crushed!";
+        message = "You are absolutely unstoppable!";
+        icon = <Trophy size={24} className="text-amber-500" />;
+        bgColor = "bg-gradient-to-br from-amber-50 to-white dark:from-amber-900/20 dark:to-slate-900";
+    }
+
     return (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center pointer-events-none">
-            <div className="absolute inset-0 bg-black/40 backdrop-blur-md animate-in fade-in"></div>
-            <div className="relative z-10 animate-in zoom-in duration-300 flex flex-col items-center">
-                <div className="mb-4 drop-shadow-2xl filter brightness-110">
-                    <PetAvatar type={petType} status="celebrating" scale={1.5} hasHalo={true} />
+        <div className="absolute inset-0 z-50 flex items-center justify-center pointer-events-none">
+            {/* Backdrop Blur just for the timer area */}
+            <div className={`absolute inset-0 bg-black/20 backdrop-blur-sm transition-opacity duration-300 ${animationState === 'enter' ? 'opacity-100' : 'opacity-0'}`}></div>
+            
+            <div className={`relative z-10 w-64 ${bgColor} rounded-[2rem] p-6 shadow-2xl border border-white/20 transform transition-all duration-300 ${animationState === 'enter' ? 'scale-100 translate-y-0 opacity-100' : 'scale-95 translate-y-4 opacity-0'}`}>
+                <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20">
+                    <PetAvatar type={petType} status={petStatus} scale={0.8} hasHalo={focusIntegrity > 90} />
                 </div>
-                <h2 className="text-4xl font-black text-white drop-shadow-lg stroke-black mb-2 text-center">{message}</h2>
-                <p className="text-xl font-bold text-white/90 drop-shadow-md">{subMessage}</p>
+                
+                <div className="mt-8 text-center">
+                    <div className="flex justify-center mb-2">{icon}</div>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white leading-tight mb-1">{title}</h3>
+                    <p className="text-xs font-bold text-slate-500 dark:text-slate-400 leading-relaxed px-2">{message}</p>
+                    
+                    {/* Integrity Bonus Badge */}
+                    {completionEvent.type === 'focus_complete' && (
+                        <div className="mt-4 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-black uppercase tracking-wider border border-emerald-200 dark:border-emerald-500/30">
+                            <ShieldCheck size={12} /> +Integrity
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );
@@ -498,10 +538,10 @@ const SoundscapeControl = () => {
     const current = options.find(o => o.id === soundscape) || options[0];
 
     return (
-        <div className="relative">
+        <div className="relative h-full">
             <button 
                 onClick={toggleBrownNoise} 
-                className={`w-full py-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-inner' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-300'}`}
+                className={`w-full h-full py-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all ${isBrownNoiseOn ? 'bg-indigo-100 dark:bg-indigo-500/20 border-indigo-500 text-indigo-600 dark:text-indigo-400 shadow-inner' : 'bg-white dark:bg-[#0B1221] border-slate-200 dark:border-slate-800 text-slate-500 hover:border-indigo-300'}`}
             >
                 <div className="flex items-center gap-2">
                     <current.icon size={16} className={isBrownNoiseOn ? 'animate-pulse' : ''} />
@@ -518,7 +558,7 @@ const SoundscapeControl = () => {
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in slide-in-from-top-2">
+                    <div className="absolute bottom-full left-0 right-0 mb-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in slide-in-from-bottom-2">
                         {options.map(opt => (
                             <button
                                 key={opt.id}
@@ -547,38 +587,10 @@ const Pomodoro: React.FC = () => {
   // Local state
   const [showTaskDropdown, setShowTaskDropdown] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
-  const [showBreakModal, setShowBreakModal] = useState(false);
-  const [showGoalModal, setShowGoalModal] = useState(false);
   
   // New: Early Exit Modal State
   const [showEarlyExitModal, setShowEarlyExitModal] = useState(false);
   
-  // Track mode change to trigger break modal
-  const prevModeRef = useRef<TimerMode>(mode);
-  const prevSessionsRef = useRef<number>(sessionsCompleted);
-
-  // --- GOAL COMPLETION TRIGGER ---
-  useEffect(() => {
-      if (sessionsCompleted > prevSessionsRef.current) {
-          if (sessionsCompleted > 0 && sessionsCompleted % sessionGoal === 0) {
-              setShowGoalModal(true);
-              confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-          }
-      }
-      prevSessionsRef.current = sessionsCompleted;
-  }, [sessionsCompleted, sessionGoal]);
-
-  // --- BREAK MODAL TRIGGER ---
-  useEffect(() => {
-      if (prevModeRef.current === 'focus' && (mode === 'shortBreak' || mode === 'longBreak')) {
-          // If NOT completing a goal (handled above), show break cat
-          if (sessionsCompleted % sessionGoal !== 0) {
-             setShowBreakModal(true);
-          }
-      }
-      prevModeRef.current = mode;
-  }, [mode, sessionsCompleted, sessionGoal]);
-
   // Custom Timer Form State
   const [customForm, setCustomForm] = useState<TimerSettings>({ focus: 25 * 60, shortBreak: 5 * 60, longBreak: 20 * 60 });
 
@@ -675,8 +687,8 @@ const Pomodoro: React.FC = () => {
         {/* CENTER: THE RING */}
         <div className="lg:col-span-6 flex flex-col items-center justify-center order-1 lg:order-2 py-8 lg:py-0 relative">
             
-            {/* OVERLAY for Transition */}
-            <TransitionOverlay />
+            {/* OVERLAY for Transition (Centered Window) */}
+            <NotificationWindow />
 
             <div className="relative group cursor-pointer" onClick={toggleTimer}>
                 {/* Outer Glow Ring */}
@@ -825,10 +837,10 @@ const Pomodoro: React.FC = () => {
 
              </div>
 
-             {/* 3. Media Controls (Compact) */}
-             <div className="grid grid-cols-2 gap-2 relative z-10">
+             {/* 3. Media Controls (Compact & Aligned) */}
+             <div className="grid grid-cols-2 gap-2 h-14 relative z-10">
                 <SoundscapeControl />
-                <button onClick={togglePiP} className="py-2 rounded-xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1 transition-all shadow-sm">
+                <button onClick={togglePiP} className="h-full py-2 rounded-xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1 transition-all shadow-sm">
                     <MonitorPlay size={16} />
                     <span className="text-[9px] font-bold uppercase">Mini Mode</span>
                 </button>
@@ -883,44 +895,6 @@ const Pomodoro: React.FC = () => {
                           </button>
                       </div>
                   </div>
-              </div>
-          </div>
-      )}
-
-      {/* --- BREAK MODAL (Simple Notification) --- */}
-      {showBreakModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-md animate-fade-in" onClick={() => setShowBreakModal(false)}>
-              <div className="bg-white dark:bg-slate-900 rounded-[2rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in" onClick={e => e.stopPropagation()}>
-                  <div className="w-20 h-20 bg-pink-100 dark:bg-pink-500/20 rounded-full flex items-center justify-center mb-4 text-pink-500">
-                      <Coffee size={32} />
-                  </div>
-                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-2 mb-2 tracking-tight">Time for a Break!</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8">You've earned this moment. Breathe.</p>
-                  <button onClick={() => { setShowBreakModal(false); toggleTimer(); }} className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transform active:scale-95 transition-transform">Start Break Timer</button>
-                  <button onClick={() => { setShowBreakModal(false); skipForward(); }} className="text-xs text-slate-400 font-bold uppercase mt-4 hover:text-slate-600 dark:hover:text-white">Skip Rest</button>
-              </div>
-          </div>
-      )}
-
-      {/* --- GOAL COMPLETION MODAL --- */}
-      {showGoalModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-fade-in" onClick={() => setShowGoalModal(false)}>
-              <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] p-8 w-full max-w-sm shadow-2xl border border-white/20 relative flex flex-col items-center text-center animate-zoom-in overflow-hidden" onClick={e => e.stopPropagation()}>
-                  {/* Glow Effect */}
-                  <div className="absolute top-0 inset-x-0 h-40 bg-gradient-to-b from-amber-400/20 to-transparent pointer-events-none"></div>
-                  
-                  <div className="w-24 h-24 bg-amber-100 dark:bg-amber-500/20 rounded-full flex items-center justify-center mb-6 relative z-10 animate-bounce">
-                      <Trophy size={48} className="text-amber-500" />
-                  </div>
-                  
-                  <h3 className="text-2xl font-black text-slate-800 dark:text-white mb-2 relative z-10">Goal Crushed!</h3>
-                  <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mb-8 relative z-10">
-                      You finished your session goal. Excellent work!
-                  </p>
-                  
-                  <button onClick={() => setShowGoalModal(false)} className="w-full py-3.5 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold shadow-lg shadow-amber-500/30 transform active:scale-95 transition-transform relative z-10">
-                      Awesome
-                  </button>
               </div>
           </div>
       )}
