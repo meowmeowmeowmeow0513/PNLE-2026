@@ -17,6 +17,7 @@ export interface Task {
   userId: string;
   createdAt: number;
   date?: string; 
+  details?: string; // New: For Patient Charts or Description
 }
 
 export interface Note {

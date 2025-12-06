@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { db, storage } from '../firebase';
+import { db } from '../firebase';
 import { collection, addDoc, deleteDoc, doc, onSnapshot, query, where, FirestoreError, updateDoc, orderBy, getDocs } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { UserFile, UserFolder, ResourceType } from '../types';
 
 export const useFileManager = (userId: string | undefined) => {
@@ -143,29 +142,10 @@ export const useFileManager = (userId: string | undefined) => {
     }
   };
 
-  // UPLOAD FILE (Small Images only)
-  const uploadFile = async (file: File): Promise<string> => {
-      if (!userId) throw new Error("User not authenticated");
-      
-      // Strict Size Limit: 2MB
-      if (file.size > 2 * 1024 * 1024) {
-          throw new Error("File too large. Max size is 2MB for efficiency.");
-      }
-
-      // Strict Type Limit: Images only
-      if (!file.type.startsWith('image/')) {
-          throw new Error("Only image files are allowed.");
-      }
-
-      const storageRef = ref(storage, `users/${userId}/uploads/${Date.now()}_${file.name}`);
-      await uploadBytes(storageRef, file);
-      return await getDownloadURL(storageRef);
-  };
-
   // ADD RESOURCE (Replaces uploadFile)
   const addResource = async (
     title: string, 
-    type: string, 
+    type: ResourceType, 
     url: string = '', 
     content: string = '', 
     color: string = 'yellow'
@@ -193,7 +173,7 @@ export const useFileManager = (userId: string | undefined) => {
   // EDIT RESOURCE (For Sticky Notes mainly)
   const editResource = async (
     id: string, 
-    updates: { title?: string, url?: string, content?: string, color?: string, type?: string }
+    updates: { title?: string, url?: string, content?: string, color?: string, type?: ResourceType }
   ) => {
       if (!userId) return;
       try {
@@ -226,21 +206,11 @@ export const useFileManager = (userId: string | undefined) => {
     }
   };
 
-  const deleteFile = async (fileId: string, fileUrl?: string) => {
+  const deleteFile = async (fileId: string) => {
     if (!userId) return;
     try {
-      // 1. Delete Firestore Doc
+      // No storage to delete, just the doc
       await deleteDoc(doc(db, 'users', userId, 'files', fileId));
-
-      // 2. If it was a storage upload (check URL pattern), try to delete from storage
-      if (fileUrl && fileUrl.includes('firebasestorage.googleapis.com')) {
-          try {
-              const fileRef = ref(storage, fileUrl);
-              await deleteObject(fileRef);
-          } catch (storageErr) {
-              console.warn("Could not delete file from storage (might act as link):", storageErr);
-          }
-      }
     } catch (error) {
       console.error("Delete failed:", error);
       throw error;
@@ -252,11 +222,7 @@ export const useFileManager = (userId: string | undefined) => {
       const performDelete = async (fid: string) => {
           const filesQ = query(collection(db, 'users', userId, 'files'), where('folderId', '==', fid));
           const filesSnap = await getDocs(filesQ);
-          // Delete files recursively
-          const fileDeletes = filesSnap.docs.map(docSnap => {
-              const data = docSnap.data();
-              return deleteFile(docSnap.id, data.downloadUrl);
-          });
+          const fileDeletes = filesSnap.docs.map(docSnap => deleteDoc(doc(db, 'users', userId, 'files', docSnap.id)));
           await Promise.all(fileDeletes);
 
           const subFoldersQ = query(collection(db, 'users', userId, 'folders'), where('parentId', '==', fid));
@@ -299,7 +265,6 @@ export const useFileManager = (userId: string | undefined) => {
     createFolder,
     updateFolder,
     addResource,
-    uploadFile, // New
     editResource,
     moveItem,
     deleteFile,

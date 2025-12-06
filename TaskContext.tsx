@@ -57,7 +57,8 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           start: data.start || fallbackStart,
           end: data.end || fallbackEnd,
           allDay: data.allDay ?? false,
-          date: data.start ? data.start.split('T')[0] : data.date
+          date: data.start ? data.start.split('T')[0] : data.date,
+          details: data.details || ''
         };
       }) as Task[];
       setTasks(fetchedTasks);
@@ -74,6 +75,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const legacyDate = newTask.start.split('T')[0];
       await addDoc(collection(db, 'users', currentUser.uid, 'tasks'), {
         ...newTask,
+        details: newTask.details || '', // Ensure details is saved
         completed: false,
         userId: currentUser.uid,
         createdAt: Date.now(),

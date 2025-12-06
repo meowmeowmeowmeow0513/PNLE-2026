@@ -1,5 +1,7 @@
+
 import React, { useMemo, useState, useRef, useEffect } from 'react';
-import { Lightbulb, BookOpen, Sparkles, ChevronDown, AlertTriangle, Loader2, Eye, EyeOff, RefreshCw, GraduationCap, ShieldAlert } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Lightbulb, BookOpen, Sparkles, ChevronDown, AlertTriangle, Loader2, Eye, EyeOff, RefreshCw, GraduationCap, ShieldAlert, Maximize2, X } from 'lucide-react';
 import { mnemonics } from '../data/mnemonicData';
 import { GoogleGenAI } from "@google/genai";
 
@@ -83,6 +85,7 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
   
   // New State for Active Recall on Mnemonic Meaning
   const [isMeaningRevealed, setIsMeaningRevealed] = useState(false);
+  const [showModal, setShowModal] = useState(false);
 
   const todayMnemonic = useMemo(() => {
     const dayOfMonth = new Date().getDate();
@@ -249,7 +252,7 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
           <div className="flex-1 px-6 pb-2 min-h-0 overflow-hidden flex flex-col">
               <div 
                   className={`bg-white/60 dark:bg-black/20 rounded-2xl p-5 border border-white/40 dark:border-white/5 shadow-inner backdrop-blur-sm flex-1 relative transition-all cursor-pointer group/meaning ring-1 ring-white/10 dark:ring-white/5 overflow-hidden flex flex-col`}
-                  onClick={() => setIsMeaningRevealed(!isMeaningRevealed)}
+                  onClick={() => !showModal && setIsMeaningRevealed(!isMeaningRevealed)}
               >
                   {/* Scrollable Text Container */}
                   <div className={`w-full h-full overflow-y-auto custom-scrollbar transition-all duration-500 ${isMeaningRevealed ? 'opacity-100 blur-0' : 'opacity-30 blur-md grayscale select-none'}`}>
@@ -257,6 +260,17 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
                           {todayMnemonic.meaning}
                       </p>
                   </div>
+
+                  {/* Maximize Button - Only visible when revealed */}
+                  {isMeaningRevealed && (
+                      <button
+                          onClick={(e) => { e.stopPropagation(); setShowModal(true); }}
+                          className={`absolute top-2 right-2 p-2 bg-white/50 dark:bg-black/40 hover:bg-white dark:hover:bg-slate-800 rounded-full ${iconColor} transition-colors z-20 shadow-sm backdrop-blur-md`}
+                          title="Expand View"
+                      >
+                          <Maximize2 size={16} />
+                      </button>
+                  )}
 
                   {/* Cover for Hidden State */}
                   {!isMeaningRevealed && (
@@ -353,6 +367,46 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
               )}
           </div>
       </div>
+
+      {/* --- MODAL POPUP --- */}
+      {showModal && createPortal(
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in" onClick={() => setShowModal(false)}>
+              <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden border border-slate-200 dark:border-slate-800 relative animate-zoom-in" onClick={e => e.stopPropagation()}>
+                  {/* Modal Header */}
+                  <div className={`px-8 py-6 border-b border-slate-100 dark:border-slate-800 relative`}>
+                      <div className={`absolute inset-0 bg-gradient-to-r ${textGradient.split(' ')[0].replace('from', 'from').replace('500', '500/5').replace('600', '600/5')} to-transparent opacity-20`}></div>
+                      
+                      <div className="relative z-10">
+                          <h3 className={`text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r ${textGradient} mb-1`}>
+                              {todayMnemonic.code}
+                          </h3>
+                          <p className="text-sm font-bold text-slate-600 dark:text-slate-300">
+                              {todayMnemonic.title}
+                          </p>
+                      </div>
+                      <button 
+                          onClick={() => setShowModal(false)}
+                          className="absolute top-6 right-6 p-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition-colors z-20"
+                      >
+                          <X size={20} className="text-slate-500 dark:text-slate-400" />
+                      </button>
+                  </div>
+                  
+                  {/* Modal Content */}
+                  <div className="p-10 max-h-[60vh] overflow-y-auto custom-scrollbar bg-slate-50/50 dark:bg-black/20">
+                       <p className="whitespace-pre-line text-2xl leading-relaxed font-bold text-slate-800 dark:text-slate-100">
+                            {todayMnemonic.meaning}
+                       </p>
+                  </div>
+                  
+                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-800 text-center">
+                      <p className="text-[10px] text-slate-400 uppercase tracking-widest font-bold">Category: {todayMnemonic.category}</p>
+                  </div>
+              </div>
+          </div>,
+          document.body
+      )}
+
     </div>
   );
 };

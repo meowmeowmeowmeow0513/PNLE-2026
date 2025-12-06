@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Clock, Trash2, Save, Check, Type, Tag, Flag, AlertTriangle, Circle, CheckCircle2, RotateCw } from 'lucide-react';
+import { X, Calendar, Clock, Trash2, Save, Check, Type, Tag, Flag, AlertTriangle, Circle, CheckCircle2, RotateCw, FileText } from 'lucide-react';
 import { Task, TaskCategory, TaskPriority } from '../types';
 import { format, isPast, addHours } from 'date-fns';
 
@@ -22,6 +22,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
   const [end, setEnd] = useState('');
   const [allDay, setAllDay] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [details, setDetails] = useState(''); // New state for details
   
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -42,6 +43,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
         setPriority(initialData.priority || 'Medium');
         setAllDay(initialData.allDay || false);
         setCompleted(initialData.completed || false);
+        setDetails(initialData.details || '');
         
         setStart(initialData.start ? toLocalISOString(initialData.start) : '');
         setEnd(initialData.end ? toLocalISOString(initialData.end) : '');
@@ -59,6 +61,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
         setPriority('Medium');
         setAllDay(false);
         setCompleted(false);
+        setDetails('');
         setStart(toLocalISOString(baseDate));
         setEnd(toLocalISOString(nextHour));
       } else {
@@ -71,6 +74,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
         setCategory('Review');
         setPriority('Medium');
         setCompleted(false);
+        setDetails('');
         setStart(toLocalISOString(now));
         setEnd(toLocalISOString(nextHour));
       }
@@ -96,7 +100,8 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
         start: startDate.toISOString(), 
         end: endDate.toISOString(),
         allDay,
-        completed
+        completed,
+        details // Save details
       });
       onClose();
     } catch (error) {
@@ -189,7 +194,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
         {/* Header decoration */}
         <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${completed ? 'from-emerald-500 to-teal-500' : isOverdue ? 'from-red-500 to-orange-500' : 'from-pink-500 via-purple-500 to-indigo-500'}`}></div>
 
-        <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar">
+        <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-1">
             {/* Top Bar */}
             <div className="flex justify-between items-start mb-6">
                 <div>
@@ -327,6 +332,19 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                         className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all cursor-pointer"
                     />
                 </div>
+            </div>
+
+            {/* Details / Patient Chart Area (New) */}
+            <div>
+                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                    <FileText size={12} /> Patient Chart / Details
+                </label>
+                <textarea
+                    value={details}
+                    onChange={(e) => setDetails(e.target.value)}
+                    placeholder="Add notes, patient details, or clinical orders..."
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-slate-200 text-sm font-mono leading-relaxed focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all min-h-[120px] resize-none"
+                />
             </div>
 
             {/* Priority Selector */}
