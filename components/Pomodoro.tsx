@@ -628,11 +628,11 @@ const SoundscapeControl = () => {
                 <Settings size={10} />
             </button>
 
-            {/* Changed from top-full to bottom-full to open UPWARDS as requested, to avoid pet coverage */}
+            {/* CHANGED: top-full mt-2 to drop DOWNWARDS as requested */}
             {isOpen && (
                 <>
                     <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)}></div>
-                    <div className="absolute bottom-full mb-2 left-0 right-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in slide-in-from-bottom-2">
+                    <div className="absolute top-full mt-2 left-0 right-0 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 p-1 animate-in slide-in-from-top-2">
                         {options.map(opt => (
                             <button
                                 key={opt.id}
