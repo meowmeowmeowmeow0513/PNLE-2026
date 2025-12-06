@@ -1,8 +1,8 @@
 
 import React from 'react';
-import { usePomodoro } from './PomodoroContext';
-import { Activity, Trash2, Clock, PieChart as PieIcon } from 'lucide-react';
-import { format, isSameDay } from 'date-fns';
+import { usePomodoro, PomodoroSession } from './PomodoroContext';
+import { Activity, Trash2, Clock, PieChart as PieIcon, BarChart3 } from 'lucide-react';
+import { format, isSameDay, subDays, startOfDay, isAfter } from 'date-fns';
 
 const DailyPieChart = ({ focusTime, breakTime }: { focusTime: number, breakTime: number }) => {
   const total = focusTime + breakTime;
@@ -54,6 +54,61 @@ const DailyPieChart = ({ focusTime, breakTime }: { focusTime: number, breakTime:
   );
 };
 
+// New Weekly Overview Component
+const WeeklyOverview = ({ history }: { history: PomodoroSession[] }) => {
+    // Generate last 7 days
+    const days = Array.from({ length: 7 }, (_, i) => {
+        const d = subDays(new Date(), i);
+        return { 
+            date: d, 
+            label: format(d, 'EEE'), // Mon, Tue
+            isToday: i === 0 
+        };
+    }).reverse();
+
+    // Calculate totals per day
+    const weeklyData = days.map(day => {
+        const dayStart = startOfDay(day.date);
+        const nextDayStart = startOfDay(subDays(day.date, -1)); // Next day midnight
+
+        const daySessions = history.filter(s => {
+            const sessionDate = new Date(s.startTime);
+            return sessionDate >= dayStart && sessionDate < nextDayStart && s.type === 'focus';
+        });
+
+        const totalMinutes = daySessions.reduce((acc, curr) => acc + curr.duration, 0) / 60;
+        return { ...day, minutes: Math.round(totalMinutes) };
+    });
+
+    const maxMinutes = Math.max(...weeklyData.map(d => d.minutes), 60); // Minimum scale of 60 mins
+
+    return (
+        <div className="h-24 flex items-end justify-between gap-1 px-2 pt-4">
+            {weeklyData.map((d, i) => {
+                const heightPct = (d.minutes / maxMinutes) * 100;
+                return (
+                    <div key={i} className="flex flex-col items-center gap-1 flex-1 group relative">
+                        {/* Tooltip */}
+                        <div className="absolute bottom-full mb-1 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-800 text-white text-[9px] px-1.5 py-0.5 rounded font-bold whitespace-nowrap z-10 pointer-events-none">
+                            {d.minutes}m
+                        </div>
+                        
+                        <div className="w-full bg-slate-100 dark:bg-slate-800/50 rounded-t-sm h-16 relative flex items-end overflow-hidden">
+                            <div 
+                                style={{ height: `${heightPct}%` }}
+                                className={`w-full transition-all duration-1000 ${d.isToday ? 'bg-pink-500' : 'bg-slate-300 dark:bg-slate-600 group-hover:bg-pink-400 dark:group-hover:bg-pink-600'}`}
+                            ></div>
+                        </div>
+                        <span className={`text-[8px] font-bold uppercase ${d.isToday ? 'text-pink-500' : 'text-slate-400'}`}>
+                            {d.label}
+                        </span>
+                    </div>
+                )
+            })}
+        </div>
+    );
+};
+
 const PomodoroStats: React.FC = () => {
   const { sessionHistory, deleteSession } = usePomodoro();
 
@@ -79,8 +134,8 @@ const PomodoroStats: React.FC = () => {
     <div className="flex flex-col h-full gap-4">
         
         {/* --- DAILY PIE CHART --- */}
-        <div className="bg-white dark:bg-[#0f172a]/90 border border-slate-200 dark:border-slate-700 rounded-3xl p-6 shadow-xl dark:shadow-2xl relative overflow-hidden backdrop-blur-xl transition-colors min-h-[220px] flex flex-col justify-center">
-            <div className="absolute top-4 left-6 flex items-center gap-2 opacity-60">
+        <div className="bg-white dark:bg-[#0f172a]/90 border border-slate-200 dark:border-slate-700 rounded-3xl p-5 shadow-xl dark:shadow-2xl relative overflow-hidden backdrop-blur-xl transition-colors min-h-[220px] flex flex-col justify-between shrink-0">
+            <div className="flex items-center gap-2 opacity-60 pl-2">
                 <PieIcon size={14} className="text-slate-400" />
                 <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Daily Balance</span>
             </div>
@@ -88,9 +143,18 @@ const PomodoroStats: React.FC = () => {
             <DailyPieChart focusTime={focusTime} breakTime={breakTime} />
         </div>
 
+        {/* --- WEEKLY BALANCE (NEW) --- */}
+        <div className="bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-3xl p-5 overflow-hidden shrink-0">
+            <div className="flex items-center gap-2 opacity-60 mb-2">
+                <BarChart3 size={14} className="text-slate-400" />
+                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Weekly Focus</span>
+            </div>
+            <WeeklyOverview history={sessionHistory} />
+        </div>
+
         {/* --- SESSION LOG --- */}
-        <div className="flex-1 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-3xl p-5 overflow-hidden flex flex-col min-h-[250px]">
-            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+        <div className="flex-1 bg-white/80 dark:bg-slate-900/50 backdrop-blur-md border border-slate-200 dark:border-slate-700/50 rounded-3xl p-5 overflow-hidden flex flex-col min-h-[200px]">
+            <h3 className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2 shrink-0">
                 <Clock size={12} /> Today's Log
             </h3>
             

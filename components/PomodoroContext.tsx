@@ -39,6 +39,9 @@ interface PomodoroContextType {
   isBrownNoiseOn: boolean;
   pipWindow: Window | null;
   petType: PetType;
+  petName: string; // Dynamic getter based on type
+  catName: string;
+  dogName: string;
   
   // Stats & History
   sessionHistory: PomodoroSession[];
@@ -57,6 +60,7 @@ interface PomodoroContextType {
   skipForward: () => void;
   deleteSession: (id: string) => Promise<void>;
   setPetType: (type: PetType) => void;
+  setPetName: (name: string) => void; // Smart setter based on type
 }
 
 const PomodoroContext = createContext<PomodoroContextType | undefined>(undefined);
@@ -92,10 +96,22 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       return saved ? JSON.parse(saved) : DEFAULT_PRESETS.custom;
   });
 
+  // --- PET STATE ---
   const [petType, setPetTypeState] = useState<PetType>(() => {
       const saved = localStorage.getItem('pomodoro_pet_type');
       return (saved as PetType) || 'cat';
   });
+
+  const [catName, setCatName] = useState<string>(() => {
+      return localStorage.getItem('pomodoro_cat_name') || 'Mochi';
+  });
+
+  const [dogName, setDogName] = useState<string>(() => {
+      return localStorage.getItem('pomodoro_dog_name') || 'Buddy';
+  });
+
+  // Derived Name
+  const petName = petType === 'cat' ? catName : dogName;
 
   const [timerSettings, setTimerSettings] = useState<TimerSettings>(DEFAULT_PRESETS.classic);
   const [timeLeft, setTimeLeft] = useState(DEFAULT_PRESETS.classic.focus);
@@ -321,6 +337,16 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       localStorage.setItem('pomodoro_pet_type', type);
   }
 
+  const setPetName = (name: string) => {
+      if (petType === 'cat') {
+          setCatName(name);
+          localStorage.setItem('pomodoro_cat_name', name);
+      } else {
+          setDogName(name);
+          localStorage.setItem('pomodoro_dog_name', name);
+      }
+  }
+
   // --- AUDIO ---
   const initAudio = () => {
     if (!audioCtxRef.current) {
@@ -456,6 +482,9 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     isBrownNoiseOn,
     pipWindow,
     petType,
+    petName,
+    catName,
+    dogName,
     sessionHistory,
     dailyProgress,
     toggleTimer,
@@ -470,7 +499,8 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     stopAlarm,
     skipForward,
     deleteSession,
-    setPetType
+    setPetType,
+    setPetName
   };
 
   return (

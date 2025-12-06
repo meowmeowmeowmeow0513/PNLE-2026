@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star
+    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
@@ -59,7 +59,7 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
 
     // --- COSMIC CAT RENDERER (Blob Style) ---
     const renderCat = () => (
-        <svg viewBox="0 0 200 200" className={`w-48 h-48 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : 'pet-breathe'}`}>
+        <svg viewBox="0 0 200 200" className={`w-40 h-40 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : 'pet-breathe'}`}>
             <defs>
                 <linearGradient id="catBody" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#f0abfc" /> {/* Pink-300 */}
@@ -139,7 +139,7 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
 
     // --- SUNNY DOGE RENDERER (Blob Style) ---
     const renderDog = () => (
-        <svg viewBox="0 0 200 200" className={`w-48 h-48 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : status === 'awake' ? 'animate-bounce-happy' : 'pet-breathe'}`}>
+        <svg viewBox="0 0 200 200" className={`w-40 h-40 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : status === 'awake' ? 'animate-bounce-happy' : 'pet-breathe'}`}>
             <defs>
                 <linearGradient id="dogBody" x1="0%" y1="0%" x2="100%" y2="100%">
                     <stop offset="0%" stopColor="#fcd34d" /> {/* Amber-300 */}
@@ -235,9 +235,18 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, onPet }) => {
 
 // --- MAIN WIDGET ---
 const FocusPetWidget = () => {
-    const { isActive, mode, timeLeft, timerSettings, petType, setPetType } = usePomodoro();
+    const { isActive, mode, timeLeft, timerSettings, petType, setPetType, petName, setPetName } = usePomodoro();
     const [hearts, setHearts] = useState<{ id: number, x: number, y: number, r: number, content: React.ReactNode }[]>([]);
     
+    // Rename State
+    const [isEditingName, setIsEditingName] = useState(false);
+    const [tempName, setTempName] = useState(petName);
+
+    // Sync temp name when petName changes (e.g. switching pets)
+    useEffect(() => {
+        setTempName(petName);
+    }, [petName]);
+
     // Combo System
     const [combo, setCombo] = useState(0);
     const comboTimeoutRef = useRef<number | null>(null);
@@ -247,19 +256,19 @@ const FocusPetWidget = () => {
     const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
     
     let status: 'sleeping' | 'awake' = 'awake';
-    let message = "Let's focus!";
+    let message = `Let's focus, ${petName}!`;
     
     if (isActive) {
         if (mode === 'focus') {
             status = 'sleeping';
-            message = "Focusing...";
+            message = "Shh... Focusing...";
         } else {
             status = 'awake';
-            message = "Break Time!";
+            message = "Yay! Break Time!";
         }
     } else {
         status = 'awake';
-        message = "Ready?";
+        message = `Ready, ${petName}?`;
     }
 
     const handlePetClick = (e: React.MouseEvent) => {
@@ -276,12 +285,21 @@ const FocusPetWidget = () => {
         
         const id = Date.now() + Math.random();
         
-        // Randomize content based on combo
+        // Randomize content based on combo and pet type
         let content = <Heart size={20} fill="currentColor" />;
-        if (combo > 5 && Math.random() > 0.7) content = <span className="text-xs font-black">XP+</span>;
-        if (combo > 10 && Math.random() > 0.8) content = <Star size={24} fill="currentColor" className="text-yellow-400" />;
-        if (petType === 'cat' && Math.random() > 0.9) content = <span className="text-xs font-bold">Mew!</span>;
-        if (petType === 'dog' && Math.random() > 0.9) content = <span className="text-xs font-bold">Woof!</span>;
+        
+        if (petType === 'cat') {
+             if (Math.random() > 0.7) content = <span className="text-xs font-bold text-pink-500">Meow!</span>;
+             if (Math.random() > 0.9) content = <Fish size={20} className="text-blue-400" fill="currentColor" />;
+             if (Math.random() > 0.85) content = <span className="text-xs font-bold text-purple-500">Purr...</span>;
+        } else {
+             if (Math.random() > 0.7) content = <span className="text-xs font-bold text-amber-600">Woof!</span>;
+             if (Math.random() > 0.9) content = <Bone size={20} className="text-slate-300" fill="currentColor" />;
+             if (Math.random() > 0.85) content = <span className="text-xs font-bold text-orange-500">Bark!</span>;
+        }
+
+        if (combo > 5 && Math.random() > 0.8) content = <span className="text-xs font-black text-emerald-500">XP+</span>;
+        if (combo > 10 && Math.random() > 0.9) content = <Star size={24} fill="currentColor" className="text-yellow-400" />;
 
         setHearts(prev => [...prev, { id, x, y, r, content }]);
         
@@ -289,6 +307,22 @@ const FocusPetWidget = () => {
         setTimeout(() => {
             setHearts(prev => prev.filter(h => h.id !== id));
         }, 800);
+    };
+
+    const handleSaveName = () => {
+        const trimmed = tempName.trim();
+        if (trimmed) {
+            setPetName(trimmed);
+            confetti({
+                particleCount: 50,
+                spread: 60,
+                origin: { y: 0.7 },
+                colors: petType === 'cat' ? ['#ec4899', '#f0abfc'] : ['#f59e0b', '#fbbf24']
+            });
+        } else {
+            setTempName(petName); // Revert if empty
+        }
+        setIsEditingName(false);
     };
 
     return (
@@ -323,7 +357,7 @@ const FocusPetWidget = () => {
                 </div>
             )}
 
-            <div className="flex-1 relative z-10 flex flex-col items-center justify-center mt-4">
+            <div className="flex-1 relative z-10 flex flex-col items-center justify-center mt-2">
                 {/* Floating Particles Container */}
                 <div className="absolute inset-0 pointer-events-none z-50 overflow-visible">
                     {hearts.map(h => (
@@ -335,6 +369,36 @@ const FocusPetWidget = () => {
                             {h.content}
                         </div>
                     ))}
+                </div>
+
+                {/* Name Badge */}
+                <div className="mb-2 relative group/name">
+                    {isEditingName ? (
+                        <div className="flex flex-col items-center animate-in fade-in zoom-in absolute bottom-0 left-1/2 -translate-x-1/2 min-w-[120px] bg-white dark:bg-slate-900 p-2 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 z-50">
+                            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Rename {petType === 'cat' ? 'Kitty' : 'Puppy'}</span>
+                            <div className="flex items-center gap-1 w-full">
+                                <input 
+                                    type="text" 
+                                    value={tempName}
+                                    onChange={(e) => setTempName(e.target.value)}
+                                    className="w-full text-xs font-bold text-center bg-slate-100 dark:bg-black/40 rounded-lg py-1 px-2 focus:outline-none text-slate-800 dark:text-white border border-transparent focus:border-pink-500"
+                                    autoFocus
+                                    placeholder={petType === 'cat' ? "Name your kitty..." : "Name your puppy..."}
+                                    onBlur={handleSaveName}
+                                    onKeyDown={(e) => e.key === 'Enter' && handleSaveName()}
+                                />
+                                <button onClick={handleSaveName} className="p-1 bg-emerald-500 text-white rounded-md hover:bg-emerald-600"><Check size={12} /></button>
+                            </div>
+                        </div>
+                    ) : (
+                        <button 
+                            onClick={() => { setTempName(petName); setIsEditingName(true); }}
+                            className="flex items-center gap-1.5 px-3 py-1 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 rounded-full border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all text-xs font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white"
+                        >
+                            {petName}
+                            <Edit2 size={10} className="opacity-0 group-hover/name:opacity-100 transition-opacity" />
+                        </button>
+                    )}
                 </div>
 
                 <PetAvatar type={petType} status={status} onPet={handlePetClick} />
@@ -510,9 +574,9 @@ const Pomodoro: React.FC = () => {
                 <div className={`absolute inset-0 rounded-full border-4 opacity-20 pointer-events-none transition-colors duration-500 ${isActive ? 'animate-ping' : ''} ${isFocus ? 'border-pink-500' : 'border-cyan-500'}`}></div>
 
                 <svg width="340" height="340" className="transform -rotate-90 drop-shadow-2xl">
-                    <circle cx="170" cy="170" r={radius} stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-200 dark:text-slate-800" />
+                    <circle cx="170" cy="170" r="140" stroke="currentColor" strokeWidth="8" fill="transparent" className="text-slate-200 dark:text-slate-800" />
                     <circle 
-                        cx="170" cy="170" r={radius} 
+                        cx="170" cy="170" r="140" 
                         stroke={strokeColor} 
                         strokeWidth="16" 
                         fill="transparent" 
