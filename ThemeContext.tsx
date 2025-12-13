@@ -88,9 +88,16 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     return 'dark';
   });
 
-  const [accentColor, setAccentColorState] = useState(() => {
+  // STORE: User's selected accent color (Persisted)
+  // This preserves the choice (e.g., Blue) even if Crescere mode forces Pink visually.
+  const [userAccentColor, setUserAccentColor] = useState(() => {
       return localStorage.getItem('pnle_accent_color') || '#EC4899';
   });
+
+  // COMPUTED: The actual color applied to CSS
+  // If Crescere mode is active, FORCE Rose Red (#be123c).
+  // Otherwise, use the user's selected color.
+  const activeAccentColor = themeMode === 'crescere' ? '#be123c' : userAccentColor;
 
   // --- ACCESSIBILITY STATE ---
   const [fontSize, setFontSizeState] = useState<FontSize>(() => {
@@ -117,7 +124,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                   if (snap.exists()) {
                       const data = snap.data();
                       if (data.themeMode) setThemeModeState(data.themeMode as ThemeMode);
-                      if (data.accentColor) setAccentColorState(data.accentColor);
+                      
+                      // Important: Load the USER'S preference, not the potentially overridden active color
+                      if (data.accentColor) setUserAccentColor(data.accentColor);
+                      
                       if (data.fontSize) setFontSizeState(data.fontSize);
                       if (data.fontFamily) setFontFamilyState(data.fontFamily);
                       if (data.reduceMotion !== undefined) setReduceMotionState(data.reduceMotion);
@@ -131,6 +141,8 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   }, [currentUser]);
 
   // --- APPLY EFFECTS TO DOM ---
+  
+  // 1. Theme Mode Classes
   useEffect(() => {
     const root = document.documentElement;
     
@@ -140,13 +152,36 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (themeMode === 'crescere') root.classList.add('theme-crescere');
     else root.classList.remove('theme-crescere');
     
+    localStorage.setItem('pnle_theme_mode', themeMode);
+    
+    if (currentUser) {
+        const ref = doc(db, 'users', currentUser.uid);
+        updateDoc(ref, { themeMode }).catch(() => {});
+    }
+  }, [themeMode, isDark, currentUser]);
+
+  // 2. CSS Variables & Color Persistence
+  useEffect(() => {
+      // Apply the ACTIVE color to CSS variables (UI update)
+      updateCssVariables(activeAccentColor);
+      
+      // Persist the USER'S preference to storage/DB
+      localStorage.setItem('pnle_accent_color', userAccentColor);
+      if (currentUser) {
+          const ref = doc(db, 'users', currentUser.uid);
+          updateDoc(ref, { accentColor: userAccentColor }).catch(() => {});
+      }
+  }, [activeAccentColor, userAccentColor, currentUser]);
+
+  // 3. Accessibility Settings
+  useEffect(() => {
+    const root = document.documentElement;
     root.setAttribute('data-font-size', fontSize);
     root.setAttribute('data-font-family', fontFamily);
     
     if (reduceMotion) root.classList.add('reduce-motion');
     else root.classList.remove('reduce-motion');
 
-    localStorage.setItem('pnle_theme_mode', themeMode);
     localStorage.setItem('pnle_font_size', fontSize);
     localStorage.setItem('pnle_font_family', fontFamily);
     localStorage.setItem('pnle_reduce_motion', String(reduceMotion));
@@ -154,41 +189,35 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     if (currentUser) {
         const ref = doc(db, 'users', currentUser.uid);
         updateDoc(ref, { 
-            themeMode, 
             fontSize, 
             fontFamily, 
             reduceMotion 
         }).catch(() => {});
     }
-  }, [themeMode, isDark, fontSize, fontFamily, reduceMotion, currentUser]);
+  }, [fontSize, fontFamily, reduceMotion, currentUser]);
 
-  // Apply Color Variables
-  useEffect(() => {
-      updateCssVariables(accentColor);
-      localStorage.setItem('pnle_accent_color', accentColor);
-      if (currentUser) {
-          const ref = doc(db, 'users', currentUser.uid);
-          updateDoc(ref, { accentColor: accentColor }).catch(() => {});
-      }
-  }, [accentColor, currentUser]);
 
   // --- PUBLIC ACTIONS ---
 
   const setThemeMode = (mode: ThemeMode) => {
       setThemeModeState(mode);
-      if (mode === 'crescere') {
-          setAccentColorState('#be123c'); // Rose Red for Crescere
-      }
+      // No need to manually set accentColor here; derived logic handles the visual switch
   };
 
   const toggleTheme = () => setThemeMode(themeMode === 'light' ? 'dark' : 'light');
-  const setAccentColor = (hex: string) => setAccentColorState(hex);
+  
+  const setAccentColor = (hex: string) => {
+      // Updates the user's preference. 
+      // If in Crescere mode, this won't visually change immediately, but will be saved for when they exit Crescere.
+      setUserAccentColor(hex);
+  };
+
   const setFontSize = (size: FontSize) => setFontSizeState(size);
   const setFontFamily = (family: FontFamily) => setFontFamilyState(family);
   const setReduceMotion = (reduce: boolean) => setReduceMotionState(reduce);
 
   const resetTheme = () => {
-      setAccentColorState('#EC4899');
+      setUserAccentColor('#EC4899'); // Reset to default Pink
       setThemeMode('dark');
       setFontSizeState('normal');
       setFontFamilyState('sans');
@@ -197,9 +226,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   return (
     <ThemeContext.Provider value={{ 
-        themeMode, isDark, accentColor, 
+        themeMode, isDark, 
+        accentColor: activeAccentColor, // Consumers see the *active* color (Rose if Crescere, User's if not)
         fontSize, fontFamily, reduceMotion,
-        setThemeMode, toggleTheme, setAccentColor,
+        setThemeMode, toggleTheme, 
+        setAccentColor, // Updates the *user's* preference
         setFontSize, setFontFamily, setReduceMotion,
         resetTheme 
     }}>
