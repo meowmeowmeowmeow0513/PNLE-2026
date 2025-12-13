@@ -1,43 +1,31 @@
 
 import React, { useState, useEffect } from 'react';
 import { useTasks } from '../TaskContext';
-import { SIM_CASES, ClinicalCase } from '../data/simulationData';
-import { Dices, CheckCircle2, Loader2, Info, Brain, Zap, Stethoscope, ClipboardList, FileText, Stamp, Thermometer, User, Activity, AlertTriangle, X, History, Trash2, Calendar, Star, Trophy, Award, ShieldCheck, HeartHandshake, Maximize2, FileOutput, AlertCircle } from 'lucide-react';
+import { SIM_CASES, ClinicalCase, OFFICIAL_CHARTS, OfficialChart, OFFICIAL_PDF_PATHS } from '../data/simulationData';
+import { Dices, CheckCircle2, Loader2, Info, Brain, Zap, Stethoscope, ClipboardList, FileText, Stamp, Thermometer, User, Activity, AlertTriangle, X, History, Trash2, Calendar, Star, Trophy, Award, ShieldCheck, HeartHandshake, Maximize2, FileOutput, AlertCircle, Download, FileDown, BookOpen, ChevronRight } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { GoogleGenAI } from "@google/genai";
-
-interface PatientChart {
-    initials: string;
-    ageSex: string;
-    chiefComplaint: string;
-    history: string;
-    vitals: {
-        bp: string;
-        hr: string;
-        rr: string;
-        temp: string;
-        spo2: string;
-    };
-    diagnosis: string;
-    statOrders: string[];
-}
+import { ref, getDownloadURL } from 'firebase/storage';
+import { storage } from '../firebase';
 
 interface SavedCaseLog {
     id: string;
     timestamp: number;
-    chart: PatientChart;
+    chart: OfficialChart;
     caseType: ClinicalCase;
 }
 
-const ClinicalRoulette: React.FC = () => {
+interface ClinicalRouletteProps {
+    onComplete?: () => void;
+}
+
+const ClinicalRoulette: React.FC<ClinicalRouletteProps> = ({ onComplete }) => {
     const { addTask } = useTasks();
     const [isSpinning, setIsSpinning] = useState(false);
     const [selectedCase, setSelectedCase] = useState<ClinicalCase | null>(null);
     const [acceptStatus, setAcceptStatus] = useState<'idle' | 'stamped' | 'accepted'>('idle');
     
     // Structured Data State
-    const [patientChart, setPatientChart] = useState<PatientChart | null>(null);
-    const [loadingScenario, setLoadingScenario] = useState(false);
+    const [patientChart, setPatientChart] = useState<OfficialChart | null>(null);
     const [activeTab, setActiveTab] = useState<'chart' | 'orders'>('chart');
 
     // Visual state for the "Slot Machine" effect
@@ -45,11 +33,12 @@ const ClinicalRoulette: React.FC = () => {
 
     // Case Log History & XP
     const [showHistory, setShowHistory] = useState(false);
-    const [viewLog, setViewLog] = useState<SavedCaseLog | null>(null); // For detailed modal
+    const [showDownloads, setShowDownloads] = useState(false);
+    const [viewLog, setViewLog] = useState<SavedCaseLog | null>(null);
     const [rouletteXP, setRouletteXP] = useState(0);
     const [caseHistory, setCaseHistory] = useState<SavedCaseLog[]>(() => {
         try {
-            const saved = localStorage.getItem('clinical_roulette_history_v2');
+            const saved = localStorage.getItem('clinical_roulette_history_v3');
             return saved ? JSON.parse(saved) : [];
         } catch (e) {
             console.error("Failed to load history", e);
@@ -57,10 +46,31 @@ const ClinicalRoulette: React.FC = () => {
         }
     });
 
+    // Resource Downloads State
+    const [resourceLinks, setResourceLinks] = useState<{title: string, url: string}[]>([]);
+
     useEffect(() => {
-        localStorage.setItem('clinical_roulette_history_v2', JSON.stringify(caseHistory));
+        localStorage.setItem('clinical_roulette_history_v3', JSON.stringify(caseHistory));
         setRouletteXP(caseHistory.length);
     }, [caseHistory]);
+
+    // Fetch PDF URLs on mount
+    useEffect(() => {
+        const fetchUrls = async () => {
+            const links = await Promise.all(OFFICIAL_PDF_PATHS.map(async (item) => {
+                try {
+                    const r = ref(storage, item.path);
+                    const url = await getDownloadURL(r);
+                    return { title: item.title, url };
+                } catch (e) {
+                    console.error("Failed to load PDF", item.title, e);
+                    return null;
+                }
+            }));
+            setResourceLinks(links.filter(l => l !== null) as {title: string, url: string}[]);
+        };
+        fetchUrls();
+    }, []);
 
     // Rank Logic - NURSING EDITION
     const getRank = () => {
@@ -72,7 +82,7 @@ const ClinicalRoulette: React.FC = () => {
     
     const rank = getRank();
 
-    // Helper to safely get icon (handles localStorage serialization loss)
+    // Helper to safely get icon
     const getCaseIcon = (caseId: string) => {
         const found = SIM_CASES.find(c => c.id === caseId);
         return found ? found.icon : FileText;
@@ -99,69 +109,26 @@ const ClinicalRoulette: React.FC = () => {
                 setIsSpinning(false);
                 setSelectedCase(randomCase);
                 confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-                generateScenario(randomCase);
+                
+                // INSTANT LOAD FROM OFFICIAL SOURCE
+                const officialData = OFFICIAL_CHARTS[randomCase.id];
+                if (officialData) {
+                    setPatientChart(officialData);
+                }
             }
         }, 80 + (count * 10)); // Decelerating spin
-    };
-
-    const generateScenario = async (caseData: ClinicalCase) => {
-        setLoadingScenario(true);
-        try {
-            const apiKey = process.env.API_KEY;
-            const ai = new GoogleGenAI({ apiKey });
-            
-            const prompt = `
-            Act as an ER Charge Nurse.
-            Case: ${caseData.title} (${caseData.short}).
-            
-            Generate a realistic patient chart in STRICT JSON format (no markdown code blocks, just raw JSON).
-            Fields required:
-            - initials (e.g. "J.D.")
-            - ageSex (e.g. "45M")
-            - chiefComplaint (Short phrase)
-            - diagnosis (Admitting Dx)
-            - history (HPI - Max 2 sentences)
-            - vitals (Object with bp, hr, rr, temp, spo2)
-            - statOrders (Array of 3-4 specific nursing/medication orders)
-            
-            Make the vitals critical but realistic for the condition.
-            `;
-
-            const result = await ai.models.generateContent({
-                model: 'gemini-2.5-flash',
-                contents: prompt,
-                config: {
-                    responseMimeType: "application/json"
-                }
-            });
-            
-            const text = result.text || "{}";
-            // Sanitize string if AI adds markdown blocks despite prompt
-            const jsonStr = text.replace(/```json|```/g, '').trim();
-            const data = JSON.parse(jsonStr) as PatientChart;
-            
-            setPatientChart(data);
-        } catch (e) {
-            console.error("AI Generation Failed", e);
-            // Fallback Chart
-            setPatientChart({
-                initials: "UNK", ageSex: "--", chiefComplaint: "System Error", history: "Could not retrieve patient data.",
-                diagnosis: caseData.title,
-                vitals: { bp: "--/--", hr: "--", rr: "--", temp: "--", spo2: "--" },
-                statOrders: ["Monitor Vitals", "Notify Physician"]
-            });
-        } finally {
-            setLoadingScenario(false);
-        }
     };
 
     const handleAcceptCase = async () => {
         if (!selectedCase || !patientChart) return;
         
-        // Stamping animation
         setAcceptStatus('stamped');
         
-        // Add to Local History (Max 10 Limit)
+        // Award XP via prop callback to prevent abuse (Moved here from parent click)
+        if (onComplete) {
+            onComplete();
+        }
+        
         const newLog: SavedCaseLog = {
             id: Math.random().toString(36).substr(2, 9),
             timestamp: Date.now(),
@@ -171,15 +138,13 @@ const ClinicalRoulette: React.FC = () => {
         
         setCaseHistory(prev => {
             const updated = [newLog, ...prev];
-            if (updated.length > 10) {
-                return updated.slice(0, 10); // Keep only top 10
-            }
+            if (updated.length > 10) return updated.slice(0, 10);
             return updated;
         });
 
         // Construct detailed text for Planner
         const detailsText = `
-PATIENT: ${patientChart.initials} (${patientChart.ageSex})
+OFFICIAL SLE CASE: ${patientChart.initials} (${patientChart.ageSex})
 DX: ${patientChart.diagnosis}
 CC: ${patientChart.chiefComplaint}
 
@@ -194,19 +159,18 @@ STAT ORDERS:
 ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
         `.trim();
 
-        // Wait for visual, then process
         setTimeout(async () => {
             const now = new Date();
             const end = new Date(now.getTime() + 60 * 60 * 1000); // 1 Hour
 
             await addTask({
-                title: `[SIM] ${selectedCase.short} - ${patientChart.initials}`,
+                title: `[SLE] ${selectedCase.short} - ${patientChart.initials}`,
                 category: 'School',
                 priority: 'High',
                 start: now.toISOString(),
                 end: end.toISOString(),
                 allDay: false,
-                details: detailsText // Save structured details
+                details: detailsText
             });
             
             setAcceptStatus('accepted');
@@ -226,9 +190,14 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
         }
     };
 
-    const activeCase = selectedCase || displayCase;
+    const getResourceVisual = (title: string) => {
+        if (title.includes("Algorithm")) return { color: "bg-red-500", icon: Zap, label: "Protocol" };
+        if (title.includes("Scenario")) return { color: "bg-blue-500", icon: FileText, label: "Script" };
+        if (title.includes("Rubrics")) return { color: "bg-emerald-500", icon: ClipboardList, label: "Grading" };
+        return { color: "bg-slate-500", icon: BookOpen, label: "Reference" };
+    };
 
-    // Determine detailed view icon safely
+    const activeCase = selectedCase || displayCase;
     const DetailedIcon = viewLog ? getCaseIcon(viewLog.caseType.id) : FileText;
 
     return (
@@ -236,12 +205,20 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
             
             {/* Header */}
             <div className="text-center space-y-4 px-4 pt-4 relative">
-                <button 
-                    onClick={() => setShowHistory(true)}
-                    className="absolute top-0 right-4 flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 hover:text-purple-500 dark:text-slate-300 transition-colors shadow-sm border border-slate-200 dark:border-slate-700 font-bold text-xs"
-                >
-                    <History size={16} /> Archives ({caseHistory.length})
-                </button>
+                <div className="absolute top-0 right-4 flex gap-2">
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setShowDownloads(true); }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-blue-100 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-200 dark:hover:bg-blue-900/40 transition-colors shadow-sm font-bold text-xs border border-blue-200 dark:border-blue-800"
+                    >
+                        <FileDown size={16} /> Official Resources
+                    </button>
+                    <button 
+                        onClick={(e) => { e.stopPropagation(); setShowHistory(true); }}
+                        className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 hover:text-purple-500 dark:text-slate-300 transition-colors shadow-sm border border-slate-200 dark:border-slate-700 font-bold text-xs"
+                    >
+                        <History size={16} /> Archives ({caseHistory.length})
+                    </button>
+                </div>
 
                 {/* Rank Badge */}
                 <div className="flex justify-center">
@@ -257,7 +234,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                 </div>
                 <h2 className="text-3xl md:text-4xl font-black text-slate-900 dark:text-white tracking-tight uppercase">Clinical Roulette</h2>
                 <p className="text-slate-500 dark:text-slate-400 max-w-md mx-auto text-sm md:text-base font-medium">
-                    Test your rapid assessment skills. Spin to receive a random high-acuity patient scenario.
+                    Test your rapid assessment skills. Spin to receive an official 2025 SLE patient scenario.
                 </p>
             </div>
 
@@ -315,7 +292,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                             </div>
                                             <div>
                                                 <h3 className="font-black text-lg leading-none">{activeCase.short}</h3>
-                                                <p className="text-[10px] font-bold uppercase opacity-70 mt-0.5">Priority 1 • Bed 4</p>
+                                                <p className="text-[10px] font-bold uppercase opacity-70 mt-0.5">Priority 1 • Official Case</p>
                                             </div>
                                         </div>
                                         {patientChart && (
@@ -327,7 +304,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                     </div>
 
                                     {/* Tabs */}
-                                    {patientChart && !loadingScenario && (
+                                    {patientChart && (
                                         <div className="flex border-b border-slate-100 dark:border-slate-800">
                                             <button 
                                                 onClick={() => setActiveTab('chart')}
@@ -349,12 +326,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                         {isSpinning ? (
                                             <div className="h-full flex flex-col items-center justify-center text-slate-400 font-mono text-sm animate-pulse gap-3 py-8">
                                                 <Loader2 size={24} className="animate-spin" />
-                                                SEARCHING DATABASE...
-                                            </div>
-                                        ) : loadingScenario ? (
-                                            <div className="h-full flex flex-col items-center justify-center gap-3 text-slate-500 py-8">
-                                                <Loader2 size={24} className="animate-spin text-purple-500" />
-                                                <span className="text-xs font-bold uppercase tracking-widest">Retrieving Records...</span>
+                                                ACCESSING EMR...
                                             </div>
                                         ) : patientChart ? (
                                             <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -383,11 +355,22 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                                             </p>
                                                         </div>
                                                         <div>
-                                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">HPI</h4>
+                                                            <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">History</h4>
                                                             <p className="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                                                                 {patientChart.history}
                                                             </p>
                                                         </div>
+                                                        
+                                                        {patientChart.labs && (
+                                                            <div>
+                                                                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Key Findings</h4>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {patientChart.labs.map((lab, i) => (
+                                                                        <span key={i} className="px-2 py-1 bg-slate-100 dark:bg-slate-800 rounded text-[10px] font-mono font-bold">{lab}</span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <div className="space-y-4">
@@ -419,7 +402,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                     </div>
 
                                     {/* Action Footer */}
-                                    {!isSpinning && !loadingScenario && acceptStatus !== 'accepted' && (
+                                    {!isSpinning && acceptStatus !== 'accepted' && (
                                         <button 
                                             onClick={handleAcceptCase}
                                             className="w-full bg-slate-900 dark:bg-white text-white dark:text-slate-900 py-5 font-bold uppercase tracking-widest hover:bg-slate-800 transition-colors flex items-center justify-center gap-2"
@@ -447,7 +430,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                     {/* Controls */}
                     <div className="flex justify-center mt-8 pb-4">
                         <button 
-                            onClick={handleSpin}
+                            onClick={(e) => { e.stopPropagation(); handleSpin(); }}
                             disabled={isSpinning || (selectedCase !== null && acceptStatus === 'idle')}
                             className={`px-12 py-5 rounded-full font-black text-xl tracking-wide shadow-2xl transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3 ${
                                 isSpinning 
@@ -467,6 +450,87 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                 </div>
             </div>
 
+            {/* --- DOWNLOADS MODAL (IMPROVED VISUALS) --- */}
+            {showDownloads && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/90 backdrop-blur-md p-4 animate-fade-in" onClick={() => setShowDownloads(false)}>
+                    <div className="bg-white dark:bg-[#0f172a] w-full max-w-4xl rounded-[2.5rem] shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden animate-zoom-in relative flex flex-col max-h-[85vh]" onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header */}
+                        <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-[#0B1121] flex justify-between items-center relative overflow-hidden shrink-0">
+                            {/* Background FX */}
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-[80px] pointer-events-none"></div>
+                            
+                            <div className="relative z-10">
+                                <h3 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-3">
+                                    <div className="p-2 bg-blue-500 text-white rounded-xl shadow-lg shadow-blue-500/30">
+                                        <FileDown size={24} />
+                                    </div>
+                                    Official SLE Library
+                                </h3>
+                                <p className="text-slate-500 dark:text-slate-400 text-sm font-medium mt-1 ml-1">
+                                    Approved 2025 Study Materials & Guidelines
+                                </p>
+                            </div>
+                            <button onClick={() => setShowDownloads(false)} className="relative z-10 p-3 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-500 transition-colors">
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        {/* Content Grid */}
+                        <div className="p-8 overflow-y-auto custom-scrollbar bg-slate-50/50 dark:bg-black/20 flex-1">
+                            {resourceLinks.length === 0 ? (
+                                <div className="flex flex-col items-center justify-center h-64 text-slate-400 gap-4">
+                                    <Loader2 size={40} className="animate-spin text-blue-500" />
+                                    <p className="font-bold">Fetching secure documents...</p>
+                                </div>
+                            ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {resourceLinks.map((res, i) => {
+                                        const visual = getResourceVisual(res.title);
+                                        return (
+                                            <a 
+                                                key={i} 
+                                                href={res.url} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="group relative bg-white dark:bg-slate-900 rounded-3xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl transition-all hover:-translate-y-1 overflow-hidden flex flex-col"
+                                            >
+                                                <div className={`absolute top-0 right-0 w-24 h-24 ${visual.color} opacity-10 rounded-bl-full group-hover:scale-150 transition-transform duration-500`}></div>
+                                                
+                                                <div className="flex items-start justify-between mb-6 relative z-10">
+                                                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${visual.color} text-white shadow-lg shadow-${visual.color}/30`}>
+                                                        <visual.icon size={28} />
+                                                    </div>
+                                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg">
+                                                        PDF
+                                                    </span>
+                                                </div>
+                                                
+                                                <div className="relative z-10">
+                                                    <span className={`text-[10px] font-bold uppercase tracking-wider mb-1 block ${visual.color.replace('bg-', 'text-')}`}>
+                                                        {visual.label}
+                                                    </span>
+                                                    <h4 className="text-xl font-black text-slate-900 dark:text-white leading-tight mb-2 group-hover:text-blue-500 transition-colors">
+                                                        {res.title}
+                                                    </h4>
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                                                        Tap to access official document.
+                                                    </p>
+                                                </div>
+
+                                                <div className="mt-6 flex items-center text-xs font-bold text-slate-400 group-hover:text-blue-500 transition-colors">
+                                                    Download / View <ChevronRight size={14} />
+                                                </div>
+                                            </a>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* --- HISTORY LOG MODAL --- */}
             {showHistory && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" onClick={() => setShowHistory(false)}>
@@ -480,13 +544,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                     <h3 className="font-bold text-lg text-slate-900 dark:text-white">Medical Archives</h3>
                                     <div className="flex items-center gap-2 text-xs">
                                         <span className="text-slate-500">Capacity: {caseHistory.length} / 10</span>
-                                        {caseHistory.length >= 10 && (
-                                            <span className="text-amber-500 font-bold flex items-center gap-1">
-                                                <AlertCircle size={12} /> Limit Reached
-                                            </span>
-                                        )}
                                     </div>
-                                    <p className="text-[10px] text-slate-400 mt-0.5">Oldest cases are automatically removed.</p>
                                 </div>
                             </div>
                             <button onClick={() => setShowHistory(false)} className="p-2 hover:bg-slate-200 dark:hover:bg-slate-800 rounded-full text-slate-500"><X size={20} /></button>
@@ -569,8 +627,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
             {viewLog && (
                 <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in" onClick={() => setViewLog(null)}>
                     <div className="bg-white dark:bg-slate-900 w-full max-w-2xl rounded-3xl shadow-2xl border border-slate-200 dark:border-white/10 overflow-hidden flex flex-col max-h-[90vh] animate-zoom-in" onClick={e => e.stopPropagation()}>
-                        
-                        {/* Header */}
+                        {/* Reuse the detailed view rendering logic from before */}
                         <div className={`p-6 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center ${getThemeColor(viewLog.caseType.color)} bg-opacity-20 dark:bg-opacity-10`}>
                             <div className="flex items-center gap-4">
                                 <div className="p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm text-slate-700 dark:text-white">
@@ -586,9 +643,7 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                             </button>
                         </div>
 
-                        {/* Scrollable Content */}
                         <div className="flex-1 overflow-y-auto custom-scrollbar p-6 space-y-6 bg-slate-50 dark:bg-slate-950">
-                            
                             {/* Patient Info */}
                             <div className="flex items-center justify-between p-4 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                                 <div>
@@ -650,7 +705,6 @@ ${patientChart.statOrders.map(o => `- ${o}`).join('\n')}
                                     </div>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>

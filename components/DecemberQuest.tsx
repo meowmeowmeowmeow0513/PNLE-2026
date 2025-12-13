@@ -339,6 +339,7 @@ const DecemberQuest: React.FC = () => {
 
                 {/* RIGHT PANEL: HOLO-BADGE (Visual) */}
                 <div className="relative z-10 w-full md:w-[35%] bg-slate-50/80 dark:bg-slate-900/80 border-t md:border-t-0 md:border-l border-slate-200 dark:border-slate-800 p-8 flex flex-col items-center justify-center text-center overflow-hidden backdrop-blur-sm">
+                    <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none"></div>
                     <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-blue-500/10 via-transparent to-transparent opacity-50"></div>
                     <EKGLine />
                     
@@ -481,9 +482,9 @@ const DecemberQuest: React.FC = () => {
                         />
                     )}
                     {activeTab === 'roulette' && (
-                        <div onClick={() => addXP(15)}>
-                            <ClinicalRoulette />
-                        </div>
+                        <ClinicalRoulette 
+                            onComplete={() => addXP(15)}
+                        />
                     )}
                     {activeTab === 'quiz' && (
                         <QuizModule 

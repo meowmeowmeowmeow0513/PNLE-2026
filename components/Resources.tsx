@@ -1,10 +1,11 @@
 
 import React, { useState } from 'react';
-import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Globe, X, Link as LinkIcon, Send, Check, Loader2, AlertCircle, Library } from 'lucide-react';
+import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Globe, X, Link as LinkIcon, Send, Check, Loader2, AlertCircle, Library, PlayCircle, GraduationCap, LayoutGrid } from 'lucide-react';
 import { ResourceLink } from '../types';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { useAuth } from '../AuthContext';
+import { useTheme } from '../ThemeContext';
 
 // Extended interface for internal use
 interface EnhancedResource extends ResourceLink {
@@ -15,6 +16,7 @@ interface EnhancedResource extends ResourceLink {
 
 const Resources: React.FC = () => {
   const { currentUser } = useAuth();
+  const { themeMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
   
   // Modal States
@@ -25,6 +27,8 @@ const Resources: React.FC = () => {
   const [requestForm, setRequestForm] = useState({ title: '', url: '', type: 'Website' });
   const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+
+  const isCrescere = themeMode === 'crescere';
 
   const resources: EnhancedResource[] = [
     {
@@ -70,16 +74,16 @@ const Resources: React.FC = () => {
       description: 'Shared flashcard decks for spaced repetition review.',
       url: 'https://ankiweb.net',
       iconName: 'layers',
-      tags: ['FLASHCARDS', 'ACTIVE RECALL'],
-      color: 'slate'
+      tags: ['FLASHCARDS', 'RECALL'],
+      color: 'violet'
     },
     {
       id: '6',
-      title: 'Credible Websites',
-      description: 'Verified portals: Simple Nursing, RegisteredNurseRN, and more.',
+      title: 'Verified Portals',
+      description: 'Credible sources: Simple Nursing, RegisteredNurseRN, and more.',
       url: '#websites', // Trigger for modal
       iconName: 'globe',
-      tags: ['PORTAL', 'VERIFIED'],
+      tags: ['PORTAL', 'EXTERNAL'],
       color: 'cyan'
     }
   ];
@@ -94,8 +98,8 @@ const Resources: React.FC = () => {
   const getIcon = (name: string, className?: string) => {
     switch (name) {
       case 'drive': return <Folder className={className} />;
-      case 'video': return <Video className={className} />;
-      case 'file': return <FileText className={className} />;
+      case 'video': return <PlayCircle className={className} />;
+      case 'file': return <LayoutGrid className={className} />;
       case 'book': return <Book className={className} />;
       case 'layers': return <Layers className={className} />;
       case 'globe': return <Globe className={className} />;
@@ -103,14 +107,130 @@ const Resources: React.FC = () => {
     }
   };
 
-  const getCardTheme = (color: string) => {
+  // --- NEW: ADVANCED THEME ENGINE ---
+  const getResourceVisuals = (color: string) => {
+      // 1. CRESCERE MODE (Warm, Luxury, Glass)
+      // FIX: Increased opacity to white/80-90 to avoid grayness
+      // FIX: Text colors reverted to Slate-900/500 for consistent readability
+      if (isCrescere) {
+          switch(color) {
+              case 'red': return {
+                  bg: 'bg-gradient-to-br from-white to-rose-50 border-rose-200 shadow-sm',
+                  iconBg: 'bg-rose-500 text-white shadow-rose-500/30',
+                  text: 'text-slate-900',
+                  subtext: 'text-slate-500',
+                  hoverBorder: 'hover:border-rose-400',
+                  blob: 'bg-rose-500/10'
+              };
+              case 'emerald': return {
+                  bg: 'bg-gradient-to-br from-white to-emerald-50 border-emerald-200 shadow-sm',
+                  iconBg: 'bg-emerald-500 text-white shadow-emerald-500/30',
+                  text: 'text-slate-900',
+                  subtext: 'text-slate-500',
+                  hoverBorder: 'hover:border-emerald-400',
+                  blob: 'bg-emerald-500/10'
+              };
+              case 'orange': return {
+                  bg: 'bg-gradient-to-br from-white to-amber-50 border-amber-200 shadow-sm',
+                  iconBg: 'bg-amber-500 text-white shadow-amber-500/30',
+                  text: 'text-slate-900',
+                  subtext: 'text-slate-500',
+                  hoverBorder: 'hover:border-amber-400',
+                  blob: 'bg-amber-500/10'
+              };
+              case 'blue': return {
+                  bg: 'bg-gradient-to-br from-white to-blue-50 border-blue-200 shadow-sm',
+                  iconBg: 'bg-blue-500 text-white shadow-blue-500/30',
+                  text: 'text-slate-900',
+                  subtext: 'text-slate-500',
+                  hoverBorder: 'hover:border-blue-400',
+                  blob: 'bg-blue-500/10'
+              };
+              case 'violet': return {
+                  bg: 'bg-gradient-to-br from-white to-violet-50 border-violet-200 shadow-sm',
+                  iconBg: 'bg-violet-500 text-white shadow-violet-500/30',
+                  text: 'text-slate-900',
+                  subtext: 'text-slate-500',
+                  hoverBorder: 'hover:border-violet-400',
+                  blob: 'bg-violet-500/10'
+              };
+              case 'cyan': return {
+                  bg: 'bg-gradient-to-br from-white to-cyan-50 border-cyan-200 shadow-sm',
+                  iconBg: 'bg-cyan-500 text-white shadow-cyan-500/30',
+                  text: 'text-slate-900',
+                  subtext: 'text-slate-500',
+                  hoverBorder: 'hover:border-cyan-400',
+                  blob: 'bg-cyan-500/10'
+              };
+              default: return {
+                  bg: 'bg-white/80 border-slate-200 shadow-sm',
+                  iconBg: 'bg-slate-500 text-white',
+                  text: 'text-slate-900',
+                  subtext: 'text-slate-500',
+                  hoverBorder: 'hover:border-slate-300',
+                  blob: 'bg-slate-500/10'
+              };
+          }
+      }
+
+      // 2. STANDARD (Light/Dark)
       switch(color) {
-          case 'red': return 'text-red-500 bg-red-50 dark:bg-red-500/20';
-          case 'emerald': return 'text-emerald-500 bg-emerald-50 dark:bg-emerald-500/20';
-          case 'orange': return 'text-orange-500 bg-orange-50 dark:bg-orange-500/20';
-          case 'blue': return 'text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/20';
-          case 'cyan': return 'text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-500/20';
-          default: return 'text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800';
+          case 'red': return {
+              bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+              iconBg: 'bg-red-50 dark:bg-red-500/20 text-red-600 dark:text-red-400',
+              text: 'text-slate-900 dark:text-white group-hover:text-red-600 dark:group-hover:text-red-400',
+              subtext: 'text-slate-500 dark:text-slate-400',
+              hoverBorder: 'hover:border-red-300 dark:hover:border-red-500/50',
+              blob: 'bg-red-500/5'
+          };
+          case 'emerald': return {
+              bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+              iconBg: 'bg-emerald-50 dark:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400',
+              text: 'text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400',
+              subtext: 'text-slate-500 dark:text-slate-400',
+              hoverBorder: 'hover:border-emerald-300 dark:hover:border-emerald-500/50',
+              blob: 'bg-emerald-500/5'
+          };
+          case 'orange': return {
+              bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+              iconBg: 'bg-orange-50 dark:bg-orange-500/20 text-orange-600 dark:text-orange-400',
+              text: 'text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400',
+              subtext: 'text-slate-500 dark:text-slate-400',
+              hoverBorder: 'hover:border-orange-300 dark:hover:border-orange-500/50',
+              blob: 'bg-orange-500/5'
+          };
+          case 'violet': return {
+              bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+              iconBg: 'bg-violet-50 dark:bg-violet-500/20 text-violet-600 dark:text-violet-400',
+              text: 'text-slate-900 dark:text-white group-hover:text-violet-600 dark:group-hover:text-violet-400',
+              subtext: 'text-slate-500 dark:text-slate-400',
+              hoverBorder: 'hover:border-violet-300 dark:hover:border-violet-500/50',
+              blob: 'bg-violet-500/5'
+          };
+          case 'cyan': return {
+              bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+              iconBg: 'bg-cyan-50 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400',
+              text: 'text-slate-900 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400',
+              subtext: 'text-slate-500 dark:text-slate-400',
+              hoverBorder: 'hover:border-cyan-300 dark:hover:border-cyan-500/50',
+              blob: 'bg-cyan-500/5'
+          };
+          case 'blue': return {
+              bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+              iconBg: 'bg-blue-50 dark:bg-blue-500/20 text-blue-600 dark:text-blue-400',
+              text: 'text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400',
+              subtext: 'text-slate-500 dark:text-slate-400',
+              hoverBorder: 'hover:border-blue-300 dark:hover:border-blue-500/50',
+              blob: 'bg-blue-500/5'
+          };
+          default: return {
+              bg: 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800',
+              iconBg: 'bg-slate-100 dark:bg-slate-800 text-slate-500',
+              text: 'text-slate-900 dark:text-white',
+              subtext: 'text-slate-500 dark:text-slate-400',
+              hoverBorder: 'hover:border-slate-300',
+              blob: 'bg-slate-500/5'
+          };
       }
   };
 
@@ -126,7 +246,6 @@ const Resources: React.FC = () => {
             throw new Error("You must be logged in to submit requests.");
         }
 
-        // Write to user's subcollection to bypass root-level security restrictions
         const userRequestsRef = collection(db, 'users', currentUser.uid, 'resource_requests');
 
         await addDoc(userRequestsRef, {
@@ -140,8 +259,6 @@ const Resources: React.FC = () => {
         });
 
         setRequestStatus('success');
-        
-        // Reset form after delay
         setTimeout(() => {
             setIsRequestModalOpen(false);
             setRequestStatus('idle');
@@ -164,26 +281,26 @@ const Resources: React.FC = () => {
   const otherResources = filteredResources.filter(r => !r.featured);
 
   return (
-    <div className="max-w-7xl mx-auto space-y-8 pb-20 animate-fade-in font-sans">
+    <div className="max-w-7xl mx-auto space-y-10 pb-20 animate-fade-in font-sans">
       
       {/* --- HERO HEADER SECTION --- */}
-      <div className="relative overflow-hidden rounded-[2.5rem] bg-white dark:bg-[#0B1121] p-8 md:p-12 border border-slate-200 dark:border-white/5 shadow-xl dark:shadow-2xl transition-colors duration-500 group">
+      <div className={`relative overflow-hidden rounded-[2.5rem] p-8 md:p-12 border shadow-xl dark:shadow-2xl transition-all duration-500 group ${isCrescere ? 'bg-white/80 border-white/60 backdrop-blur-3xl' : 'bg-white dark:bg-[#0B1121] border-slate-200 dark:border-white/5'}`}>
           
           {/* Dynamic Backgrounds */}
-          <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-purple-100 dark:bg-purple-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none opacity-70 dark:opacity-100"></div>
-          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-pink-100 dark:bg-pink-500/10 rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none opacity-70 dark:opacity-100"></div>
+          <div className={`absolute top-0 right-0 w-[500px] h-[500px] rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none opacity-70 dark:opacity-100 ${isCrescere ? 'bg-rose-200/40' : 'bg-purple-100 dark:bg-purple-500/10'}`}></div>
+          <div className={`absolute bottom-0 left-0 w-[400px] h-[400px] rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none opacity-70 dark:opacity-100 ${isCrescere ? 'bg-amber-200/40' : 'bg-pink-100 dark:bg-pink-500/10'}`}></div>
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none"></div>
 
           <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-end justify-between gap-8">
               <div className="max-w-2xl">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 dark:bg-white/10 border border-slate-200 dark:border-white/20 backdrop-blur-sm text-[10px] font-bold uppercase tracking-widest mb-4 text-slate-500 dark:text-slate-300">
-                      <Library size={12} className="text-purple-500 dark:text-purple-400" />
+                  <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full border backdrop-blur-sm text-[10px] font-bold uppercase tracking-widest mb-4 ${isCrescere ? 'bg-white/80 border-white/60 text-slate-600' : 'bg-slate-100 dark:bg-white/10 border-slate-200 dark:border-white/20 text-slate-500 dark:text-slate-300'}`}>
+                      <Library size={12} className={isCrescere ? 'text-rose-500' : 'text-purple-500 dark:text-purple-400'} />
                       Knowledge Base
                   </div>
-                  <h1 className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[0.9] mb-4 text-slate-900 dark:text-white">
-                      Resource <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-500 to-pink-500 dark:from-purple-400 dark:to-pink-400">Hub</span>
+                  <h1 className={`text-4xl md:text-5xl lg:text-6xl font-black tracking-tight leading-[0.9] mb-4 ${isCrescere ? 'text-slate-900' : 'text-slate-900 dark:text-white'}`}>
+                      Resource <br/> <span className={`text-transparent bg-clip-text bg-gradient-to-r ${isCrescere ? 'from-rose-500 to-amber-500' : 'from-purple-500 to-pink-500 dark:from-purple-400 dark:to-pink-400'}`}>Hub</span>
                   </h1>
-                  <p className="text-slate-500 dark:text-slate-400 text-base md:text-lg font-medium leading-relaxed max-w-xl">
+                  <p className={`text-base md:text-lg font-medium leading-relaxed max-w-xl ${isCrescere ? 'text-slate-500' : 'text-slate-500 dark:text-slate-400'}`}>
                       Curated high-yield materials, tools, and links for your review journey. Everything you need in one place.
                   </p>
               </div>
@@ -191,14 +308,14 @@ const Resources: React.FC = () => {
               {/* Enhanced Search Input */}
               <div className="relative group w-full lg:w-96">
                   <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                      <Search size={20} className="text-slate-400 group-focus-within:text-purple-500 transition-colors" />
+                      <Search size={20} className={`transition-colors ${isCrescere ? 'text-slate-400 group-focus-within:text-rose-600' : 'text-slate-400 group-focus-within:text-purple-500'}`} />
                   </div>
                   <input 
                       type="text" 
-                      placeholder="Search resources (e.g. 'Anatomy')..." 
+                      placeholder="Search resources..." 
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-12 pr-10 py-4 bg-slate-50 dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-2xl text-slate-800 dark:text-white placeholder-slate-400 focus:outline-none focus:bg-white dark:focus:bg-white/10 focus:border-purple-500/50 focus:ring-4 focus:ring-purple-500/10 transition-all font-medium shadow-sm text-base"
+                      className={`w-full pl-12 pr-10 py-4 border rounded-2xl placeholder-opacity-50 focus:outline-none focus:ring-4 transition-all font-medium shadow-sm text-base ${isCrescere ? 'bg-white/80 border-slate-200 text-slate-900 placeholder-slate-400 focus:border-rose-400 focus:ring-rose-500/10' : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-800 dark:text-white placeholder-slate-400 focus:bg-white dark:focus:bg-white/10 focus:border-purple-500/50 focus:ring-purple-500/10'}`}
                   />
                   {searchQuery && (
                       <button 
@@ -212,13 +329,13 @@ const Resources: React.FC = () => {
           </div>
       </div>
 
-      {/* --- FEATURED HERO CARD --- */}
+      {/* --- FEATURED HERO CARD (Google Drive) --- */}
       {featuredResource && !searchQuery && (
         <a 
           href={featuredResource.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="relative group block w-full rounded-[2.5rem] overflow-hidden shadow-2xl transition-all hover:shadow-[0_20px_60px_-15px_rgba(59,130,246,0.3)] hover:-translate-y-1 duration-500"
+          className="relative group block w-full rounded-[2.5rem] overflow-hidden shadow-2xl transition-all hover:shadow-[0_20px_60px_-15px_rgba(59,130,246,0.3)] hover:-translate-y-1 duration-500 transform-gpu will-change-transform"
         >
           {/* Dynamic Background */}
           <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700"></div>
@@ -250,17 +367,17 @@ const Resources: React.FC = () => {
 
             <div className="w-full md:w-auto">
               <span className="w-full md:w-auto px-8 py-4 bg-white text-blue-600 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl transition-all group-hover:scale-105 active:scale-95">
-                Access Drive <ArrowRight size={20} />
+                Access Vault <ArrowRight size={20} />
               </span>
             </div>
           </div>
         </a>
       )}
 
-      {/* --- RESOURCE GRID --- */}
+      {/* --- RESOURCE GRID (Aesthetic Cards) --- */}
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
         {otherResources.map((resource) => {
-            const themeClasses = getCardTheme(resource.color);
+            const visuals = getResourceVisuals(resource.color);
             return (
                 <a
                     key={resource.id}
@@ -273,32 +390,32 @@ const Resources: React.FC = () => {
                         setIsWebsitesModalOpen(true);
                     }
                     }}
-                    className="group relative flex flex-col justify-between p-8 rounded-[2.5rem] bg-white dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700/50 hover:border-pink-500/30 dark:hover:border-pink-500/30 hover:shadow-2xl dark:hover:shadow-black/50 hover:-translate-y-1 transition-all duration-300 overflow-hidden"
+                    className={`group relative flex flex-col justify-between p-8 rounded-[2.5rem] border shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden transform-gpu will-change-transform ${visuals.bg} ${visuals.hoverBorder}`}
                 >
-                    {/* Hover Gradient Background */}
-                    <div className="absolute inset-0 bg-gradient-to-br from-transparent via-transparent to-pink-500/5 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none"></div>
+                    {/* Abstract Blob Background */}
+                    <div className={`absolute -top-10 -right-10 w-48 h-48 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 ${visuals.blob}`}></div>
 
                     <div className="relative z-10">
                         <div className="flex justify-between items-start mb-6">
-                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 shadow-sm ${themeClasses}`}>
+                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 shadow-sm border border-white/10 ${visuals.iconBg}`}>
                                 {getIcon(resource.iconName, "w-8 h-8")}
                             </div>
-                            <div className="p-3 rounded-full bg-slate-50 dark:bg-white/5 text-slate-300 group-hover:text-pink-500 dark:group-hover:text-pink-400 transition-colors">
+                            <div className={`p-3 rounded-full transition-colors ${isCrescere ? 'bg-white/80 text-slate-400 group-hover:text-rose-600' : 'bg-slate-50 dark:bg-white/5 text-slate-300 group-hover:text-pink-500 dark:group-hover:text-pink-400'}`}>
                                 <ExternalLink size={20} />
                             </div>
                         </div>
 
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white leading-tight mb-3 group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-900 group-hover:to-slate-600 dark:group-hover:from-white dark:group-hover:to-slate-300 transition-all">
+                        <h3 className={`text-2xl font-black leading-tight mb-3 transition-colors ${visuals.text}`}>
                             {resource.title}
                         </h3>
-                        <p className="text-sm font-medium text-slate-500 dark:text-slate-400 leading-relaxed">
+                        <p className={`text-sm font-medium leading-relaxed ${visuals.subtext}`}>
                             {resource.description}
                         </p>
                     </div>
 
-                    <div className="relative z-10 mt-8 pt-6 border-t border-slate-100 dark:border-slate-700/50 flex flex-wrap gap-2">
+                    <div className={`relative z-10 mt-8 pt-6 border-t flex flex-wrap gap-2 ${isCrescere ? 'border-slate-200' : 'border-slate-100 dark:border-slate-700/50'}`}>
                         {resource.tags.map(tag => (
-                            <span key={tag} className="text-[10px] font-bold bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 px-3 py-1.5 rounded-lg uppercase tracking-wider border border-slate-100 dark:border-slate-700">
+                            <span key={tag} className={`text-[10px] font-bold px-3 py-1.5 rounded-lg uppercase tracking-wider border ${isCrescere ? 'bg-white/80 border-slate-200 text-slate-600' : 'bg-slate-50 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-100 dark:border-slate-700'}`}>
                                 {tag}
                             </span>
                         ))}
@@ -307,24 +424,24 @@ const Resources: React.FC = () => {
             );
         })}
 
-        {/* Add New Placeholder */}
+        {/* Add New Placeholder (Styled to match) */}
         <button 
           onClick={() => setIsRequestModalOpen(true)}
-          className="group relative rounded-[2.5rem] border-2 border-dashed border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 flex flex-col items-center justify-center p-8 gap-4 hover:border-pink-300 dark:hover:border-pink-500/50 hover:bg-pink-50/50 dark:hover:bg-pink-500/5 transition-all duration-300 min-h-[300px]"
+          className={`group relative rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center p-8 gap-4 transition-all duration-300 min-h-[300px] ${isCrescere ? 'border-rose-200 bg-rose-50/50 hover:bg-rose-100/50 hover:border-rose-400' : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 hover:border-pink-300 dark:hover:border-pink-500/50 hover:bg-pink-50/50 dark:hover:bg-pink-500/5'}`}
         >
-          <div className="w-16 h-16 rounded-full bg-white dark:bg-slate-800 shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:shadow-lg">
-            <Plus size={32} className="text-slate-400 dark:text-slate-500 group-hover:text-pink-500 transition-colors" />
+          <div className={`w-16 h-16 rounded-full shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:shadow-lg ${isCrescere ? 'bg-white text-rose-400 group-hover:text-rose-600' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 group-hover:text-pink-500'}`}>
+            <Plus size={32} />
           </div>
           <div className="text-center">
-            <h4 className="font-bold text-slate-600 dark:text-slate-300 text-base group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">Request Resource</h4>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Suggest a link to be added</p>
+            <h4 className={`font-bold text-base transition-colors ${isCrescere ? 'text-rose-900 group-hover:text-rose-600' : 'text-slate-600 dark:text-slate-300 group-hover:text-pink-600 dark:group-hover:text-pink-400'}`}>Request Resource</h4>
+            <p className={`text-xs mt-1 font-medium ${isCrescere ? 'text-slate-500' : 'text-slate-400'}`}>Suggest a link to be added</p>
           </div>
         </button>
       </div>
 
       {/* --- CREDIBLE WEBSITES MODAL --- */}
       {isWebsitesModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in" onClick={() => setIsWebsitesModalOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setIsWebsitesModalOpen(false)}>
           <div 
             className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-white/5 flex flex-col max-h-[85vh] animate-zoom-in"
             onClick={e => e.stopPropagation()}
@@ -377,7 +494,7 @@ const Resources: React.FC = () => {
 
       {/* --- REQUEST RESOURCE MODAL --- */}
       {isRequestModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-md p-4 animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl w-full max-w-lg p-8 relative border border-slate-200 dark:border-white/5 animate-zoom-in overflow-hidden">
             
             {/* Background Texture */}

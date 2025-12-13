@@ -25,7 +25,8 @@ import {
     Cable,
     Wind,
     Lightbulb,
-    Star
+    Star,
+    ClipboardCheck
 } from 'lucide-react';
 import ECGMonitor from './ECGMonitor';
 import ACLSReference from './ACLSReference';
@@ -195,9 +196,11 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
     const [accessEstablished, setAccessEstablished] = useState(false);
     const logEndRef = useRef<HTMLDivElement>(null);
 
-    // Scroll logs
+    // Scroll logs (Improved to prevent page jumping)
     useEffect(() => {
-        if (logEndRef.current) logEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        if (logEndRef.current) {
+            logEndRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
     }, [logs]);
 
     useEffect(() => {
@@ -234,16 +237,16 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         if (phase === 'cpr') return; // Don't interrupt CPR
 
         let hint = "";
-        if (!padsAttached) hint = "Instructor: Don't forget to attach the pads/monitor leads!";
+        if (!padsAttached) hint = "Rubric: Check Safety & Attach Pads immediately!";
         else if (rhythm === 'VFIB' || rhythm === 'VT') {
-            if (energy === 0) hint = "Instructor: Shockable rhythm detected. Charge the defibrillator.";
-            else if (energy === 200) hint = "Instructor: Defib charged. Clear and Shock!";
+            if (energy === 0) hint = "Algorithm: Shockable rhythm. Charge to manufacturer rec (200J).";
+            else if (energy === 200) hint = "Algorithm: Clear the patient and SHOCK.";
         } 
         else if (rhythm === 'PEA') {
-            hint = "Instructor: Monitor shows a rhythm, but no pulse? This is PEA. Think H's and T's.";
+            hint = "Algorithm: PEA detected. Resume CPR. Check H's and T's.";
         }
         else if (rhythm === 'ASYSTOLE') {
-            hint = "Instructor: Flatline. Confirm in leads. Give Epinephrine ASAP.";
+            hint = "Algorithm: Asystole. Resume CPR. Give Epinephrine ASAP.";
         }
         
         if (hint) addLog(hint, "hint");
@@ -326,41 +329,41 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             return;
         }
 
-        // 2. CHALLENGE MODE: Clinical Logic Validation
+        // 2. CHALLENGE MODE: Clinical Logic Validation (Rubric Alignment)
         let isValid = true;
         let errorMsg = "";
 
         if (['epi_btn', 'amio_btn', 'lido_btn'].includes(actionId) && !accessEstablished) {
-            isValid = false; errorMsg = "Procedure Error: Establish IV/IO Access First!";
+            isValid = false; errorMsg = "Rubric Violation: Safety/IV - Establish Access First!";
         }
 
         if (actionId === 'shock_btn') {
-            if (energy < 200) { isValid = false; errorMsg = "Procedure Error: Defibrillator must be charged to 200J first."; }
-            else if (!padsAttached) { isValid = false; errorMsg = "Safety Error: Attach Pads before shocking."; }
-            else if (['ASYSTOLE', 'PEA'].includes(rhythm)) { isValid = false; errorMsg = "CRITICAL ERROR: Never Shock Asystole/PEA. Resume CPR."; }
+            if (energy < 200) { isValid = false; errorMsg = "Procedure: Charge Defib to 200J (Biphasic) first."; }
+            else if (!padsAttached) { isValid = false; errorMsg = "Safety: Pads not attached. Patient Safety Critical."; }
+            else if (['ASYSTOLE', 'PEA'].includes(rhythm)) { isValid = false; errorMsg = "FATAL ERROR: Shocked Non-Shockable Rhythm."; }
         }
 
         if (actionId === 'charge') {
-            if (!padsAttached) { isValid = false; errorMsg = "Procedure Error: Attach Pads before charging."; }
+            if (!padsAttached) { isValid = false; errorMsg = "Procedure: Attach Pads before charging."; }
         }
 
         if (actionId === 'analyze_btn') {
-            if (!padsAttached) { isValid = false; errorMsg = "Procedure Error: Connect pads/leads to monitor first."; }
-            if (phase === 'cpr' && !isTrainingMode) { isValid = false; errorMsg = "Procedure Error: Do not interrupt CPR for manual analysis. Wait for cycle end."; }
+            if (!padsAttached) { isValid = false; errorMsg = "Procedure: Connect pads/leads to monitor first."; }
+            if (phase === 'cpr' && !isTrainingMode) { isValid = false; errorMsg = "CPR Quality: Do not interrupt compressions for manual analysis."; }
         }
 
         if (actionId === 'amio_btn' || actionId === 'lido_btn') {
-            if (!['VFIB', 'VT'].includes(rhythm)) { isValid = false; errorMsg = "Medication Error: Antiarrhythmics are not indicated for non-shockable rhythms."; }
+            if (!['VFIB', 'VT'].includes(rhythm)) { isValid = false; errorMsg = "Medication Error: Antiarrhythmics not indicated."; }
             else if (totalShocks < 3) {
                 isValid = false; 
-                errorMsg = "Timing Error: Antiarrhythmics are indicated for Refractory VF/pVT (after 3rd shock)."; 
+                errorMsg = "Timing Error: Antiarrhythmics indicated after 3rd shock (Refractory)."; 
             } 
         }
 
         if (actionId === 'epi_btn') {
             const lastEpi = medHistory.epi[medHistory.epi.length - 1] || 0;
             if (medHistory.epi.length > 0 && currentCycle - lastEpi < 2) {
-                isValid = false; errorMsg = "Medication Error: Epinephrine is given every 3-5 mins (Every other cycle).";
+                isValid = false; errorMsg = "Medication Error: Epi dosing interval is 3-5 mins (Every other cycle).";
             }
         }
 
@@ -368,7 +371,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             execute();
         } else {
             showFeedback(errorMsg, "error");
-            setViability(v => Math.max(0, v - 5));
+            setViability(v => Math.max(0, v - 10)); // Heavier penalty for rubric violations
             setStats(s => ({ ...s, errors: s.errors + 1 }));
         }
     };
@@ -420,12 +423,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             addLog("SYSTEM: ROSC ACHIEVED. CODE ENDED.", "success");
             confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
             
-            // --- GAMIFICATION CALLBACK ---
-            // If it's a real scenario (not tutorial) and successful
             if (!activeScenario.isTutorial && onScenarioComplete) {
-                // Award points via callback to DecemberQuest parent
-                // Check if already mastered is handled by parent, we just signal success
-                // We add a slight delay for dramatic effect
                 setTimeout(() => onScenarioComplete(activeScenario.id), 1000);
             }
 
@@ -453,7 +451,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             const logSummary = logs.map(l => `[${l.time}] ${l.text}`).join('\n');
 
             const prompt = `
-            Act as an Expert Clinical Instructor for Nursing Students.
+            Act as an Expert Clinical Instructor for Nursing Students based on 2025 SLE Rubrics.
             
             Scenario: ${activeScenario.patient} - ${activeScenario.history} (${activeScenario.startRhythm})
             Outcome: ${outcome === 'rosc' ? 'SURVIVAL' : 'DEATH'}
@@ -469,9 +467,9 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             CLINICAL VERDICT
             [One sentence summary]
             
-            PERFORMANCE AUDIT
-            - [Feedback on Medication Timing]
-            - [Feedback on Sequence]
+            RUBRIC ANALYSIS
+            - Safety/Infection Control: [Comment on pads/IV timing]
+            - Algorithm Adherence: [Comment on drug/shock timing]
             
             INSTRUCTOR NOTE
             [One high-yield tip for this specific case: ${activeScenario.focus}]
@@ -514,7 +512,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
     const performCPR = () => {
         if (phase === 'cpr') return;
         setPhase('cpr');
-        addLog(`Action: Cycle ${currentCycle} CPR Started. High Quality Compressions.`, "action");
+        addLog(`Action: Cycle ${currentCycle} CPR Started. Push Hard/Fast.`, "action");
     };
 
     const attachPads = () => {
@@ -535,6 +533,12 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
     };
 
     const deliverShock = () => {
+        // PREVENTION OF ABUSE: Limit shock to 1 per cycle in normal play
+        if (!isTrainingMode && shocksInCycle >= 1) {
+            showFeedback("Protocol Violation: Max 1 shock per 2-minute cycle. Resume CPR.", "error");
+            return;
+        }
+
         setIsShocking(true);
         addLog("Action: CLEAR! Shocking...", "action");
         
@@ -542,13 +546,13 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             setIsShocking(false);
             setEnergy(0);
             
-            addLog(`System: Shock ${stats.shocks + 1} Delivered. Resetting electrical activity.`, "success");
+            addLog(`System: Shock ${stats.shocks + 1} Delivered.`, "success");
             setStats(s => ({ ...s, shocks: s.shocks + 1 }));
             setShocksInCycle(s => s + 1);
             setTotalShocks(s => s + 1);
             
             setPhase('assessment'); 
-            addLog("GUIDANCE: Resume CPR immediately! Do not check pulse yet.", "alert");
+            addLog("GUIDANCE: Resume CPR immediately! Do not check pulse.", "alert");
         }, 800);
     };
 
@@ -558,7 +562,7 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             addLog("Action: Bag-Mask Ventilation established with 100% O2.", "action");
         } else if (airwayStatus === 'bvm') {
             setAirwayStatus('advanced');
-            addLog("Action: Endotracheal Tube inserted. Continuous compressions enabled.", "success");
+            addLog("Action: ET Tube inserted. Continuous compressions.", "success");
         }
     };
 
@@ -567,19 +571,19 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         setViability(v => Math.min(100, v + 15));
 
         if (med === 'epi') {
-            addLog(`Action: Epinephrine 1mg IVP (Cycle ${currentCycle}). Vasoconstriction taking effect.`, "success");
+            addLog(`Action: Epinephrine 1mg IVP (Cycle ${currentCycle}).`, "success");
             setMedHistory(prev => ({ ...prev, epi: [...prev.epi, currentCycle] }));
             setStats(s => ({ ...s, epi: s.epi + 1 }));
         } 
         else if (med === 'amio') {
             const dose = history.length === 0 ? "300mg" : "150mg";
-            addLog(`Action: Amiodarone ${dose} IVP. Antiarrhythmic effect active.`, "success");
+            addLog(`Action: Amiodarone ${dose} IVP.`, "success");
             setMedHistory(prev => ({ ...prev, amio: [...prev.amio, currentCycle] }));
             setStats(s => ({ ...s, amio: s.amio + 1 }));
         }
         else if (med === 'lidocaine') {
             const dose = history.length === 0 ? "1mg/kg" : "0.5mg/kg";
-            addLog(`Action: Lidocaine ${dose} IVP. Sodium channel blockade.`, "success");
+            addLog(`Action: Lidocaine ${dose} IVP.`, "success");
             setMedHistory(prev => ({ ...prev, lidocaine: [...prev.lidocaine, currentCycle] }));
             setStats(s => ({ ...s, lidocaine: s.lidocaine + 1 }));
         }
@@ -601,8 +605,6 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                 showFeedback("TRAINING: Correctly Identified.", "success");
                 setTutorialStep(prev => {
                     const nextStep = prev + 1;
-                    // --- FIX FOR STEP 10 (CHARGE) ---
-                    // Explicitly force phase transition for upcoming Charge step to ensure button is enabled
                     if (TUTORIAL_STEPS[nextStep] === 'charge') {
                         setTimeout(() => {
                             setPhase('assessment');
@@ -612,8 +614,6 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                     return nextStep;
                 });
                 
-                // If it was a manual analysis step, we need to return to 'assessment' to continue
-                // If it was a cycle complete step, we proceed to 'advanceCycleLogic'
                 if (!isManualAnalysis) {
                     advanceCycleLogic();
                 } else {
@@ -642,13 +642,11 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
     };
 
     const advanceCycleLogic = () => {
-        addLog(`--- END OF CYCLE ${currentCycle} ---`, "system");
+        addLog(`--- CYCLE ${currentCycle} COMPLETE. STARTING CYCLE ${currentCycle + 1} ---`, "system");
         setStats(s => ({ ...s, cprCycles: s.cprCycles + 1 }));
         setCurrentCycle(c => c + 1);
         setCycleTimer(0);
         setShocksInCycle(0);
-        
-        // Ensure phase resets to assessment to allow actions
         setPhase('assessment');
 
         const medsMet = activeScenario.requiredMeds ? activeScenario.requiredMeds.every(m => {
@@ -664,8 +662,13 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             return;
         }
 
+        // INSTRUCTOR HINTS IF STUCK (Prevents infinite loop feeling)
+        if (cyclesMet && !medsMet) {
+             addLog("INSTRUCTOR HINT: You missed a required medication to achieve ROSC! Check Algorithm.", "alert");
+        }
+
         if (activeScenario.requiredMeds?.includes('amio') && !medsMet) {
-             addLog("GUIDANCE: Rhythm is refractory. Prepare Antiarrhythmic for next cycle.", "alert");
+             addLog("GUIDANCE: Rhythm is refractory. Prepare Antiarrhythmic.", "alert");
         }
 
         if (viability < 20 && rhythm !== 'ASYSTOLE' && !isTrainingMode) {
@@ -673,17 +676,8 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             addLog("Monitor: Rhythm degenerated to ASYSTOLE.", "alert");
         }
         
-        // Nuanced feedback for specific scenarios
-        if (activeScenario.id === 4 && rhythm === 'PEA') { // PEA Case
-             addLog(`Monitor: Rhythm appears organized (NSR-like).`, "info");
+        if (activeScenario.id === 4 && rhythm === 'PEA') { 
              addLog(`Instructor: Do not trust the monitor. Check Pulse!`, "hint");
-        } else if (activeScenario.id === 2 && rhythm === 'VT' && currentCycle > 1) { // pVT
-             // Hints for causes if sticking around
-             if (Math.random() > 0.6) {
-                 addLog("Instructor: Wide complex persists. Check electrolytes? (Hyperkalemia/Magnesium)", "hint");
-             } else {
-                 addLog(`Monitor: Rhythm is ${rhythm}. Pulse Check?`, "info");
-             }
         } else {
              addLog(`Monitor: Rhythm is ${rhythm}. Pulse Check?`, "info");
         }
@@ -708,7 +702,6 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         return step === 'analyze_btn' || step === 'cycle_btn' ? 'identify_btn' : '';
     };
 
-    // Helper to check mastery
     const isMastered = (id: number) => {
         const saved = localStorage.getItem('december_quest_state_v2');
         if (saved) {
@@ -790,7 +783,6 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
     return (
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-4 duration-500 relative">
             <div className="lg:col-span-12 rounded-[2rem] shadow-xl border border-slate-200 dark:border-slate-800 p-4 md:p-6 flex flex-col md:flex-row items-center justify-between gap-6 bg-white dark:bg-slate-900 relative overflow-hidden">
-                {/* Header Background */}
                 <div className="absolute inset-0 bg-slate-50 dark:bg-slate-800/50 pointer-events-none"></div>
                 
                 <div className="flex items-center gap-4 relative z-10 w-full md:w-auto">
@@ -1004,13 +996,13 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
 
             </div>
 
-            {/* LOGS PANEL */}
+            {/* LOGS PANEL - Updated with stable scrolling behavior */}
             <div className="lg:col-span-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-[2.5rem] overflow-hidden flex flex-col h-[500px] shadow-lg order-2 lg:order-2">
                 <div className="p-5 bg-slate-50 dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 font-bold text-xs text-slate-500 uppercase tracking-widest flex justify-between shrink-0">
                     <span>Resuscitation Log</span>
                     <span className="text-red-500 animate-pulse">● LIVE</span>
                 </div>
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 bg-white dark:bg-slate-900">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 space-y-2 bg-white dark:bg-slate-900 scroll-smooth">
                     {logs.length === 0 && <p className="text-center text-slate-400 text-xs mt-10">Waiting for commands...</p>}
                     {logs.map((l) => (
                         <div key={l.id} className={`p-3 rounded-xl text-xs border leading-relaxed shadow-sm ${
@@ -1032,10 +1024,23 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
             {showRhythmCheck && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-md p-4 animate-fade-in">
                     <div className="bg-white dark:bg-slate-900 w-full max-w-md rounded-3xl p-8 shadow-2xl animate-zoom-in border border-slate-200 dark:border-white/10">
-                        <div className="text-center mb-6">
+                        <div className="text-center mb-4">
                             <Eye className="w-12 h-12 text-blue-600 dark:text-blue-400 mx-auto mb-2" />
                             <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Rhythm Check</h3>
-                            <p className="text-slate-500 text-xs mt-1">Identify the rhythm on the monitor to proceed.</p>
+                            <p className="text-slate-500 text-xs mt-1">Identify the rhythm on the monitor.</p>
+                        </div>
+
+                        {/* MINI MONITOR PREVIEW - Updated with CLEAN Mode */}
+                        <div className="mb-6 rounded-xl overflow-hidden shadow-lg border-2 border-slate-800 h-40">
+                            <ECGMonitor 
+                                rhythm={rhythm} 
+                                isShocking={false} 
+                                phase={phase} 
+                                viability={100} 
+                                padsAttached={true}
+                                clean={true} 
+                                className="h-full w-full"
+                            />
                         </div>
                         
                         <div className="grid grid-cols-2 gap-3 mb-6">
@@ -1095,6 +1100,21 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
                                 </div>
                             ) : (
                                 <div className="prose dark:prose-invert max-w-none">
+                                    <div className="mb-6 p-4 bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <h4 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest mb-2 text-slate-500">
+                                            <ClipboardCheck size={14} /> Rubric Evaluation
+                                        </h4>
+                                        <ul className="text-sm space-y-1 text-slate-700 dark:text-slate-300">
+                                            <li className="flex items-center gap-2">
+                                                <span className={`w-2 h-2 rounded-full ${stats.errors === 0 ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                                Algorithm Adherence: {stats.errors === 0 ? 'Competent' : 'Needs Improvement'}
+                                            </li>
+                                            <li className="flex items-center gap-2">
+                                                <span className={`w-2 h-2 rounded-full ${accessEstablished ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                                                Safety/IV Access: {accessEstablished ? 'Maintained' : 'Missed'}
+                                            </li>
+                                        </ul>
+                                    </div>
                                     <SimpleMarkdown text={debriefContent || "No analysis available."} />
                                 </div>
                             )}

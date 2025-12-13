@@ -144,7 +144,7 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
 
   return (
     <>
-    <div className={`relative overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:scale-[1.02] flex flex-col justify-between h-full min-h-[280px] border shadow-2xl group ${theme.wrapper}`}>
+    <div className={`relative overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between h-full min-h-[280px] border shadow-xl group will-change-transform transform-gpu ${theme.wrapper}`}>
         
         {/* Shine Effect for Expert */}
         {isExpert && <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-amber-200/20 to-transparent opacity-0 dark:opacity-30 animate-shine pointer-events-none"></div>}

@@ -1,7 +1,14 @@
 
-import { HeartPulse, Activity, Zap, Droplets, Wind, ShieldAlert, Filter, AlertTriangle, Skull, Thermometer, Syringe, Brain, Baby, Users } from 'lucide-react';
+import { HeartPulse, Activity, Zap, Droplets, Wind, ShieldAlert, Filter, AlertTriangle, Skull, Thermometer, Syringe, Brain, Baby, Users, FileText } from 'lucide-react';
 
 export type Rhythm = 'NSR' | 'VFIB' | 'ASYSTOLE' | 'PEA' | 'VT' | 'TORSADES' | 'BRADYCARDIA';
+
+export const OFFICIAL_PDF_PATHS = [
+    { title: "ACLS Algorithm", path: "gs://pnle-review-companion.firebasestorage.app/SLE/Algorithm ACLS Cardiac Arrest.pdf" },
+    { title: "ACLS Scenario 2025", path: "gs://pnle-review-companion.firebasestorage.app/SLE/SLE ACLS Scenario - 2025a.pdf" },
+    { title: "Clinical Cases 2025", path: "gs://pnle-review-companion.firebasestorage.app/SLE/SLE Case Scenarios - 2025.pdf" },
+    { title: "SLE Rubrics 2025", path: "gs://pnle-review-companion.firebasestorage.app/SLE/SLE Rubrics 2025 (Updated).pdf" }
+];
 
 export interface ScenarioData {
     id: number;
@@ -27,7 +34,24 @@ export interface ClinicalCase {
     icon: any;
     color: string;
     description: string;
-    category: string; // Replacement for difficulty
+    category: string;
+}
+
+export interface OfficialChart {
+    initials: string;
+    ageSex: string;
+    chiefComplaint: string;
+    history: string;
+    vitals: {
+        bp: string;
+        hr: string;
+        rr: string;
+        temp: string;
+        spo2: string;
+    };
+    diagnosis: string;
+    statOrders: string[];
+    labs?: string[]; // Specific lab values from PDF
 }
 
 export interface QuizQuestion {
@@ -69,66 +93,30 @@ export const TUTORIAL_SCENARIO: ScenarioData = {
     focus: "Algorithm Sequence"
 };
 
-// Defined Step IDs for Tutorial Mode (Strict AHA Sequence)
 export const TUTORIAL_STEPS = [
-    'pulse_check',     // 0: Check Pulse
-    'cpr_btn',         // 1: Start CPR
-    'airway_btn',      // 2: Give Oxygen / BVM
-    'attach_pads_btn', // 3: Attach Monitor/Defib
-    'analyze_btn',     // 4: Analyze Rhythm (Manual Check - Initial)
-    'charge',          // 5: Charge Defib
-    'shock_btn',       // 6: Deliver Shock
-    'cpr_btn',         // 7: Resume CPR Immediately
-    'iv_btn',          // 8: Establish IV/IO Access (During CPR)
-    'cycle_btn',       // 9: Complete 2 min cycle -> Triggers Analysis
-    'charge',          // 10: Charge (Persistent VF) - Note: Updated logic prompts this
-    'shock_btn',       // 11: Shock
-    'cpr_btn',         // 12: Resume CPR
-    'epi_btn',         // 13: Give Epi (Cycle 2 starts)
-    'airway_btn',      // 14: Consider Advanced Airway
-    'cycle_btn',       // 15: Complete Cycle -> Triggers Analysis
-    'charge',          // 16: Charge
-    'shock_btn',       // 17: Shock
-    'cpr_btn',         // 18: Resume CPR
-    'amio_btn',        // 19: Give Amio (Refractory VF - After 3rd Shock)
-    'cycle_btn'        // 20: Complete Cycle
+    'pulse_check', 'cpr_btn', 'airway_btn', 'attach_pads_btn', 'analyze_btn', 
+    'charge', 'shock_btn', 'cpr_btn', 'iv_btn', 'cycle_btn', 
+    'charge', 'shock_btn', 'cpr_btn', 'epi_btn', 'airway_btn', 
+    'cycle_btn', 'charge', 'shock_btn', 'cpr_btn', 'amio_btn', 'cycle_btn'
 ];
 
-// --- CORE ACLS MISSIONS (Based on 2025 Guidelines) ---
+// --- CORE ACLS MISSIONS (Based on 2025 PDF) ---
 export const SCENARIOS: ScenarioData[] = [
-    // SHOCKABLE PATH
     { 
         id: 1, 
-        title: "Code Blue: ER",
-        patient: "55M, Post-MI", 
-        history: "Collapsed in waiting room. No pulse. Monitor shows chaotic VFib. Refractory to initial defib.", 
+        title: "Official SLE Scenario",
+        patient: "66M, Post-Stress Test", 
+        history: "Felt 'woozy' 6 mins into treadmill test. BP 186/112, HR 174 before collapse. Alarm sounded in room.", 
         startRhythm: 'VFIB',
-        clue: "SHOCKABLE. Needs Amiodarone/Lidocaine if shocks fail.",
-        correctCauses: ['thrombosis_c'],
-        requiredMeds: ['epi', 'amio'], // Logic will also accept Lidocaine
+        clue: "SHOCKABLE. Witnessed Arrest. High Quality CPR & Defibrillation Priority.",
+        correctCauses: ['thrombosis_c'], // Coronary Thrombosis likely due to stress test
+        requiredMeds: ['epi', 'amio'], 
         algorithm: 'shockable',
         successCondition: 'ROSC after 3 shocks + antiarrhythmic',
         minCycles: 4, 
         initialPulse: false,
-        focus: "Antiarrhythmic Timing"
+        focus: "Official 2025 Scenario"
     },
-    { 
-        id: 2, 
-        title: "Code Blue: Dialysis Unit",
-        patient: "42F, Renal Failure", 
-        history: "Found unresponsive during dialysis. Monitor shows Wide Complex Tachycardia.", 
-        startRhythm: 'VT',
-        clue: "SHOCKABLE. Monomorphic Wide Complex. Suspect Hyperkalemia.",
-        correctCauses: ['hyperkalemia'],
-        requiredMeds: ['epi', 'amio'],
-        algorithm: 'shockable',
-        successCondition: 'ROSC after shock + meds',
-        minCycles: 3,
-        initialPulse: false,
-        focus: "Rhythm Recognition"
-    },
-
-    // NON-SHOCKABLE PATH
     { 
         id: 3, 
         title: "Code Blue: Ward 3",
@@ -161,74 +149,86 @@ export const SCENARIOS: ScenarioData[] = [
     }
 ];
 
-// --- CLINICAL ROULETTE CASES ---
+// --- CLINICAL ROULETTE CASES (2025 PDF MAPPED) ---
 export const SIM_CASES: ClinicalCase[] = [
-    { 
-        id: 'dka', 
-        title: 'Diabetic Ketoacidosis', 
-        short: 'DKA Protocol', 
-        icon: Droplets, 
-        color: 'purple',
-        description: 'Manage hyperglycemic crisis, fluid resuscitation, and insulin drip titration.',
-        category: 'Endocrine Emergency'
-    },
-    { 
-        id: 'ckd', 
-        title: 'Chronic Kidney Disease', 
-        short: 'CKD Exacerbation', 
-        icon: Filter, 
-        color: 'yellow',
-        description: 'Fluid overload management, emergent dialysis prep, and electrolyte balancing.',
-        category: 'Renal / Electrolytes'
-    },
-    { 
-        id: 'copd', 
-        title: 'COPD Exacerbation', 
-        short: 'Resp. Failure', 
-        icon: Wind, 
-        color: 'blue',
-        description: 'Oxygenation strategies, steroid administration, and ABG interpretation.',
-        category: 'Respiratory'
-    },
-    { 
-        id: 'sepsis', 
-        title: 'Septic Shock', 
-        short: 'Sepsis Bundle', 
-        icon: ShieldAlert, 
-        color: 'emerald',
-        description: 'Hour-1 Bundle execution: Lactate, Cultures, Broad-spectrum Antibiotics, Vasopressors.',
-        category: 'Infectious / Shock'
-    },
-    { 
-        id: 'asthma', 
-        title: 'Status Asthmaticus', 
-        short: 'Acute Asthma', 
-        icon: Wind, 
-        color: 'cyan',
-        description: 'Aggressive bronchodilation, magnesium sulfate IV, and airway management.',
-        category: 'Respiratory'
-    },
-    { 
-        id: 'hypo', 
-        title: 'Hypoglycemia', 
-        short: 'Hypoglycemia', 
-        icon: Zap, 
-        color: 'amber',
-        description: 'Rapid dextrose administration, seizure precautions, and root cause analysis.',
-        category: 'Endocrine'
-    },
-    { 
-        id: 'mi', 
-        title: 'Acute Myocardial Infarction', 
-        short: 'STEMI', 
-        icon: HeartPulse, 
-        color: 'red',
-        description: 'MONA protocol, ECG interpretation, and Cath Lab coordination.',
-        category: 'Cardiovascular'
-    }
+    { id: 'mi', title: 'Acute MI', short: 'Acute MI (S.H.)', icon: HeartPulse, color: 'red', description: 'Chest pain 10/10, radiating to left arm. Troponin 14 ng/L.', category: 'Cardiovascular' },
+    { id: 'chf', title: 'Congestive Heart Failure', short: 'CHF Exacerbation (T.J.)', icon: Activity, color: 'blue', description: 'Orthopnea, +3 Edema, weight gain. EF 28%. Non-compliant.', category: 'Cardiovascular' },
+    { id: 'hypo', title: 'Hypoglycemia', short: 'Severe Hypoglycemia (E.J.)', icon: Zap, color: 'amber', description: 'T1DM, Basketball player. LOC. CBG 48. Needs D50.', category: 'Endocrine' },
+    { id: 'dka', title: 'Diabetic Ketoacidosis', short: 'DKA (B.D.)', icon: Droplets, color: 'purple', description: 'Confusion, fruity breath, Kussmaul. CBG 530. pH 7.25.', category: 'Endocrine' },
+    { id: 'asthma', title: 'Asthma Attack', short: 'Status Asthmaticus (M.H.)', icon: Wind, color: 'cyan', description: 'Wheezing, forgot inhaler. RR 30, O2 88%. Needs Bronchodilators.', category: 'Respiratory' },
+    { id: 'copd', title: 'COPD Exacerbation', short: 'COPD (A.L.)', icon: Wind, color: 'orange', description: 'Smoker. Respiratory distress. Target SpO2 88-92%.', category: 'Respiratory' },
+    { id: 'ckd', title: 'Chronic Kidney Disease', short: 'CKD (E.D.)', icon: Filter, color: 'yellow', description: 'Edema, K+ 6.0, peaked T waves. Needs Lasix/Kayexalate.', category: 'Renal' },
+    { id: 'sepsis', title: 'Sepsis/Septic Shock', short: 'Septic Shock (J.S.)', icon: ShieldAlert, color: 'emerald', description: 'MVA wound infection. BP 88/62. Lactate, Antibiotics, Pressors.', category: 'Infectious' },
 ];
 
-// --- SLE QUIZZES (10 High-Yield Items) ---
+// --- OFFICIAL CHART DATA (From PDF) ---
+export const OFFICIAL_CHARTS: Record<string, OfficialChart> = {
+    'mi': {
+        initials: "S.H.", ageSex: "65F", chiefComplaint: "Mid sternal chest pain (10/10)",
+        history: "Direct admission CCU. Pain radiates to left arm. Smoking 1pk/day x10yrs. HTN x8yrs. High Cholesterol.",
+        vitals: { bp: "160/96", hr: "104", rr: "20", temp: "37", spo2: "96" },
+        diagnosis: "Acute Myocardial Infarction",
+        labs: ["Troponin: 14 ng/L", "Cholesterol: Elevated"],
+        statOrders: ["Oxygen (Nasal Prongs)", "Nitroglycerin 0.4mg SL", "Morphine IVP", "Aspirin 160-325mg (Chewable)", "12-Lead ECG"]
+    },
+    'chf': {
+        initials: "T.J.", ageSex: "52M", chiefComplaint: "Orthopnea, Dyspnea, Palpitations",
+        history: "Filipino. +3 Bipedal edema x7 days. Hx Mitral Valve Regurg x12yrs, Chronic A-Fib. Non-compliant with low salt diet/meds. 5kg weight gain.",
+        vitals: { bp: "168/90", hr: "116 (Irr)", rr: "24", temp: "37", spo2: "87" },
+        diagnosis: "CHF Exacerbation",
+        labs: ["EF: 28%", "CXR: LV Hypertrophy/Hazy bases"],
+        statOrders: ["IV Lasix STAT", "Dobutamine Drip", "Foley Catheter (Strict I&O)", "Elevate Head of Bed"]
+    },
+    'hypo': {
+        initials: "E.J.", ageSex: "22M", chiefComplaint: "Loss of Consciousness",
+        history: "T1DM x5yrs. Played basketball, missed meals. NPH Insulin 28u taken at 7AM. Found unconscious.",
+        vitals: { bp: "110/70", hr: "105", rr: "18", temp: "36.5", spo2: "98" },
+        diagnosis: "Severe Hypoglycemia",
+        labs: ["CBG: 48 mg/dL"],
+        statOrders: ["D50W IV Push", "Recheck CBG q15mins", "Neuro Assessment", "Carbohydrate Snack upon waking"]
+    },
+    'dka': {
+        initials: "B.D.", ageSex: "58F", chiefComplaint: "Confusion, Blurry Vision",
+        history: "Muslim female. Polyuria, severe headache x3 days. Kussmaul breathing, fruity breath. Missed follow-ups.",
+        vitals: { bp: "88/58", hr: "110", rr: "32", temp: "37", spo2: "88" },
+        diagnosis: "Diabetic Ketoacidosis",
+        labs: ["CBG: 530", "pH: 7.25", "HCO3: 12", "K+: 5.8", "Na: 129"],
+        statOrders: ["Regular Insulin Drip (0.1 u/kg/hr)", "IV Fluids (NSS)", "Foley Catheter", "Hourly CBG Monitoring"]
+    },
+    'asthma': {
+        initials: "M.H.", ageSex: "19F", chiefComplaint: "Shortness of Breath, Wheezing",
+        history: "Playing volleyball, forgot inhaler. Anxious, diaphoretic, accessory muscle use. Hx Asthma since age 12. Allergy: Sulfa/NSAIDS.",
+        vitals: { bp: "130/85", hr: "120", rr: "30", temp: "37", spo2: "88" },
+        diagnosis: "Acute Asthma Attack",
+        labs: ["ABG: Respiratory Alkalosis (Early)", "O2 Sat: 88%"],
+        statOrders: ["Oxygen @ 2L/min", "Albuterol Nebulizer q20mins", "IV Methylprednisolone", "Atrovent Nebulizer"]
+    },
+    'copd': {
+        initials: "A.L.", ageSex: "72M", chiefComplaint: "Respiratory Distress",
+        history: "Chinese. Smoker x30yrs. Restless, frequent urination at night. Coughing changes.",
+        vitals: { bp: "140/84", hr: "98", rr: "26", temp: "38", spo2: "88" },
+        diagnosis: "COPD Exacerbation",
+        labs: ["SpO2: 88%", "Temp: 38C (Possible Infection)"],
+        statOrders: ["Oxygen (Target 88-92%)", "Albuterol Nebulizer", "Prednisone 60mg PO", "Sputum Culture"]
+    },
+    'ckd': {
+        initials: "E.D.", ageSex: "49F", chiefComplaint: "Dyspnea, Orthopnea, Edema",
+        history: "DM x8yrs, HTN x5yrs. Consulted 'albularyo'. Decreased urine output x3 days. Nausea. Walking difficulty.",
+        vitals: { bp: "180/90", hr: "98", rr: "30", temp: "37", spo2: "88" },
+        diagnosis: "Chronic Kidney Disease",
+        labs: ["K+: 6.0 (High)", "Cr: 5.6", "BUN: 68", "Hgb: 8"],
+        statOrders: ["Lasix 40mg IVP", "Kayexalate Enema", "Limit Fluids (1L/day)", "Prepare for Dialysis"]
+    },
+    'sepsis': {
+        initials: "J.S.", ageSex: "38M", chiefComplaint: "Fever, Palpitations, Lightheaded",
+        history: "MVA wound 48hrs ago (infected). T1DM. Purulent drainage. Hypotensive.",
+        vitals: { bp: "88/62", hr: "124", rr: "28", temp: "38.5", spo2: "94" },
+        diagnosis: "Sepsis / Septic Shock",
+        labs: ["Lactate: >2", "WBC: Elevated", "Blood Glucose: 288"],
+        statOrders: ["Blood Cultures x2", "IV Antibiotics (Broad Spectrum)", "IV Fluid Bolus (30ml/kg)", "Norepinephrine (if refractory)"]
+    }
+};
+
 export const SIDE_QUEST_QUIZZES: QuizQuestion[] = [
     {
         id: 'q1',

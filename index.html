@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -7,18 +8,64 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Dancing+Script:wght@700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Dancing+Script:wght@700&family=Merriweather:wght@300;400;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <style>
+      :root {
+        /* Default Pink-500 RGB values */
+        --accent-50: 253 242 248;
+        --accent-100: 252 231 243;
+        --accent-200: 251 207 232;
+        --accent-400: 244 114 182;
+        --accent-500: 236 72 153;
+        --accent-600: 219 39 119;
+
+        /* Default Font Variable */
+        --font-primary: 'Plus Jakarta Sans', sans-serif;
+      }
+
+      /* --- ACCESSIBILITY: FONT FAMILIES --- */
+      /* These update the CSS variable, which Tailwind consumes */
+      html[data-font-family="serif"] {
+        --font-primary: 'Merriweather', serif;
+      }
+      
+      html[data-font-family="mono"] {
+        --font-primary: 'JetBrains Mono', monospace;
+      }
+
       body {
-        font-family: 'Plus Jakarta Sans', sans-serif;
+        font-family: var(--font-primary);
         background-color: #F3F4F6; /* very light gray */
         transition: background-color 0.3s ease;
       }
-      /* Ensure body background is dark when dark mode is active */
+      
+      /* Standard Dark Mode */
       html.dark body {
         background-color: #020617; /* slate-950/Cosmic base */
       }
+
+      /* --- ACCESSIBILITY: FONT SCALING --- */
+      /* Base font size scaling - affects all REM units in Tailwind */
+      html[data-font-size="small"] { font-size: 14px; }
+      html[data-font-size="normal"] { font-size: 16px; }
+      html[data-font-size="large"] { font-size: 18px; }
+      html[data-font-size="extra-large"] { font-size: 20px; }
+
+      /* --- ACCESSIBILITY: REDUCED MOTION --- */
+      html.reduce-motion * {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
       
+      html.reduce-motion .animate-spin,
+      html.reduce-motion .animate-pulse,
+      html.reduce-motion .animate-bounce,
+      html.reduce-motion .animate-ping {
+        animation: none !important;
+      }
+
       /* Custom scrollbar for notes */
       .custom-scrollbar::-webkit-scrollbar {
         width: 8px;
@@ -41,18 +88,28 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['Plus Jakarta Sans', 'sans-serif'],
+              // We bind the default 'sans' stack to our dynamic CSS variable.
+              // This ensures that all 'font-sans' classes (the default in Tailwind)
+              // automatically update when the user changes their preference.
+              sans: ['var(--font-primary)', 'sans-serif'],
+              
+              // These remain specific for purposeful design choices
+              serif: ['Merriweather', 'serif'],
+              mono: ['JetBrains Mono', 'monospace'],
               handwriting: ['Dancing Script', 'cursive'],
             },
             colors: {
+              // Override 'pink' to use our CSS variables. 
+              // This instantly themes the entire app (buttons, text, etc) without refactoring TSX.
               pink: {
-                50: '#FDF2F8',
-                100: '#FCE7F3',
-                200: '#FBCFE8',
-                400: '#F472B6',
-                500: '#EC4899',
-                600: '#DB2777',
-                accent: '#EC4899', // Pink 500 as accent
+                50: 'rgb(var(--accent-50) / <alpha-value>)',
+                100: 'rgb(var(--accent-100) / <alpha-value>)',
+                200: 'rgb(var(--accent-200) / <alpha-value>)',
+                400: 'rgb(var(--accent-400) / <alpha-value>)',
+                500: 'rgb(var(--accent-500) / <alpha-value>)',
+                600: 'rgb(var(--accent-600) / <alpha-value>)',
+                // Legacy support for where 'accent' might be used conceptually
+                accent: 'rgb(var(--accent-500) / <alpha-value>)',
               },
               navy: {
                 800: '#0B1C2C',
@@ -80,6 +137,7 @@
     "@fullcalendar/react": "https://aistudiocdn.com/@fullcalendar/react@^6.1.19",
     "@fullcalendar/timegrid": "https://aistudiocdn.com/@fullcalendar/timegrid@^6.1.19",
     "@fullcalendar/daygrid": "https://aistudiocdn.com/@fullcalendar/daygrid@^6.1.19",
+    "@fullcalendar/list": "https://aistudiocdn.com/@fullcalendar/list@^6.1.19",
     "@fullcalendar/interaction": "https://aistudiocdn.com/@fullcalendar/interaction@^6.1.19",
     "canvas-confetti": "https://aistudiocdn.com/canvas-confetti@^1.9.4",
     "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",

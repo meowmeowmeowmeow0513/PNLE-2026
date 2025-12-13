@@ -165,7 +165,7 @@ const PNLECountdown = () => {
         );
     };
     return (
-        <div className="relative group overflow-hidden rounded-[2rem] p-[1px] transition-all duration-500 hover:shadow-2xl hover:shadow-pink-500/20 hover:-translate-y-1">
+        <div className="relative group overflow-hidden rounded-[2rem] p-[1px] transition-all duration-500 hover:shadow-2xl hover:shadow-pink-500/20 hover:-translate-y-1 transform-gpu will-change-transform">
             <div className="absolute inset-0 bg-gradient-to-br from-slate-200 via-white to-slate-200 dark:from-slate-800 dark:via-[#0f172a] dark:to-slate-900 opacity-100 rounded-[2rem]"></div>
             <div className="absolute inset-0 bg-gradient-to-br from-pink-500 via-purple-500 to-cyan-500 opacity-0 group-hover:opacity-100 transition-opacity duration-700 rounded-[2rem] blur-sm"></div>
             <div className="relative bg-white/90 dark:bg-[#0B1121]/95 backdrop-blur-2xl rounded-[2rem] p-6 h-full flex flex-col justify-between overflow-hidden">
@@ -231,7 +231,9 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const [greeting, setGreeting] = useState('');
   useEffect(() => { const hour = new Date().getHours(); if (hour < 12) setGreeting('Good Morning'); else if (hour < 18) setGreeting('Good Afternoon'); else setGreeting('Good Evening'); }, []);
   const handleQuickAdd = async (e: React.FormEvent) => { e.preventDefault(); if (!newTaskText.trim()) return; const now = new Date(); const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000); await addTask({ title: newTaskText.trim(), category: 'Review', priority: 'Medium', start: now.toISOString(), end: oneHourLater.toISOString(), allDay: false }); setNewTaskText(''); };
-  const glassCard = "group relative bg-white/80 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl transition-all duration-300 hover:border-pink-500/30 dark:hover:border-pink-500/30 hover:shadow-[0_0_30px_-10px_rgba(236,72,153,0.3)] hover:-translate-y-1";
+  
+  // Replaced hover:scale with hover:-translate-y-1 and added will-change-transform for smoother, non-blurry transitions
+  const glassCard = "group relative bg-white/80 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl transition-all duration-300 hover:border-pink-500/30 dark:hover:border-pink-500/30 hover:shadow-[0_0_30px_-10px_rgba(236,72,153,0.3)] hover:-translate-y-1 will-change-transform transform-gpu";
 
   return (
     <>

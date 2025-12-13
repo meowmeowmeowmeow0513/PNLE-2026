@@ -185,14 +185,14 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop */}
-      <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+      {/* Backdrop - LIGHTER and LESS BLURRY */}
+      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
 
       {/* Modal Content */}
       <div className="relative w-full max-w-lg bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-2xl border border-white/20 dark:border-slate-700/50 p-0 overflow-hidden animate-zoom-in flex flex-col max-h-[90vh]">
         
         {/* Header decoration */}
-        <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${completed ? 'from-emerald-500 to-teal-500' : isOverdue ? 'from-red-500 to-orange-500' : 'from-pink-500 via-purple-500 to-indigo-500'}`}></div>
+        <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${completed ? 'from-emerald-500 to-teal-500' : isOverdue ? 'from-red-500 to-orange-500' : 'from-rose-500 via-purple-500 to-sky-500'}`}></div>
 
         <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-1">
             {/* Top Bar */}
@@ -206,7 +206,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                                  ? 'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400'
                                  : isOverdue 
                                      ? 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
-                                     : 'bg-pink-100 text-pink-600 dark:bg-pink-500/20 dark:text-pink-400'
+                                     : 'bg-rose-100 text-rose-600 dark:bg-rose-500/20 dark:text-rose-400'
                              }`}>
                                 {completed ? 'Charted' : isOverdue ? 'Missed Dose' : 'Active'}
                             </span>
@@ -258,7 +258,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                             className={`w-full py-4 rounded-xl border-2 flex items-center justify-center gap-3 transition-all ${
                                 completed 
                                 ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500 text-emerald-600 dark:text-emerald-400 shadow-sm' 
-                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-pink-500 hover:text-pink-500'
+                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-rose-500 hover:text-rose-500'
                             }`}
                         >
                             {completed ? (
@@ -281,7 +281,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
             
             {/* Title Input */}
             <div className="relative group">
-                <div className="absolute top-3.5 left-4 text-slate-400 group-focus-within:text-pink-500 transition-colors">
+                <div className="absolute top-3.5 left-4 text-slate-400 group-focus-within:text-rose-500 transition-colors">
                     <Type size={20} />
                 </div>
                 <input 
@@ -289,20 +289,20 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     placeholder="Task Title (e.g. Maternal Chapter 1)"
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all font-bold text-lg"
+                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all font-bold text-lg"
                     autoFocus
                 />
             </div>
 
-            {/* Category Selector */}
+            {/* Category Selector (Updated Colors) */}
             <div>
                 <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
                     <Tag size={12} /> Category
                 </label>
                 <div className="flex gap-2.5">
-                    <CategoryPill cat="Review" colorClass="bg-pink-500" icon={Calendar} />
-                    <CategoryPill cat="School" colorClass="bg-yellow-500" icon={Save} />
-                    <CategoryPill cat="Duty" colorClass="bg-blue-600" icon={Clock} />
+                    <CategoryPill cat="Review" colorClass="bg-rose-500" icon={Calendar} />
+                    <CategoryPill cat="School" colorClass="bg-violet-500" icon={Save} />
+                    <CategoryPill cat="Duty" colorClass="bg-sky-500" icon={Clock} />
                     <CategoryPill cat="Personal" colorClass="bg-emerald-500" icon={Check} />
                 </div>
             </div>
@@ -317,7 +317,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                         type="datetime-local" 
                         value={start}
                         onChange={(e) => setStart(e.target.value)}
-                        className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all cursor-pointer"
+                        className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all cursor-pointer"
                     />
                 </div>
                 <div className="space-y-1.5">
@@ -329,7 +329,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                         value={end}
                         onChange={(e) => setEnd(e.target.value)}
                         min={start}
-                        className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-pink-500 focus:ring-2 focus:ring-pink-500/20 transition-all cursor-pointer"
+                        className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all cursor-pointer"
                     />
                 </div>
             </div>
@@ -343,7 +343,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
                     placeholder="Add notes, patient details, or clinical orders..."
-                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-slate-200 text-sm font-mono leading-relaxed focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all min-h-[120px] resize-none"
+                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-slate-200 text-sm font-mono leading-relaxed focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all min-h-[120px] resize-none"
                 />
             </div>
 
@@ -396,7 +396,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                     <button
                         type="submit"
                         disabled={loading}
-                        className="flex-[2] py-3.5 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold shadow-xl shadow-pink-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                        className="flex-[2] py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
                     >
                         {loading ? (
                             <span className="opacity-80">Saving...</span>

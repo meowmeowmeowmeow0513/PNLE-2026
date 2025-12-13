@@ -3,7 +3,19 @@ import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { usePomodoro, PomodoroSession } from './PomodoroContext';
 import { Activity, Trash2, Clock, PieChart as PieIcon, BarChart3, Info, X, Target, Calendar, CheckCircle2, ShieldCheck, BarChart2 } from 'lucide-react';
-import { format, isSameDay, subDays, startOfDay, isAfter } from 'date-fns';
+import { format, isSameDay, isAfter } from 'date-fns';
+
+const startOfDay = (d: Date | number) => {
+    const date = new Date(d);
+    date.setHours(0, 0, 0, 0);
+    return date;
+};
+
+const subDays = (d: Date | number, amount: number) => {
+    const date = new Date(d);
+    date.setDate(date.getDate() - amount);
+    return date;
+};
 
 const DailyPieChart = ({ focusTime, breakTime }: { focusTime: number, breakTime: number }) => {
   const total = focusTime + breakTime;
