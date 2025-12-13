@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -14,10 +13,11 @@ import VerifyEmail from './components/VerifyEmail';
 import ForgotPassword from './components/ForgotPassword';
 import LandingPage from './components/LandingPage';
 import OnboardingFlow from './components/OnboardingFlow';
-import GlobalYoutubePlayer from './components/GlobalYoutubePlayer'; 
+import GlobalYoutubePlayer from './components/GlobalYoutubePlayer';
+import ClinicalTools from './components/ClinicalTools';
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
-import { PomodoroProvider } from './components/PomodoroContext'; 
+import { PomodoroProvider } from './components/PomodoroContext';
 import { TaskProvider } from './TaskContext';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { Loader, LogOut } from 'lucide-react';
@@ -26,7 +26,7 @@ import { db } from './firebase';
 
 const AppContent: React.FC = () => {
   const { currentUser, loading, onboardingStatus, logout } = useAuth();
-  const { themeMode } = useTheme(); 
+  const { themeMode } = useTheme();
   const [activeItem, setActiveItem] = useState<NavigationItem>('Dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarMinimized, setSidebarMinimized] = useState(() => {
@@ -34,25 +34,24 @@ const AppContent: React.FC = () => {
   });
   const [publicView, setPublicView] = useState<'landing' | 'login' | 'forgot'>('landing');
 
-  // Sync Sidebar Preference from Firestore
   useEffect(() => {
     if (currentUser) {
-        const fetchPref = async () => {
-            try {
-                const docRef = doc(db, 'users', currentUser.uid);
-                const snap = await getDoc(docRef);
-                if (snap.exists()) {
-                    const data = snap.data();
-                    if (data.sidebarMinimized !== undefined) {
-                        setSidebarMinimized(data.sidebarMinimized);
-                        localStorage.setItem('pnle_sidebar_minimized', String(data.sidebarMinimized));
-                    }
-                }
-            } catch (e) {
-                console.error("Error fetching sidebar pref", e);
+      const fetchPref = async () => {
+        try {
+          const docRef = doc(db, 'users', currentUser.uid);
+          const snap = await getDoc(docRef);
+          if (snap.exists()) {
+            const data = snap.data();
+            if (data.sidebarMinimized !== undefined) {
+              setSidebarMinimized(data.sidebarMinimized);
+              localStorage.setItem('pnle_sidebar_minimized', String(data.sidebarMinimized));
             }
-        };
-        fetchPref();
+          }
+        } catch (e) {
+          console.error('Error fetching sidebar pref', e);
+        }
+      };
+      fetchPref();
     }
   }, [currentUser]);
 
@@ -60,12 +59,14 @@ const AppContent: React.FC = () => {
     setSidebarMinimized(prev => {
       const next = !prev;
       localStorage.setItem('pnle_sidebar_minimized', String(next));
-      
+
       if (currentUser) {
-          const docRef = doc(db, 'users', currentUser.uid);
-          updateDoc(docRef, { sidebarMinimized: next }).catch(err => console.error("Failed to save sidebar pref", err));
+        const docRef = doc(db, 'users', currentUser.uid);
+        updateDoc(docRef, { sidebarMinimized: next }).catch(err =>
+          console.error('Failed to save sidebar pref', err)
+        );
       }
-      
+
       return next;
     });
   };
@@ -78,6 +79,8 @@ const AppContent: React.FC = () => {
         return <Planner />;
       case 'Pomodoro Timer':
         return <Pomodoro />;
+      case 'Clinical Tools':
+        return <ClinicalTools />;
       case 'Resource Hub':
         return <Resources />;
       case 'Exam TOS':
@@ -91,54 +94,51 @@ const AppContent: React.FC = () => {
     }
   };
 
-  // 1. Loading State (Global Auth)
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617] text-white gap-4 font-sans">
         <Loader className="animate-spin text-pink-500" size={48} />
         <p className="text-slate-500 text-sm font-medium">Loading Application...</p>
-        <button 
+        <button
           onClick={() => logout()}
           className="mt-8 text-xs text-slate-600 hover:text-slate-400 underline flex items-center gap-1 transition-colors"
         >
-           <LogOut size={12} /> Stuck? Emergency Sign Out
+          <LogOut size={12} /> Stuck? Emergency Sign Out
         </button>
       </div>
     );
   }
 
-  // 2. Auth Wall
   if (!currentUser) {
     if (publicView === 'landing') return <LandingPage onGetStarted={() => setPublicView('login')} />;
-    if (publicView === 'login') return <SignUp onForgotPassword={() => setPublicView('forgot')} onBack={() => setPublicView('landing')} />;
+    if (publicView === 'login')
+      return <SignUp onForgotPassword={() => setPublicView('forgot')} onBack={() => setPublicView('landing')} />;
     if (publicView === 'forgot') return <ForgotPassword onBack={() => setPublicView('login')} />;
   }
 
-  // 3. Verification Wall
   if (currentUser && !currentUser.emailVerified) {
     return <VerifyEmail />;
   }
 
-  // 4. Onboarding Wall
   if (onboardingStatus === 'pending') {
-      return <OnboardingFlow />;
+    return <OnboardingFlow />;
   }
-  
+
   if (onboardingStatus !== 'completed') {
-     return (
+    return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617] gap-4 font-sans">
         <Loader className="animate-spin text-pink-500" size={48} />
         <p className="text-slate-400 text-sm">Preparing Dashboard...</p>
-        <button onClick={() => logout()} className="mt-8 text-xs text-slate-500 underline"><LogOut size={12} /> Cancel</button>
+        <button onClick={() => logout()} className="mt-8 text-xs text-slate-500 underline">
+          <LogOut size={12} /> Cancel
+        </button>
       </div>
     );
   }
 
-  // 5. Authenticated App Layout (Nebulearn Structure)
   return (
     <PomodoroProvider>
       <TaskProvider>
-        {/* INJECTED STYLES FOR ANIMATIONS */}
         <style>{`
           @keyframes aurora {
             0% { transform: translate(0px, 0px) scale(1); opacity: 0.4; }
@@ -146,8 +146,6 @@ const AppContent: React.FC = () => {
             66% { transform: translate(-20px, 20px) scale(0.9); opacity: 0.4; }
             100% { transform: translate(0px, 0px) scale(1); opacity: 0.4; }
           }
-          
-          /* CRESCERE: Subsurface Light Engine (Ultra Slow & Fluid) */
           @keyframes drift-1 {
             0% { transform: translate(0, 0) rotate(0deg); }
             50% { transform: translate(10%, 5%) rotate(5deg) scale(1.1); }
@@ -166,74 +164,55 @@ const AppContent: React.FC = () => {
 
           .animate-aurora { animation: aurora 15s infinite ease-in-out; }
           .animate-aurora-delayed { animation: aurora 20s infinite ease-in-out reverse; }
-          
+
           .animate-drift-slow-1 { animation: drift-1 60s infinite ease-in-out; }
           .animate-drift-slow-2 { animation: drift-2 70s infinite ease-in-out reverse; }
           .animate-drift-slow-3 { animation: drift-3 80s infinite ease-in-out; }
 
-          /* Custom Keyframes for Modals */
           @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
           .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
           @keyframes zoom-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
           .animate-zoom-in { animation: zoom-in 0.2s ease-out forwards; }
         `}</style>
 
-        {/* GLOBAL FONT ENFORCEMENT */}
-        <div className={`relative flex h-screen font-sans selection:bg-pink-500/30 overflow-hidden transition-colors duration-500 text-slate-900 dark:text-white`}>
-          
+        {/* ✅ FIX: flex on mobile, grid on desktop so main content always reflows with sidebar width */}
+        <div
+          className={`relative h-screen font-sans selection:bg-pink-500/30 overflow-hidden transition-colors duration-500 text-slate-900 dark:text-white
+          flex lg:grid lg:grid-cols-[auto_1fr]`}
+        >
           {/* --- GLOBAL BACKGROUND SYSTEM --- */}
           <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-slate-50 dark:bg-black">
-             
-             {/* 1. CRESCERE MODE: Subsurface Light Engine */}
-             <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${themeMode === 'crescere' ? 'opacity-100' : 'opacity-0'}`}>
-                
-                {/* A. Deep Field Base (Warm Alabaster) */}
-                <div className="absolute inset-0 bg-[#fff5f5]"></div>
-                
-                {/* B. The Light Sources (Massive, Slow Moving Gradients) */}
-                {/* Reduced opacity for less 'thick' feel */}
-                <div className="absolute inset-0 overflow-hidden">
-                    {/* Top Right: Rose Gold Light */}
-                    <div className="absolute -top-[30%] -right-[30%] w-[120vw] h-[120vw] bg-gradient-to-b from-rose-200/40 to-transparent rounded-full blur-[100px] animate-drift-slow-1 mix-blend-multiply opacity-50"></div>
-                    
-                    {/* Bottom Left: Warm Amber Glow */}
-                    <div className="absolute -bottom-[30%] -left-[30%] w-[120vw] h-[120vw] bg-gradient-to-t from-amber-100/40 to-transparent rounded-full blur-[100px] animate-drift-slow-2 mix-blend-multiply opacity-50"></div>
-                    
-                    {/* Center Depth: Subtle Violet (for contrast) */}
-                    <div className="absolute top-[20%] left-[20%] w-[60vw] h-[60vw] bg-gradient-to-r from-purple-100/30 to-transparent rounded-full blur-[120px] animate-drift-slow-3 mix-blend-multiply opacity-30"></div>
-                </div>
+            {/* CRESCERE */}
+            <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${themeMode === 'crescere' ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="absolute inset-0 bg-[#fff5f5]" />
+              <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute -top-[30%] -right-[30%] w-[120vw] h-[120vw] bg-gradient-to-b from-rose-200/40 to-transparent rounded-full blur-[100px] animate-drift-slow-1 mix-blend-multiply opacity-50" />
+                <div className="absolute -bottom-[30%] -left-[30%] w-[120vw] h-[120vw] bg-gradient-to-t from-amber-100/40 to-transparent rounded-full blur-[100px] animate-drift-slow-2 mix-blend-multiply opacity-50" />
+                <div className="absolute top-[20%] left-[20%] w-[60vw] h-[60vw] bg-gradient-to-r from-purple-100/30 to-transparent rounded-full blur-[120px] animate-drift-slow-3 mix-blend-multiply opacity-30" />
+              </div>
+              <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 ${themeMode === 'crescere' ? '' : 'mix-blend-overlay'}`} />
+              <div className="absolute inset-0 bg-[radial-gradient(transparent_0%,_rgba(255,241,242,0.4)_100%)]" />
+            </div>
 
-                {/* Removed Heavy Diffuser layer to fix "suffocating" feel */}
-                
-                {/* D. Texture (Film Grain for "Paper" feel) */}
-                {/* Fixed: removed mix-blend-overlay for Crescere to keep it bright white */}
-                <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 ${themeMode === 'crescere' ? '' : 'mix-blend-overlay'}`}></div>
-                
-                {/* E. Vignette (Focus on Center) */}
-                <div className="absolute inset-0 bg-[radial-gradient(transparent_0%,_rgba(255,241,242,0.4)_100%)]"></div>
-             </div>
+            {/* DARK */}
+            <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] transition-opacity duration-700 ease-in-out ${themeMode === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-pink-900/10 rounded-full blur-[120px] animate-aurora" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-900/10 rounded-full blur-[120px] animate-aurora-delayed" />
+              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
+            </div>
 
-             {/* 2. STANDARD DARK MODE: Nebula Gradient */}
-             <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] transition-opacity duration-700 ease-in-out ${themeMode === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-                <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-pink-900/10 rounded-full blur-[120px] animate-aurora"></div>
-                <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-900/10 rounded-full blur-[120px] animate-aurora-delayed"></div>
-                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
-             </div>
-
-             {/* 3. LIGHT MODE: Clean Flat */}
-             <div className={`absolute inset-0 bg-[#f8fafc] transition-opacity duration-700 ease-in-out ${themeMode === 'light' ? 'opacity-100' : 'opacity-0'}`}>
-                 {/* Added subtle floating orbs to make glassmorphism blur effective */}
-                 <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/40 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none mix-blend-multiply"></div>
-                 <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-50/40 rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none mix-blend-multiply"></div>
-                 {/* Light noise texture */}
-                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none"></div>
-             </div>
+            {/* LIGHT */}
+            <div className={`absolute inset-0 bg-[#f8fafc] transition-opacity duration-700 ease-in-out ${themeMode === 'light' ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/40 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none mix-blend-multiply" />
+              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-50/40 rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none mix-blend-multiply" />
+              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none" />
+            </div>
           </div>
-          
-          {/* Sidebar (Fixed Width, z-60 to sit above Intro Overlay) */}
-          <div className="relative z-[60] h-full">
-            <Sidebar 
-              activeItem={activeItem} 
+
+          {/* Sidebar */}
+          <div className="relative z-[60] h-full flex-shrink-0">
+            <Sidebar
+              activeItem={activeItem}
               onNavigate={setActiveItem}
               isOpen={sidebarOpen}
               onClose={() => setSidebarOpen(false)}
@@ -242,28 +221,23 @@ const AppContent: React.FC = () => {
             />
           </div>
 
-          {/* Main Content (Flex Column, z-10) */}
-          <div className="flex-1 flex flex-col h-screen relative min-w-0 z-10">
-            {/* Sticky Header */}
-            <TopBar 
+          {/* Main Content */}
+          <div className="relative z-10 min-w-0 w-full flex flex-col h-screen">
+            <TopBar
               title={activeItem}
               onMenuClick={() => setSidebarOpen(true)}
-              // Props below are handled by Context in children, but TopBar interface kept compat
-              isDark={true} 
-              toggleTheme={() => {}} 
+              isDark={true}
+              toggleTheme={() => { }}
             />
-            
-            {/* Scrollable Content Area */}
+
             <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth custom-scrollbar relative">
               <div className="max-w-7xl mx-auto pb-20">
                 {renderContent()}
               </div>
             </main>
 
-            {/* Floating Player (Fixed Z-Index) */}
             <GlobalYoutubePlayer activeItem={activeItem} />
           </div>
-
         </div>
       </TaskProvider>
     </PomodoroProvider>
@@ -273,7 +247,7 @@ const AppContent: React.FC = () => {
 const App: React.FC = () => {
   return (
     <ThemeProvider>
-        <AppContent />
+      <AppContent />
     </ThemeProvider>
   );
 };

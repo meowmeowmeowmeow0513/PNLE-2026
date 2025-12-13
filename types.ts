@@ -1,6 +1,4 @@
-
-
-export type NavigationItem = 'Dashboard' | 'Planner' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Personal Folder' | 'December Quest';
+export type NavigationItem = 'Dashboard' | 'Planner' | 'Pomodoro Timer' | 'Resource Hub' | 'Exam TOS' | 'Personal Folder' | 'December Quest' | 'Clinical Tools';
 
 export type TaskCategory = 'Review' | 'School' | 'Duty' | 'Personal';
 export type TaskPriority = 'High' | 'Medium' | 'Low';

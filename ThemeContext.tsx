@@ -2,7 +2,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useAuth } from './AuthContext';
 import { db } from './firebase';
-import { doc, updateDoc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, updateDoc, getDoc } from 'firebase/firestore';
 
 export type ThemeMode = 'light' | 'dark' | 'crescere';
 export type FontSize = 'small' | 'normal' | 'large' | 'extra-large';
@@ -49,20 +49,30 @@ const updateCssVariables = (hex: string) => {
     const root = document.documentElement;
     const base = hexToRgb(hex);
     
-    const tint = (factor: number) => {
-        return `${Math.round(base.r + (255 - base.r) * factor)} ${Math.round(base.g + (255 - base.g) * factor)} ${Math.round(base.b + (255 - base.b) * factor)}`;
-    };
-    
-    const shade = (factor: number) => {
-        return `${Math.round(base.r * (1 - factor))} ${Math.round(base.g * (1 - factor))} ${Math.round(base.b * (1 - factor))}`;
+    // Helper to mix white/black for tints/shades
+    const mix = (color: {r: number, g: number, b: number}, mixColor: {r: number, g: number, b: number}, weight: number) => {
+        return `${Math.round(color.r * (1 - weight) + mixColor.r * weight)} ${Math.round(color.g * (1 - weight) + mixColor.g * weight)} ${Math.round(color.b * (1 - weight) + mixColor.b * weight)}`;
     };
 
-    root.style.setProperty('--accent-50', tint(0.95));
-    root.style.setProperty('--accent-100', tint(0.9));
-    root.style.setProperty('--accent-200', tint(0.7));
-    root.style.setProperty('--accent-400', tint(0.2));
+    const w = {r: 255, g: 255, b: 255};
+    const b = {r: 0, g: 0, b: 0};
+
+    // Generating a full Tailwind-like palette from one color
+    root.style.setProperty('--accent-50', mix(base, w, 0.95));
+    root.style.setProperty('--accent-100', mix(base, w, 0.9));
+    root.style.setProperty('--accent-200', mix(base, w, 0.8));
+    root.style.setProperty('--accent-300', mix(base, w, 0.6));
+    root.style.setProperty('--accent-400', mix(base, w, 0.4));
+    
+    // Base Color (500)
     root.style.setProperty('--accent-500', `${base.r} ${base.g} ${base.b}`);
-    root.style.setProperty('--accent-600', shade(0.1));
+    
+    // Shades
+    root.style.setProperty('--accent-600', mix(base, b, 0.1));
+    root.style.setProperty('--accent-700', mix(base, b, 0.3));
+    root.style.setProperty('--accent-800', mix(base, b, 0.5));
+    root.style.setProperty('--accent-900', mix(base, b, 0.7));
+    root.style.setProperty('--accent-950', mix(base, b, 0.85));
 };
 
 export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -108,7 +118,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                       const data = snap.data();
                       if (data.themeMode) setThemeModeState(data.themeMode as ThemeMode);
                       if (data.accentColor) setAccentColorState(data.accentColor);
-                      // Load A11y Prefs
                       if (data.fontSize) setFontSizeState(data.fontSize);
                       if (data.fontFamily) setFontFamilyState(data.fontFamily);
                       if (data.reduceMotion !== undefined) setReduceMotionState(data.reduceMotion);
@@ -125,21 +134,18 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   useEffect(() => {
     const root = document.documentElement;
     
-    // 1. Theme Mode
     if (isDark) root.classList.add('dark');
     else root.classList.remove('dark');
 
     if (themeMode === 'crescere') root.classList.add('theme-crescere');
     else root.classList.remove('theme-crescere');
     
-    // 2. Accessibility Attributes
     root.setAttribute('data-font-size', fontSize);
     root.setAttribute('data-font-family', fontFamily);
     
     if (reduceMotion) root.classList.add('reduce-motion');
     else root.classList.remove('reduce-motion');
 
-    // 3. Persistence
     localStorage.setItem('pnle_theme_mode', themeMode);
     localStorage.setItem('pnle_font_size', fontSize);
     localStorage.setItem('pnle_font_family', fontFamily);
@@ -172,8 +178,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       setThemeModeState(mode);
       if (mode === 'crescere') {
           setAccentColorState('#be123c'); // Rose Red for Crescere
-      } else {
-          setAccentColorState('#EC4899'); // Default Pink for Light/Dark
       }
   };
 

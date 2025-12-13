@@ -102,7 +102,7 @@ const StudyVitals = () => {
     return points.join(' ');
   }, [progress, total, completed]);
   return (
-    <div className="relative w-full h-full flex flex-row items-center justify-between overflow-hidden px-6 gap-6">
+    <div className="relative w-full h-full flex flex-row items-center justify-between overflow-hidden px-4 md:px-6 gap-6">
         <div className="absolute inset-0" style={{ backgroundImage: 'linear-gradient(rgba(236, 72, 153, 0.05) 1px, transparent 1px), linear-gradient(90deg, rgba(236, 72, 153, 0.05) 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
         <div className="relative z-10 flex flex-col justify-center min-w-[140px]">
              <div className="flex items-center gap-2 mb-1">
@@ -233,6 +233,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
   const handleQuickAdd = async (e: React.FormEvent) => { e.preventDefault(); if (!newTaskText.trim()) return; const now = new Date(); const oneHourLater = new Date(now.getTime() + 60 * 60 * 1000); await addTask({ title: newTaskText.trim(), category: 'Review', priority: 'Medium', start: now.toISOString(), end: oneHourLater.toISOString(), allDay: false }); setNewTaskText(''); };
   
   // Replaced hover:scale with hover:-translate-y-1 and added will-change-transform for smoother, non-blurry transitions
+  // Updated p-8 to p-5 sm:p-8 for better mobile fit
   const glassCard = "group relative bg-white/80 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl transition-all duration-300 hover:border-pink-500/30 dark:hover:border-pink-500/30 hover:shadow-[0_0_30px_-10px_rgba(236,72,153,0.3)] hover:-translate-y-1 will-change-transform transform-gpu";
 
   return (
@@ -242,7 +243,7 @@ const Dashboard: React.FC<DashboardProps> = ({ onNavigate }) => {
     <div className="w-full pb-20">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-8 items-stretch">
             <div className="lg:col-span-2 flex flex-col gap-6 lg:gap-8 h-full">
-                <div className={`${glassCard} relative p-8 flex items-center justify-between min-h-[180px] overflow-hidden`}>
+                <div className={`${glassCard} relative p-6 sm:p-8 flex items-center justify-between min-h-[180px] overflow-hidden`}>
                      <div className="absolute top-0 right-0 w-96 h-96 bg-purple-600/5 dark:bg-purple-600/10 rounded-full blur-[100px] pointer-events-none"></div>
                      <div className="absolute bottom-0 left-0 w-64 h-64 bg-pink-500/5 dark:bg-pink-500/10 rounded-full blur-[80px] pointer-events-none"></div>
                      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none"></div>
