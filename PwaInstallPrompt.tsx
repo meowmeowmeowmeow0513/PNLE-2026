@@ -59,11 +59,11 @@ const PwaInstallPrompt = () => {
       `}>
           <div className="bg-white/90 dark:bg-[#0f172a]/95 rounded-[1.2rem] p-4 flex items-center gap-4 relative overflow-hidden">
               
-              {/* --- LOGO --- */}
+              {/* --- APP LOGO (From Firebase) --- */}
               <img 
-                src="https://firebasestorage.googleapis.com/v0/b/pnle-review-companion.firebasestorage.app/o/WebsiteLogo.png?alt=media&token=618c2ca2-f87c-4daf-9b2b-0342976a7567"
-                alt="App Logo"
-                className="w-12 h-12 rounded-2xl shrink-0"
+                src="https://firebasestorage.googleapis.com/v0/b/pnle-review-companion.firebasestorage.app/o/WebsiteLogo.png?alt=media&token=618c2ca2-f87c-4daf-9b2b-0342976a7567" 
+                alt="App Logo" 
+                className="w-12 h-12 rounded-2xl shrink-0 shadow-md"
               />
 
               {/* --- TEXT CONTENT --- */}
@@ -85,7 +85,7 @@ const PwaInstallPrompt = () => {
                   </div>
               ) : (
                   <div className="flex items-center gap-2">
-                      <button
+                      <button 
                           onClick={handleInstallClick}
                           className={`px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider text-white shadow-lg active:scale-95 transition-all flex items-center gap-2
                           ${isCrescere ? 'bg-gradient-to-r from-rose-500 to-amber-500' : 'bg-gradient-to-r from-pink-500 to-purple-600'}`}
@@ -99,7 +99,7 @@ const PwaInstallPrompt = () => {
               )}
           </div>
 
-          {/* --- IOS INSTRUCTIONS EXPANDER (Only visible on iOS) --- */}
+          {/* --- IOS INSTRUCTIONS --- */}
           {isIOS && (
               <div className="bg-slate-50/90 dark:bg-slate-900/90 p-3 text-[10px] font-bold text-slate-500 dark:text-slate-400 flex items-center justify-center gap-2 border-t border-slate-200 dark:border-slate-800 rounded-b-[1.2rem]">
                   <span>Tap</span>
