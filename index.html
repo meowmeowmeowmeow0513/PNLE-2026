@@ -1,10 +1,13 @@
-
 <!DOCTYPE html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PNLE 2026 Review Companion</title>
+    
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#db2777">
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -24,7 +27,6 @@
       }
 
       /* --- ACCESSIBILITY: FONT FAMILIES --- */
-      /* These update the CSS variable, which Tailwind consumes */
       html[data-font-family="serif"] {
         --font-primary: 'Merriweather', serif;
       }
@@ -45,8 +47,6 @@
       }
 
       /* --- ACCESSIBILITY: FONT SCALING --- */
-      /* Base font size scaling - affects all REM units in Tailwind */
-      /* Adjusted to be more conservative to prevent layout breakage */
       html[data-font-size="small"] { font-size: 14px; }
       html[data-font-size="normal"] { font-size: 16px; }
       html[data-font-size="large"] { font-size: 17px; }
@@ -89,19 +89,12 @@
         theme: {
           extend: {
             fontFamily: {
-              // We bind the default 'sans' stack to our dynamic CSS variable.
-              // This ensures that all 'font-sans' classes (the default in Tailwind)
-              // automatically update when the user changes their preference.
               sans: ['var(--font-primary)', 'sans-serif'],
-              
-              // These remain specific for purposeful design choices
               serif: ['Merriweather', 'serif'],
               mono: ['JetBrains Mono', 'monospace'],
               handwriting: ['Dancing Script', 'cursive'],
             },
             colors: {
-              // Override 'pink' to use our CSS variables. 
-              // This instantly themes the entire app (buttons, text, etc) without refactoring TSX.
               pink: {
                 50: 'rgb(var(--accent-50) / <alpha-value>)',
                 100: 'rgb(var(--accent-100) / <alpha-value>)',
@@ -109,7 +102,6 @@
                 400: 'rgb(var(--accent-400) / <alpha-value>)',
                 500: 'rgb(var(--accent-500) / <alpha-value>)',
                 600: 'rgb(var(--accent-600) / <alpha-value>)',
-                // Legacy support for where 'accent' might be used conceptually
                 accent: 'rgb(var(--accent-500) / <alpha-value>)',
               },
               navy: {
@@ -121,35 +113,49 @@
         }
       }
     </script>
-  <script type="importmap">
-{
-  "imports": {
-    "react": "https://aistudiocdn.com/react@^19.2.0",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "date-fns": "https://aistudiocdn.com/date-fns@^4.1.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
-    "firebase/app": "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js",
-    "firebase/auth": "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js",
-    "firebase/firestore": "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js",
-    "firebase/storage": "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js",
-    "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",
-    "@fullcalendar/react": "https://aistudiocdn.com/@fullcalendar/react@^6.1.19",
-    "@fullcalendar/timegrid": "https://aistudiocdn.com/@fullcalendar/timegrid@^6.1.19",
-    "@fullcalendar/daygrid": "https://aistudiocdn.com/@fullcalendar/daygrid@^6.1.19",
-    "@fullcalendar/list": "https://aistudiocdn.com/@fullcalendar/list@^6.1.19",
-    "@fullcalendar/interaction": "https://aistudiocdn.com/@fullcalendar/interaction@^6.1.19",
-    "canvas-confetti": "https://aistudiocdn.com/canvas-confetti@^1.9.4",
-    "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
-    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0"
-  }
-}
-</script>
-<link rel="stylesheet" href="/index.css">
-</head>
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://aistudiocdn.com/react@^19.2.0",
+        "react/": "https://aistudiocdn.com/react@^19.2.0/",
+        "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+        "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
+        "date-fns": "https://aistudiocdn.com/date-fns@^4.1.0",
+        "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+        "firebase/app": "https://www.gstatic.com/firebasejs/10.13.1/firebase-app.js",
+        "firebase/auth": "https://www.gstatic.com/firebasejs/10.13.1/firebase-auth.js",
+        "firebase/firestore": "https://www.gstatic.com/firebasejs/10.13.1/firebase-firestore.js",
+        "firebase/storage": "https://www.gstatic.com/firebasejs/10.13.1/firebase-storage.js",
+        "firebase/": "https://aistudiocdn.com/firebase@^12.6.0/",
+        "@fullcalendar/react": "https://aistudiocdn.com/@fullcalendar/react@^6.1.19",
+        "@fullcalendar/timegrid": "https://aistudiocdn.com/@fullcalendar/timegrid@^6.1.19",
+        "@fullcalendar/daygrid": "https://aistudiocdn.com/@fullcalendar/daygrid@^6.1.19",
+        "@fullcalendar/list": "https://aistudiocdn.com/@fullcalendar/list@^6.1.19",
+        "@fullcalendar/interaction": "https://aistudiocdn.com/@fullcalendar/interaction@^6.1.19",
+        "canvas-confetti": "https://aistudiocdn.com/canvas-confetti@^1.9.4",
+        "react-dom": "https://aistudiocdn.com/react-dom@^19.2.0",
+        "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0"
+      }
+    }
+    </script>
+    <link rel="stylesheet" href="/index.css">
+  </head>
   <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>
+
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js')
+            .then((registration) => {
+              console.log('Worker registered with scope:', registration.scope);
+            })
+            .catch((err) => {
+              console.log('Worker registration failed:', err);
+            });
+        });
+      }
+    </script>
   </body>
 </html>
