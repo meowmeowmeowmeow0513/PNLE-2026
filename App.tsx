@@ -16,6 +16,7 @@ import LandingPage from './components/LandingPage';
 import OnboardingFlow from './components/OnboardingFlow';
 import GlobalYoutubePlayer from './components/GlobalYoutubePlayer';
 import ClinicalTools from './components/ClinicalTools';
+import PwaInstallPrompt from './components/PwaInstallPrompt';
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
 import { PomodoroProvider } from './components/PomodoroContext';
