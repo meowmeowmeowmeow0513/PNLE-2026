@@ -2,13 +2,14 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud, ShieldCheck, ArrowRight, XCircle
+    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud, ShieldCheck, ArrowRight, XCircle, Maximize2
 } from 'lucide-react';
 import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType, SoundscapeType } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
 import { isWithinInterval } from 'date-fns';
 import confetti from 'canvas-confetti';
 import PomodoroStats from './PomodoroStats';
+import PomodoroFullScreen from './PomodoroFullScreen';
 
 // --- ADVANCED PET STYLES ---
 const petStyles = `
@@ -661,6 +662,7 @@ const Pomodoro: React.FC = () => {
   // Local state
   const [showTaskDropdown, setShowTaskDropdown] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
+  const [isFullScreen, setIsFullScreen] = useState(false);
   
   // New: Early Exit Modal State
   const [showEarlyExitModal, setShowEarlyExitModal] = useState(false);
@@ -912,11 +914,15 @@ const Pomodoro: React.FC = () => {
              </div>
 
              {/* 3. Media Controls (Compact & Aligned) */}
-             <div className="grid grid-cols-2 gap-2 h-14 relative z-10">
+             <div className="grid grid-cols-3 gap-2 h-14 relative z-10">
                 <SoundscapeControl />
                 <button onClick={togglePiP} className="h-full py-2 rounded-xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1 transition-all shadow-sm">
                     <MonitorPlay size={16} />
-                    <span className="text-[9px] font-bold uppercase">Mini Mode</span>
+                    <span className="text-[9px] font-bold uppercase">Mini</span>
+                </button>
+                <button onClick={() => setIsFullScreen(true)} className="h-full py-2 rounded-xl bg-white dark:bg-[#0B1221] border border-slate-200 dark:border-slate-800 text-slate-500 hover:text-pink-500 hover:border-pink-500/50 flex flex-col items-center justify-center gap-1 transition-all shadow-sm">
+                    <Maximize2 size={16} />
+                    <span className="text-[9px] font-bold uppercase">Zen</span>
                 </button>
              </div>
 
@@ -999,6 +1005,9 @@ const Pomodoro: React.FC = () => {
               </div>
           </div>
       )}
+
+      {/* --- FULLSCREEN ZEN MODE --- */}
+      {isFullScreen && <PomodoroFullScreen onClose={() => setIsFullScreen(false)} />}
     </div>
   );
 };
