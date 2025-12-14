@@ -25,7 +25,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onEdit, onDelete,
         }
     };
 
-    // --- STICKY NOTE RENDERER ---
+    // --- STICKY NOTE RENDERER (Updated: No Handwriting, Responsive) ---
     if (isNote) {
         const bgColors: Record<string, string> = {
             yellow: 'bg-[#fef9c3] text-yellow-900 selection:bg-yellow-500/30',
@@ -42,20 +42,21 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onEdit, onDelete,
                 draggable
                 onDragStart={onDragStart}
                 onClick={(e) => { e.stopPropagation(); onEdit(); }}
-                className={`aspect-square p-6 pt-8 rounded-sm shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 hover:rotate-0 flex flex-col justify-between group relative ${theme} ${randomRotate}`}
+                className={`min-h-[220px] h-auto w-full p-6 pt-8 rounded-sm shadow-md hover:shadow-xl transition-all duration-300 cursor-pointer transform hover:scale-105 hover:rotate-0 flex flex-col justify-between group relative ${theme} ${randomRotate}`}
             >
                 {/* Washi Tape Visual */}
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 w-20 h-8 bg-white/40 backdrop-blur-sm shadow-sm rotate-1 transform skew-x-12 opacity-80 pointer-events-none"></div>
 
-                <div className="overflow-hidden flex-1 pointer-events-none">
-                    <h4 className="font-black text-sm mb-2 opacity-90 uppercase tracking-wider border-b border-black/10 pb-1 truncate">{resource.fileName}</h4>
-                    <p className="text-xs font-bold leading-relaxed whitespace-pre-wrap font-handwriting opacity-80 line-clamp-6 text-[13px]">
+                <div className="flex-1 overflow-hidden">
+                    <h4 className="font-black text-sm mb-3 opacity-90 uppercase tracking-wider border-b border-black/10 pb-1 break-words leading-snug">{resource.fileName}</h4>
+                    {/* Replaced font-handwriting with font-sans/font-medium for better readability */}
+                    <div className="text-sm font-medium leading-relaxed whitespace-pre-wrap opacity-90 max-h-[200px] overflow-y-auto custom-scrollbar">
                         {resource.userNotes}
-                    </p>
+                    </div>
                 </div>
                 
                 {/* Footer Actions - Visible on mobile, hover on desktop */}
-                <div className="flex justify-between items-end opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-2 relative z-30">
+                <div className="flex justify-between items-end opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity mt-4 pt-2 border-t border-black/5 relative z-30">
                     <span className="text-[10px] font-bold opacity-50">{formatDate(resource.createdAt)}</span>
                     <button 
                         onClick={(e) => { 
@@ -85,7 +86,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onEdit, onDelete,
         <div 
             draggable
             onDragStart={onDragStart}
-            className="group bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-pink-500/10 hover:border-pink-300 dark:hover:border-pink-500 transition-all cursor-pointer flex flex-col h-[180px] overflow-hidden relative"
+            className="group bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700 shadow-sm hover:shadow-xl hover:shadow-pink-500/10 hover:border-pink-300 dark:hover:border-pink-500 transition-all cursor-pointer flex flex-col min-h-[180px] overflow-hidden relative"
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
         >
             <div 
@@ -95,7 +96,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({ resource, onEdit, onDelete,
                     {getIcon()}
                 </div>
                 <div className="text-center w-full px-2">
-                    <h4 className="font-bold text-slate-800 dark:text-white text-sm truncate w-full group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">{resource.fileName}</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-white text-sm break-words leading-tight w-full group-hover:text-pink-600 dark:group-hover:text-pink-400 transition-colors">{resource.fileName}</h4>
                     <p className="text-[10px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest truncate mt-1 opacity-80 group-hover:opacity-100 transition-opacity">
                         {resource.downloadUrl ? new URL(resource.downloadUrl).hostname.replace('www.','') : 'Link'}
                     </p>

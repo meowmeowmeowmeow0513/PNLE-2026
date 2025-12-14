@@ -50,14 +50,14 @@ const CompetencyAuditModal: React.FC<CompetencyAuditModalProps> = ({ onClose, da
             <div className={`w-full h-full md:h-[90vh] md:max-w-5xl md:rounded-[2.5rem] shadow-2xl flex flex-col overflow-hidden relative animate-zoom-in border ${isCrescere ? 'bg-white/95 border-white/60' : 'bg-white dark:bg-[#0f172a] border-slate-200 dark:border-white/5'}`}>
                 
                 {/* 1. Header (Command Center Style - Adaptive) */}
-                <div className={`relative p-6 md:p-8 shrink-0 overflow-hidden border-b ${isCrescere ? 'bg-white/50 border-slate-200' : 'bg-white dark:bg-black border-slate-200 dark:border-white/5'}`}>
+                <div className={`relative p-5 md:p-8 shrink-0 overflow-hidden border-b ${isCrescere ? 'bg-white/50 border-slate-200' : 'bg-white dark:bg-black border-slate-200 dark:border-white/5'}`}>
                     {/* Abstract Background FX */}
                     <div className="absolute top-0 right-0 w-96 h-96 bg-amber-500/5 dark:bg-amber-500/10 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none"></div>
                     <div className="absolute bottom-0 left-0 w-64 h-64 bg-pink-500/5 dark:bg-pink-500/10 rounded-full blur-[80px] -ml-20 -mb-20 pointer-events-none"></div>
                     <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none"></div>
 
                     <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
-                        <div>
+                        <div className="pr-12 md:pr-0">
                             <div className="flex items-center gap-2 mb-2">
                                 <span className={`px-2.5 py-0.5 rounded text-[10px] font-black uppercase tracking-widest border backdrop-blur-sm flex items-center gap-1.5 ${isCrescere ? 'bg-amber-500/10 text-amber-600 border-amber-500/20' : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'}`}>
                                     <GripHorizontal size={12} /> Audit Mode
@@ -69,13 +69,13 @@ const CompetencyAuditModal: React.FC<CompetencyAuditModalProps> = ({ onClose, da
                             <p className={`text-xs md:text-sm font-medium mt-1 ${isCrescere ? 'text-slate-500' : 'text-slate-500 dark:text-white/60'}`}>Self-assess against the PRC Blueprint specifications.</p>
                         </div>
                         
-                        <button onClick={onClose} className={`absolute top-6 right-6 p-2 rounded-full transition-colors backdrop-blur-md ${isCrescere ? 'bg-slate-100 hover:bg-slate-200 text-slate-500' : 'bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-500 dark:text-white'}`}>
+                        <button onClick={onClose} className={`absolute top-4 right-4 md:top-6 md:right-6 p-2 rounded-full transition-colors backdrop-blur-md ${isCrescere ? 'bg-slate-100 hover:bg-slate-200 text-slate-500' : 'bg-slate-100 dark:bg-white/10 hover:bg-slate-200 dark:hover:bg-white/20 text-slate-500 dark:text-white'}`}>
                             <X size={20} />
                         </button>
                     </div>
 
                     {/* Stats Dashboard Grid - Adaptive */}
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 mt-8">
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 md:gap-4 mt-6 md:mt-8">
                         <div className={`backdrop-blur-md rounded-2xl p-3 md:p-4 border flex flex-col items-center justify-center group transition-colors ${isCrescere ? 'bg-slate-50 border-slate-100 hover:bg-slate-100' : 'bg-slate-50 dark:bg-white/5 border-slate-100 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10'}`}>
                             <span className={`text-2xl md:text-3xl font-black leading-none ${isCrescere ? 'text-slate-900' : 'text-slate-900 dark:text-white'}`}>{tabStats.mastered}</span>
                             <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-wider mt-1 flex items-center gap-1 ${isCrescere ? 'text-emerald-600' : 'text-emerald-600 dark:text-emerald-400'}`}><CheckCircle2 size={10} /> Mastered</span>
@@ -101,7 +101,7 @@ const CompetencyAuditModal: React.FC<CompetencyAuditModalProps> = ({ onClose, da
                     </div>
                 </div>
 
-                {/* 2. Navigation Tabs (Pill Style) */}
+                {/* 2. Navigation Tabs (Pill Style) - Scrollable on mobile */}
                 <div className={`p-2 md:px-6 md:py-3 border-b overflow-x-auto no-scrollbar shrink-0 ${isCrescere ? 'bg-slate-50 border-slate-200' : 'bg-slate-100 dark:bg-black/40 border-slate-200 dark:border-white/5'}`}>
                     <div className="flex gap-2 min-w-max">
                         {EXAM_BLUEPRINTS.map((exam, idx) => (
@@ -154,7 +154,7 @@ const CompetencyAuditModal: React.FC<CompetencyAuditModalProps> = ({ onClose, da
                                                 {/* Content Side */}
                                                 <div className="flex-1">
                                                     <div className="flex justify-between items-start">
-                                                        <h4 className={`font-bold text-base leading-tight mb-2 flex items-center gap-2 ${isCrescere ? 'text-slate-800' : 'text-slate-800 dark:text-white'}`}>
+                                                        <h4 className={`font-bold text-base leading-tight mb-2 flex items-center gap-2 break-words ${isCrescere ? 'text-slate-800' : 'text-slate-800 dark:text-white'}`}>
                                                             {topic.name}
                                                             {status === 'mastered' && <CheckCircle2 size={14} className="text-emerald-500" />}
                                                         </h4>
@@ -175,7 +175,7 @@ const CompetencyAuditModal: React.FC<CompetencyAuditModalProps> = ({ onClose, da
                                                 </div>
 
                                                 {/* Action Side (Segmented Control) */}
-                                                <div className={`flex items-center p-1.5 rounded-xl shrink-0 self-start lg:self-center w-full lg:w-auto mt-2 lg:mt-0 shadow-inner ${isCrescere ? 'bg-slate-100' : 'bg-slate-100 dark:bg-slate-950'}`}>
+                                                <div className={`flex items-center p-1.5 rounded-xl shrink-0 self-start lg:self-center w-full lg:w-auto mt-4 lg:mt-0 shadow-inner ${isCrescere ? 'bg-slate-100' : 'bg-slate-100 dark:bg-slate-950'}`}>
                                                     <button 
                                                         onClick={() => onUpdate(id, 'none')}
                                                         className={`flex-1 lg:flex-none px-4 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 ${

@@ -32,7 +32,7 @@ const AscensionIntro: React.FC<{ onComplete: () => void }> = ({ onComplete }) =>
     }, []);
 
     return (
-        <div className="fixed inset-0 z-[50] flex flex-col items-center justify-center p-6 overflow-hidden font-sans select-none touch-none
+        <div className="fixed inset-0 z-[1000] flex flex-col items-center justify-center p-0 overflow-hidden font-sans select-none touch-none
             bg-[radial-gradient(circle_at_center,_var(--tw-gradient-stops))] from-white via-rose-50 to-orange-50 text-slate-900 
             dark:bg-[#020617] dark:text-white dark:from-[#020617] dark:to-black
         ">
@@ -85,70 +85,75 @@ const AscensionIntro: React.FC<{ onComplete: () => void }> = ({ onComplete }) =>
                 ))}
             </div>
 
-            {/* Step 1: Context */}
-            <div className={`relative z-10 transition-all duration-1000 transform text-center max-w-3xl px-6 ${step === 1 ? 'opacity-100 translate-y-0 scale-100' : step > 1 ? 'opacity-0 -translate-y-10 scale-95' : 'opacity-0 translate-y-10 scale-95'} ${step > 1 ? 'hidden' : 'block'}`}>
-                <div className="mx-auto mb-10 w-28 h-28 flex items-center justify-center rounded-full bg-white/80 dark:bg-pink-500/10 shadow-[0_0_40px_rgba(236,72,153,0.3)] ring-1 ring-pink-100 dark:ring-pink-500/30 backdrop-blur-xl">
-                    <GraduationCap size={56} className="text-pink-500 dark:text-pink-400 animate-bounce" />
-                </div>
-                <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6 text-slate-900 dark:text-white drop-shadow-sm">
-                    The Final Stretch.
-                </h1>
-                <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 font-medium leading-relaxed max-w-2xl mx-auto">
-                    4th Year, 2nd Semester. <br/>
-                    Every sleepless night has led you to this moment.
-                </p>
-            </div>
+            {/* CONTENT LAYOUT - Centered safe area */}
+            <div className="relative z-10 w-full max-w-4xl mx-auto px-6 flex flex-col items-center justify-center min-h-[50vh]">
 
-            {/* Step 2: The Goal */}
-            <div className={`relative z-10 transition-all duration-1000 transform text-center max-w-3xl px-6 ${step === 2 ? 'opacity-100 translate-y-0 scale-100' : step > 2 ? 'opacity-0 -translate-y-10 scale-95' : 'opacity-0 translate-y-10 scale-95'} ${step > 2 || step < 2 ? 'hidden' : 'block'}`}>
-                <div className="w-48 h-28 border-4 border-amber-400 rounded-3xl mx-auto mb-10 flex items-center justify-center bg-white/60 dark:bg-amber-400/10 shadow-[0_0_60px_rgba(251,191,36,0.5)] backdrop-blur-xl relative overflow-hidden group">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 animate-shine"></div>
-                    <span className="font-serif font-black text-amber-500 dark:text-amber-400 text-5xl tracking-widest drop-shadow-sm">PRC</span>
+                {/* Step 1: Context */}
+                <div className={`transition-all duration-1000 transform text-center w-full ${step === 1 ? 'opacity-100 translate-y-0 scale-100' : step > 1 ? 'opacity-0 -translate-y-10 scale-95 pointer-events-none absolute' : 'opacity-0 translate-y-10 scale-95 absolute'}`}>
+                    <div className="mx-auto mb-8 w-24 h-24 md:w-32 md:h-32 flex items-center justify-center rounded-full bg-white/80 dark:bg-pink-500/10 shadow-[0_0_40px_rgba(236,72,153,0.3)] ring-1 ring-pink-100 dark:ring-pink-500/30 backdrop-blur-xl">
+                        <GraduationCap className="w-12 h-12 md:w-16 md:h-16 text-pink-500 dark:text-pink-400 animate-bounce" />
+                    </div>
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight mb-6 text-slate-900 dark:text-white drop-shadow-sm leading-tight">
+                        The Final Stretch.
+                    </h1>
+                    <p className="text-lg md:text-2xl text-slate-600 dark:text-slate-400 font-medium leading-relaxed max-w-lg mx-auto">
+                        4th Year, 2nd Semester. <br/>
+                        Every sleepless night has led you to this moment.
+                    </p>
                 </div>
-                <h1 className="text-5xl md:text-7xl font-black tracking-tight mb-6">
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 drop-shadow-sm">
-                        License Awaits.
-                    </span>
-                </h1>
-                <p className="text-xl md:text-2xl text-slate-600 dark:text-slate-400 font-medium">
-                    It's not just a card. It's your future.
-                </p>
-            </div>
 
-            {/* Step 3: Identity */}
-            <div className={`relative z-10 transition-all duration-1000 transform text-center max-w-5xl px-6 ${step >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'}`}>
-                <div className="flex justify-center mb-6">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/50 dark:bg-white/10 border border-white/50 dark:border-white/10 backdrop-blur-md shadow-sm">
-                        <Star size={16} className="text-amber-400 fill-current" />
-                        <span className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">Batch 2026</span>
+                {/* Step 2: The Goal */}
+                <div className={`transition-all duration-1000 transform text-center w-full ${step === 2 ? 'opacity-100 translate-y-0 scale-100' : step > 2 ? 'opacity-0 -translate-y-10 scale-95 pointer-events-none absolute' : 'opacity-0 translate-y-10 scale-95 absolute'}`}>
+                    <div className="w-40 h-24 md:w-56 md:h-32 border-4 border-amber-400 rounded-3xl mx-auto mb-8 flex items-center justify-center bg-white/60 dark:bg-amber-400/10 shadow-[0_0_60px_rgba(251,191,36,0.5)] backdrop-blur-xl relative overflow-hidden group">
+                        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 animate-shine"></div>
+                        <span className="font-serif font-black text-amber-500 dark:text-amber-400 text-4xl md:text-6xl tracking-widest drop-shadow-sm">PRC</span>
+                    </div>
+                    <h1 className="text-4xl sm:text-5xl md:text-7xl font-black tracking-tight mb-6 leading-tight">
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-500 via-orange-500 to-yellow-500 drop-shadow-sm">
+                            License Awaits.
+                        </span>
+                    </h1>
+                    <p className="text-lg md:text-2xl text-slate-600 dark:text-slate-400 font-medium">
+                        It's not just a card. It's your future.
+                    </p>
+                </div>
+
+                {/* Step 3: Identity & Button */}
+                <div className={`transition-all duration-1000 transform text-center w-full ${step >= 3 ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10 absolute'}`}>
+                    <div className="flex justify-center mb-6">
+                        <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/50 dark:bg-white/10 border border-white/50 dark:border-white/10 backdrop-blur-md shadow-sm">
+                            <Star size={16} className="text-amber-400 fill-current" />
+                            <span className="text-xs font-bold uppercase tracking-widest text-slate-600 dark:text-slate-300">Batch 2026</span>
+                        </div>
+                    </div>
+                    
+                    <h1 className="text-5xl sm:text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter mb-8 leading-[0.9]">
+                        <span className="text-slate-900 dark:text-white block drop-shadow-xl">SOAR HIGH,</span>
+                        <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 animate-gradient block mt-2 drop-shadow-2xl filter contrast-125 pb-2">
+                            TATAK RAMON
+                        </span>
+                    </h1>
+                    
+                    <div className="flex items-center justify-center gap-3 text-slate-600 dark:text-slate-300 mt-8 font-bold text-sm md:text-xl uppercase tracking-[0.2em] opacity-80">
+                        <Sparkles size={16} className="text-amber-400" />
+                        <span>Welcome to your sanctuary</span>
+                        <Sparkles size={16} className="text-amber-400" />
+                    </div>
+                    
+                    <div className={`mt-12 transition-all duration-1000 delay-500 ${step >= 4 ? 'opacity-100 transform scale-100' : 'opacity-0 transform scale-95 pointer-events-none'}`}>
+                        <button 
+                            onClick={onComplete}
+                            className="group relative px-12 md:px-16 py-5 md:py-6 rounded-full font-black text-lg md:text-xl uppercase tracking-[0.25em] overflow-hidden hover:scale-105 transition-transform 
+                            bg-white text-slate-900 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] ring-1 ring-slate-100
+                            dark:bg-white dark:text-slate-900 dark:shadow-[0_0_60px_rgba(255,255,255,0.4)]
+                            "
+                        >
+                            <span className="relative z-10 flex items-center gap-4">Enter <ArrowRight size={24} /></span>
+                            <div className="absolute inset-0 bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 dark:from-slate-200 dark:to-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
+                        </button>
                     </div>
                 </div>
-                
-                <h1 className="text-6xl md:text-8xl lg:text-9xl font-black tracking-tighter mb-8 leading-[0.85]">
-                    <span className="text-slate-900 dark:text-white block drop-shadow-xl">SOAR HIGH,</span>
-                    <span className="text-transparent bg-clip-text bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 animate-gradient block mt-2 drop-shadow-2xl filter contrast-125">
-                        TATAK RAMON
-                    </span>
-                </h1>
-                
-                <div className="flex items-center justify-center gap-3 text-slate-600 dark:text-slate-300 mt-10 font-bold text-lg md:text-xl uppercase tracking-[0.2em] opacity-80">
-                    <Sparkles size={20} className="text-amber-400" />
-                    <span>Welcome to your sanctuary</span>
-                    <Sparkles size={20} className="text-amber-400" />
-                </div>
-                
-                <div className={`mt-16 transition-all duration-1000 delay-500 ${step >= 4 ? 'opacity-100 transform scale-100' : 'opacity-0 transform scale-95'}`}>
-                    <button 
-                        onClick={onComplete}
-                        className="group relative px-16 py-6 rounded-full font-black text-xl uppercase tracking-[0.25em] overflow-hidden hover:scale-105 transition-transform 
-                        bg-white text-slate-900 shadow-[0_20px_60px_-15px_rgba(0,0,0,0.2)] ring-1 ring-slate-100
-                        dark:bg-white dark:text-slate-900 dark:shadow-[0_0_60px_rgba(255,255,255,0.4)]
-                        "
-                    >
-                        <span className="relative z-10 flex items-center gap-4">Enter <ArrowRight size={24} /></span>
-                        <div className="absolute inset-0 bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 dark:from-slate-200 dark:to-white opacity-0 group-hover:opacity-100 transition-opacity duration-500"></div>
-                    </button>
-                </div>
+
             </div>
         </div>
     );

@@ -174,35 +174,35 @@ const BlueprintModal = ({ exam, onClose }: { exam: ExamBlueprint; onClose: () =>
 
       {/* Modal Container */}
       <div 
-        className={`relative w-full h-full md:h-[90vh] md:max-w-5xl rounded-none md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border-none md:border animate-zoom-in duration-300 ${isCrescere ? 'bg-white/90 border-white/60' : 'bg-white dark:bg-[#0f172a] border-slate-200 dark:border-white/5'}`}
+        className={`relative w-full h-[100dvh] md:h-[90vh] md:max-w-5xl rounded-none md:rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col border-none md:border animate-zoom-in duration-300 ${isCrescere ? 'bg-white/90 border-white/60' : 'bg-white dark:bg-[#0f172a] border-slate-200 dark:border-white/5'}`}
         role="dialog"
       >
         
-        {/* --- IMMERSIVE HEADER --- */}
-        <div className={`shrink-0 relative overflow-hidden p-6 md:p-10 pb-16 transition-colors duration-500`}>
+        {/* --- IMMERSIVE HEADER (Scrollable on small screens if content is huge) --- */}
+        <div className={`shrink-0 relative overflow-hidden p-5 md:p-10 pb-12 transition-colors duration-500 max-h-[40vh] md:max-h-none overflow-y-auto custom-scrollbar`}>
            {/* Dynamic Gradient Background */}
            <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} opacity-95`}></div>
-           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
+           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay pointer-events-none"></div>
            <div className="absolute -right-20 -top-20 w-96 h-96 bg-white/20 rounded-full blur-3xl pointer-events-none"></div>
            
            <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
-              <div className="flex items-start gap-5">
-                  <div className="w-16 h-16 md:w-20 md:h-20 bg-white/20 backdrop-blur-md rounded-2xl md:rounded-3xl flex items-center justify-center shadow-lg border border-white/20 text-white shrink-0">
-                      <exam.icon size={32} className="md:w-10 md:h-10" />
+              <div className="flex items-start gap-4 md:gap-5">
+                  <div className="w-14 h-14 md:w-20 md:h-20 bg-white/20 backdrop-blur-md rounded-2xl md:rounded-3xl flex items-center justify-center shadow-lg border border-white/20 text-white shrink-0">
+                      <exam.icon size={28} className="md:w-10 md:h-10" />
                   </div>
-                  <div>
-                      <div className="flex items-center gap-3 mb-2">
-                          <span className="px-3 py-1 rounded-full bg-white/20 border border-white/20 backdrop-blur-sm text-white text-[10px] font-black uppercase tracking-widest shadow-sm">
+                  <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 md:gap-3 mb-2">
+                          <span className="px-2 py-0.5 md:px-3 md:py-1 rounded-full bg-white/20 border border-white/20 backdrop-blur-sm text-white text-[9px] md:text-[10px] font-black uppercase tracking-widest shadow-sm">
                               {exam.code}
                           </span>
-                          <span className="flex items-center gap-1.5 text-white/90 text-xs font-bold uppercase tracking-wider">
-                              <Layers size={14} /> PRC Annex A
+                          <span className="flex items-center gap-1.5 text-white/90 text-[10px] md:text-xs font-bold uppercase tracking-wider">
+                              <Layers size={12} className="md:w-[14px]" /> PRC Annex A
                           </span>
                       </div>
-                      <h2 className="text-2xl md:text-4xl font-black text-white leading-tight tracking-tight drop-shadow-sm">
+                      <h2 className="text-xl md:text-4xl font-black text-white leading-tight tracking-tight drop-shadow-sm break-words">
                           {exam.title}
                       </h2>
-                      <p className="text-white/80 font-medium text-sm md:text-base mt-2 max-w-2xl leading-relaxed">
+                      <p className="text-white/80 font-medium text-xs md:text-base mt-2 max-w-2xl leading-relaxed break-words">
                           {exam.subtitle}
                       </p>
                   </div>
@@ -216,7 +216,7 @@ const BlueprintModal = ({ exam, onClose }: { exam: ExamBlueprint; onClose: () =>
                       <X size={20} />
                   </button>
                   
-                  {/* Strategy Pill */}
+                  {/* Strategy Pill - Hidden on small mobile to save space, shown below in body */}
                   <div className="hidden md:block bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-4 max-w-sm hover:bg-white/15 transition-colors shadow-lg">
                       <div className="flex items-center gap-2 mb-2 text-amber-300">
                           <Sparkles size={16} className="fill-current animate-pulse" />
@@ -231,7 +231,7 @@ const BlueprintModal = ({ exam, onClose }: { exam: ExamBlueprint; onClose: () =>
         </div>
 
         {/* --- SCROLLABLE CONTENT --- */}
-        <div className={`flex-1 overflow-y-auto custom-scrollbar -mt-8 rounded-t-[2rem] relative z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] ${isCrescere ? 'bg-white/95' : 'bg-slate-50 dark:bg-[#0f172a]'}`}>
+        <div className={`flex-1 overflow-y-auto custom-scrollbar -mt-6 rounded-t-[2rem] relative z-20 shadow-[0_-10px_40px_rgba(0,0,0,0.1)] ${isCrescere ? 'bg-white/95' : 'bg-slate-50 dark:bg-[#0f172a]'}`}>
             
             {/* Mobile Strategy (Visible only on mobile) */}
             <div className="md:hidden px-6 pt-8 pb-0">
@@ -246,7 +246,7 @@ const BlueprintModal = ({ exam, onClose }: { exam: ExamBlueprint; onClose: () =>
                 </div>
             </div>
 
-            <div className="p-6 md:p-10 grid grid-cols-1 xl:grid-cols-2 gap-8 md:gap-12">
+            <div className="p-6 md:p-10 grid grid-cols-1 xl:grid-cols-2 gap-8 md:gap-12 pb-24 md:pb-10">
                 {exam.competencies.map((comp, idx) => (
                     <div key={idx} className="relative">
                         {/* Vertical Connector Line (Desktop) */}
@@ -276,7 +276,7 @@ const BlueprintModal = ({ exam, onClose }: { exam: ExamBlueprint; onClose: () =>
                                         className={`group rounded-2xl p-6 border shadow-sm transition-all duration-300 hover:scale-[1.01] ${isCrescere ? 'bg-white/80 border-slate-200 hover:border-slate-300 hover:shadow-lg' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-lg dark:hover:shadow-black/50'}`}
                                     >
                                         <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start mb-4 gap-2">
-                                            <h4 className={`font-bold text-base md:text-lg leading-snug ${isCrescere ? 'text-slate-800' : 'text-slate-800 dark:text-slate-200'}`}>
+                                            <h4 className={`font-bold text-base md:text-lg leading-snug break-words ${isCrescere ? 'text-slate-800' : 'text-slate-800 dark:text-slate-200'}`}>
                                                 {topic.name}
                                             </h4>
                                             <div className="flex flex-wrap gap-1.5 shrink-0">
@@ -491,13 +491,13 @@ const ExamTOS: React.FC = () => {
                   <button
                       key={exam.id}
                       onClick={() => setSelectedExam(exam)}
-                      className={`group relative flex flex-col justify-between h-[380px] rounded-[2.5rem] p-8 border transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl overflow-hidden text-left hover:border-opacity-100 border-opacity-60 ${isCrescere ? `bg-white/80 border-white/60 backdrop-blur-xl ${theme.border}` : `bg-white dark:bg-[#0f172a] dark:border-opacity-40 ${theme.border}`}`}
+                      className={`group relative flex flex-col justify-between h-auto min-h-[380px] rounded-[2.5rem] p-8 border transition-all duration-500 hover:-translate-y-2 hover:shadow-2xl overflow-hidden text-left hover:border-opacity-100 border-opacity-60 ${isCrescere ? `bg-white/80 border-white/60 backdrop-blur-xl ${theme.border}` : `bg-white dark:bg-[#0f172a] dark:border-opacity-40 ${theme.border}`}`}
                   >
                       {/* Gradient Hover Effect */}
                       <div className={`absolute inset-0 bg-gradient-to-br ${theme.gradient} opacity-0 group-hover:opacity-[0.03] transition-opacity duration-500`}></div>
                       
                       {/* Top Section */}
-                      <div className="relative z-10 w-full">
+                      <div className="relative z-10 w-full flex-1">
                           <div className="flex justify-between items-start mb-6">
                               <div className={`w-16 h-16 rounded-3xl flex items-center justify-center transition-transform duration-500 group-hover:rotate-6 shadow-sm ${theme.bg} ${theme.text}`}>
                                   <exam.icon size={32} />
@@ -507,10 +507,10 @@ const ExamTOS: React.FC = () => {
                               </div>
                           </div>
 
-                          <h3 className={`text-2xl font-black leading-tight mb-3 transition-all ${isCrescere ? 'text-slate-900 group-hover:text-slate-700' : 'text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-900 group-hover:to-slate-600 dark:group-hover:from-white dark:group-hover:to-slate-300'}`}>
+                          <h3 className={`text-2xl font-black leading-tight mb-3 break-words transition-all ${isCrescere ? 'text-slate-900 group-hover:text-slate-700' : 'text-slate-900 dark:text-white group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-slate-900 group-hover:to-slate-600 dark:group-hover:from-white dark:group-hover:to-slate-300'}`}>
                               {exam.title}
                           </h3>
-                          <p className={`text-sm font-medium line-clamp-2 leading-relaxed ${isCrescere ? 'text-slate-500' : 'text-slate-500 dark:text-slate-400'}`}>
+                          <p className={`text-sm font-medium leading-relaxed break-words ${isCrescere ? 'text-slate-500' : 'text-slate-500 dark:text-slate-400'}`}>
                               {exam.subtitle}
                           </p>
                       </div>
@@ -556,13 +556,13 @@ const ExamTOS: React.FC = () => {
           {!searchQuery && (
               <button
                   onClick={() => setTrackerOpen(true)}
-                  className={`group relative flex flex-col justify-between h-[380px] rounded-[2.5rem] p-8 border transition-all duration-500 hover:-translate-y-2 overflow-hidden text-left ${isCrescere ? 'bg-white/80 border-slate-200 hover:border-amber-300 shadow-lg' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-2xl hover:border-amber-300 dark:hover:border-amber-700'}`}
+                  className={`group relative flex flex-col justify-between h-auto min-h-[380px] rounded-[2.5rem] p-8 border transition-all duration-500 hover:-translate-y-2 overflow-hidden text-left ${isCrescere ? 'bg-white/80 border-slate-200 hover:border-amber-300 shadow-lg' : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 shadow-lg dark:shadow-2xl hover:border-amber-300 dark:hover:border-amber-700'}`}
               >
                   {/* Luxury Background - Light & Dark Compatible */}
                   <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
                   <div className={`absolute top-[-50%] right-[-50%] w-[100%] h-[100%] blur-3xl pointer-events-none ${isCrescere ? 'bg-gradient-to-b from-amber-200/40 via-transparent to-transparent' : 'bg-gradient-to-b from-amber-200/20 via-transparent to-transparent dark:from-amber-400/10'}`}></div>
 
-                  <div className="relative z-10 w-full">
+                  <div className="relative z-10 w-full flex-1">
                       <div className="flex justify-between items-start mb-6">
                           <div className={`w-16 h-16 rounded-3xl flex items-center justify-center shadow-inner ${isCrescere ? 'bg-amber-50 border border-amber-100 text-amber-500' : 'bg-amber-50 dark:bg-slate-800 border border-amber-100 dark:border-slate-700 text-amber-500'}`}>
                               <ClipboardCheck size={32} />

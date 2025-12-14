@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -175,10 +176,17 @@ const AppContent: React.FC = () => {
           .animate-zoom-in { animation: zoom-in 0.2s ease-out forwards; }
         `}</style>
 
-        {/* ✅ FIX: flex on mobile, grid on desktop so main content always reflows with sidebar width */}
+        {/* 
+           RESPONSIVE LAYOUT ENGINE
+           Mobile: Flex-col (Sidebar is fixed overlay)
+           Desktop: Flex-row (Sidebar is static flow)
+           
+           This ensures that when sidebar expands/collapses on desktop, 
+           the Main Content area naturally resizes and recenters content via flex-1.
+        */}
         <div
           className={`relative h-screen font-sans selection:bg-pink-500/30 overflow-hidden transition-colors duration-500 text-slate-900 dark:text-white
-          flex lg:grid lg:grid-cols-[auto_1fr]`}
+          flex flex-row`}
         >
           {/* --- GLOBAL BACKGROUND SYSTEM --- */}
           <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-slate-50 dark:bg-black">
@@ -209,20 +217,18 @@ const AppContent: React.FC = () => {
             </div>
           </div>
 
-          {/* Sidebar */}
-          <div className="relative z-[60] h-full flex-shrink-0">
-            <Sidebar
-              activeItem={activeItem}
-              onNavigate={setActiveItem}
-              isOpen={sidebarOpen}
-              onClose={() => setSidebarOpen(false)}
-              isMinimized={sidebarMinimized}
-              onToggleMinimize={toggleSidebarMinimize}
-            />
-          </div>
+          {/* Sidebar - Component handles its own Fixed (mobile) vs Static (desktop) behavior */}
+          <Sidebar
+            activeItem={activeItem}
+            onNavigate={setActiveItem}
+            isOpen={sidebarOpen}
+            onClose={() => setSidebarOpen(false)}
+            isMinimized={sidebarMinimized}
+            onToggleMinimize={toggleSidebarMinimize}
+          />
 
-          {/* Main Content */}
-          <div className="relative z-10 min-w-0 w-full flex flex-col h-screen">
+          {/* Main Content Area - Flex Grow to fill remaining space */}
+          <div className="flex-1 flex flex-col h-full min-w-0 relative z-10 transition-[margin,width] duration-300 ease-in-out">
             <TopBar
               title={activeItem}
               onMenuClick={() => setSidebarOpen(true)}
@@ -231,7 +237,7 @@ const AppContent: React.FC = () => {
             />
 
             <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth custom-scrollbar relative">
-              <div className="max-w-7xl mx-auto pb-20">
+              <div className="max-w-7xl mx-auto pb-20 animate-fade-in">
                 {renderContent()}
               </div>
             </main>

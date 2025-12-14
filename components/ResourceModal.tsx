@@ -48,98 +48,108 @@ const ResourceModal: React.FC<ResourceModalProps> = ({ isOpen, onClose, onSave, 
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-md p-6 relative border border-slate-100 dark:border-slate-700 flex flex-col max-h-[90vh]">
-                <button onClick={onClose} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
-                    <X size={20} />
-                </button>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in safe-area-bottom">
+            <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-lg relative border border-slate-100 dark:border-slate-700 flex flex-col max-h-[90vh]">
+                
+                {/* Header (Sticky) */}
+                <div className="flex items-center justify-between p-6 border-b border-slate-100 dark:border-slate-700 shrink-0">
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white">
+                        {initialData ? 'Edit Resource' : 'Add New Resource'}
+                    </h3>
+                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-2 -mr-2">
+                        <X size={20} />
+                    </button>
+                </div>
 
-                <h3 className="text-xl font-black text-slate-800 dark:text-white mb-6">
-                    {initialData ? 'Edit Resource' : 'Add New Resource'}
-                </h3>
-
+                {/* Tabs (Sticky below header) */}
                 {!initialData && (
-                    <div className="flex bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl mb-6">
-                        <button 
-                            onClick={() => setActiveTab('link')}
-                            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'link' ? 'bg-white dark:bg-slate-800 text-pink-600 shadow-sm' : 'text-slate-500'}`}
-                        >
-                            Save Link
-                        </button>
-                        <button 
-                            onClick={() => setActiveTab('note')}
-                            className={`flex-1 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'note' ? 'bg-white dark:bg-slate-800 text-yellow-600 shadow-sm' : 'text-slate-500'}`}
-                        >
-                            Sticky Note
-                        </button>
+                    <div className="px-6 pt-4 shrink-0">
+                        <div className="flex bg-slate-100 dark:bg-slate-700/50 p-1 rounded-xl">
+                            <button 
+                                onClick={() => setActiveTab('link')}
+                                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'link' ? 'bg-white dark:bg-slate-800 text-pink-600 shadow-sm' : 'text-slate-500'}`}
+                            >
+                                Save Link
+                            </button>
+                            <button 
+                                onClick={() => setActiveTab('note')}
+                                className={`flex-1 py-2.5 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${activeTab === 'note' ? 'bg-white dark:bg-slate-800 text-yellow-600 shadow-sm' : 'text-slate-500'}`}
+                            >
+                                Sticky Note
+                            </button>
+                        </div>
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit} className="space-y-5 overflow-y-auto custom-scrollbar flex-1 px-1">
+                {/* Content Body (Scrollable) */}
+                <form onSubmit={handleSubmit} className="overflow-y-auto custom-scrollbar flex-1 p-6 space-y-6">
                     <div>
-                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Title</label>
+                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Title</label>
                         <input 
                             type="text" 
                             required 
                             value={title} 
                             onChange={e => setTitle(e.target.value)} 
                             placeholder={activeTab === 'link' ? "e.g. Pharma Lecture" : "e.g. Reminder"}
-                            className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                            className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all text-base"
                         />
                     </div>
 
                     {activeTab === 'link' ? (
                         <div>
-                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">URL</label>
+                            <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">URL</label>
                             <input 
                                 type="url" 
                                 required 
                                 value={url} 
                                 onChange={e => setUrl(e.target.value)} 
                                 placeholder="https://..."
-                                className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-pink-500/50"
+                                className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all"
                             />
                         </div>
                     ) : (
                         <>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1 block">Content</label>
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5 block">Content</label>
+                                {/* Removed font-handwriting, increased min-height */}
                                 <textarea 
                                     required 
-                                    rows={4}
                                     value={content} 
                                     onChange={e => setContent(e.target.value)} 
                                     placeholder="Type your note here..."
-                                    className="w-full p-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-500/50 resize-none font-handwriting text-lg"
+                                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl font-medium text-slate-800 dark:text-white focus:outline-none focus:ring-4 focus:ring-yellow-500/10 focus:border-yellow-500 transition-all resize-y min-h-[150px] leading-relaxed"
                                 />
                             </div>
                             <div>
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 block">Color</label>
-                                <div className="flex gap-3">
-                                    {['yellow', 'pink', 'cyan', 'green'].map(c => (
+                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 block">Color</label>
+                                <div className="flex gap-4">
+                                    {['yellow', 'pink', 'cyan', 'green', 'slate'].map(c => (
                                         <button
                                             key={c}
                                             type="button"
                                             onClick={() => setColor(c)}
-                                            className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${color === c ? 'border-slate-500 scale-110' : 'border-transparent'}`}
-                                            style={{ backgroundColor: c === 'yellow' ? '#fef08a' : c === 'pink' ? '#fbcfe8' : c === 'cyan' ? '#a5f3fc' : '#a7f3d0' }}
+                                            className={`w-10 h-10 rounded-full border-2 transition-transform hover:scale-110 flex items-center justify-center ${color === c ? 'border-slate-500 scale-110 shadow-md' : 'border-transparent'}`}
+                                            style={{ backgroundColor: c === 'yellow' ? '#fef08a' : c === 'pink' ? '#fbcfe8' : c === 'cyan' ? '#a5f3fc' : c === 'green' ? '#a7f3d0' : '#e2e8f0' }}
                                         >
-                                            {color === c && <Check size={16} className="text-slate-800 mx-auto" />}
+                                            {color === c && <Check size={18} className="text-slate-900" strokeWidth={3} />}
                                         </button>
                                     ))}
                                 </div>
                             </div>
                         </>
                     )}
+                </form>
 
+                {/* Footer (Sticky) */}
+                <div className="p-6 pt-2 border-t border-slate-100 dark:border-slate-700 bg-white dark:bg-slate-800 rounded-b-3xl shrink-0">
                     <button 
-                        type="submit" 
+                        onClick={(e) => handleSubmit(e as any)}
                         disabled={loading}
-                        className="w-full py-3.5 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold shadow-lg transition-all active:scale-95 disabled:opacity-50 mt-4"
+                        className="w-full py-4 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-2xl font-black text-sm uppercase tracking-widest shadow-lg transition-all active:scale-95 disabled:opacity-50 hover:shadow-xl"
                     >
                         {loading ? 'Saving...' : 'Save Resource'}
                     </button>
-                </form>
+                </div>
             </div>
         </div>
     );

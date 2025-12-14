@@ -1,6 +1,7 @@
 
-import React, { useState } from 'react';
-import { X, Calendar, Save, Loader, Sun, Check, CloudRain, Zap } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
+import { X, Calendar, Save, Loader, Sun, Check, CloudRain, Zap, ChevronLeft, Quote } from 'lucide-react';
 import { UserFile } from '../types';
 import { format } from 'date-fns';
 
@@ -15,143 +16,198 @@ const JournalModal: React.FC<JournalModalProps> = ({ onClose, initialData, onSav
     const [content, setContent] = useState(initialData?.userNotes || '');
     const [mood, setMood] = useState(initialData?.color || 'yellow');
     const [loading, setLoading] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    
+    // Lock body scroll when open
+    useEffect(() => {
+        document.body.style.overflow = 'hidden';
+        return () => { document.body.style.overflow = 'unset'; };
+    }, []);
 
     const handleSubmit = async (e?: React.FormEvent) => {
         if (e) e.preventDefault();
         if (!title.trim()) return;
         
-        setError(null);
         setLoading(true);
         try {
             await onSave(title, content, mood);
         } catch (err: any) {
-            setError(err.message || "Failed to save entry. Try again.");
+            console.error(err);
+            alert("Failed to save entry. Please try again.");
             setLoading(false);
         }
     };
 
     const moodOptions = [
-        { id: 'yellow', label: 'Motivated', icon: Sun, color: 'bg-amber-400', glow: 'shadow-amber-500/50' },
-        { id: 'green', label: 'Focused', icon: Check, color: 'bg-emerald-500', glow: 'shadow-emerald-500/50' },
-        { id: 'blue', label: 'Tired', icon: CloudRain, color: 'bg-blue-500', glow: 'shadow-blue-500/50' },
-        { id: 'red', label: 'Stressed', icon: Zap, color: 'bg-red-500', glow: 'shadow-red-500/50' },
+        { id: 'yellow', label: 'Motivated', icon: Sun, bg: 'bg-amber-500', text: 'text-amber-500', tint: 'from-amber-500/10 to-amber-500/5' },
+        { id: 'green', label: 'Focused', icon: Check, bg: 'bg-emerald-500', text: 'text-emerald-500', tint: 'from-emerald-500/10 to-emerald-500/5' },
+        { id: 'blue', label: 'Tired', icon: CloudRain, bg: 'bg-blue-500', text: 'text-blue-500', tint: 'from-blue-500/10 to-blue-500/5' },
+        { id: 'red', label: 'Stressed', icon: Zap, bg: 'bg-red-500', text: 'text-red-500', tint: 'from-red-500/10 to-red-500/5' },
     ];
 
     const currentMood = moodOptions.find(m => m.id === mood) || moodOptions[0];
 
-    return (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-0 md:p-6 animate-fade-in safe-area-bottom bg-slate-900/80 backdrop-blur-md">
+    // Using Portal to ensure the modal is relative to the viewport, not the parent container.
+    // This fixes issues where the modal "kisses" the sidebar or gets squashed by layout transitions.
+    return createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center">
             
-            {/* Overlay click to close */}
-            <div className="absolute inset-0" onClick={onClose}></div>
+            {/* Backdrop */}
+            <div 
+                className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm transition-opacity animate-fade-in" 
+                onClick={onClose} 
+            />
 
-            {/* Floating Card - Optimized Height for Tablet/Mobile */}
-            <div className="relative w-full md:max-w-4xl bg-white dark:bg-[#020617] md:rounded-[2rem] shadow-2xl overflow-hidden flex flex-col animate-zoom-in ring-1 ring-white/10 h-[100dvh] md:h-[85vh] my-auto max-h-[900px]">
+            {/* 
+               MAIN CONTAINER 
+               Mobile: Full Screen (inset-0), Rounded-none
+               Tablet/Desktop: Centered Card, Rounded
+            */}
+            <div className={`
+                relative z-10 
+                w-full h-[100dvh] 
+                md:w-[90vw] md:max-w-3xl md:h-[85vh] 
+                bg-white dark:bg-[#020617] 
+                md:rounded-[2.5rem] shadow-2xl overflow-hidden 
+                flex flex-col 
+                animate-slide-up-mobile md:animate-zoom-in
+                transition-colors duration-700 ease-in-out
+                border-none md:border border-slate-200 dark:border-slate-800
+            `}>
                 
-                {/* Ambient Mood Light (Top Glow) */}
-                <div className={`absolute top-0 left-1/2 -translate-x-1/2 w-3/4 h-32 bg-gradient-to-b ${currentMood.color.replace('bg-', 'from-')}/20 to-transparent opacity-60 pointer-events-none blur-3xl transition-colors duration-1000`}></div>
+                {/* Dynamic Mood Tint Background */}
+                <div className={`absolute inset-0 bg-gradient-to-br ${currentMood.tint} opacity-50 pointer-events-none transition-colors duration-700`}></div>
+                <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none"></div>
 
                 {/* --- HEADER --- */}
-                <div className="flex items-center justify-between px-6 py-4 md:px-8 md:py-6 border-b border-slate-100 dark:border-slate-800/50 shrink-0 relative z-20">
-                    {/* Date/Info */}
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
-                            <Calendar size={12} /> {format(new Date(), 'MMMM do, yyyy')}
-                        </span>
-                        {error && <span className="text-xs text-red-500 font-bold mt-1 animate-pulse">{error}</span>}
-                    </div>
-
-                    {/* Desktop Toolbar */}
-                    <div className="hidden md:flex items-center gap-4">
-                        <div className="flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-full">
-                            {moodOptions.map(m => (
-                                <button
-                                    key={m.id}
-                                    onClick={() => setMood(m.id)}
-                                    className={`p-2 rounded-full transition-all duration-300 ${
-                                        mood === m.id 
-                                        ? `${m.color} text-white shadow-lg ${m.glow} scale-110` 
-                                        : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-white dark:hover:bg-slate-700'
-                                    }`}
-                                    title={m.label}
-                                >
-                                    <m.icon size={16} />
-                                </button>
-                            ))}
+                <div className="flex-none px-4 py-3 md:px-8 md:py-6 border-b border-slate-100 dark:border-slate-800/50 flex items-center justify-between bg-white/80 dark:bg-slate-950/80 backdrop-blur-xl z-20 sticky top-0">
+                    <button 
+                        onClick={onClose} 
+                        className="p-2 -ml-2 rounded-full hover:bg-slate-100 dark:hover:bg-white/10 text-slate-500 dark:text-slate-400 transition-colors flex items-center gap-1 group"
+                    >
+                        <div className="p-1 rounded-full border border-slate-200 dark:border-slate-700 group-hover:bg-white dark:group-hover:bg-slate-800">
+                            <ChevronLeft className="md:hidden" size={20} />
+                            <X className="hidden md:block" size={20} />
                         </div>
-                        <div className="h-6 w-px bg-slate-200 dark:bg-slate-800"></div>
-                        <button 
-                            onClick={(e) => handleSubmit(e as any)} 
-                            disabled={loading || !title.trim()}
-                            className={`flex items-center gap-2 px-6 py-2.5 rounded-full font-bold text-sm transition-all ${
-                                !title.trim() 
-                                ? 'bg-slate-200 text-slate-400 cursor-not-allowed' 
-                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-lg hover:scale-105 active:scale-95'
-                            }`}
-                        >
-                            {loading ? <Loader size={16} className="animate-spin" /> : <Save size={16} />}
-                            Save Entry
-                        </button>
-                        <button onClick={onClose} className="p-2.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 transition-colors">
-                            <X size={20} />
-                        </button>
+                        <span className="md:hidden text-sm font-bold">Back</span>
+                    </button>
+
+                    <div className="flex flex-col items-center">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+                            {format(new Date(), 'MMMM do, yyyy')}
+                        </span>
+                        <div className="flex items-center gap-1.5">
+                            <currentMood.icon size={12} className={currentMood.text} />
+                            <span className={`text-xs font-black uppercase ${currentMood.text}`}>
+                                {currentMood.label}
+                            </span>
+                        </div>
                     </div>
 
-                    {/* Mobile Close Button */}
-                    <button onClick={onClose} className="md:hidden p-2 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500">
-                        <X size={20} />
-                    </button>
+                    {/* Desktop Save (Hidden on Mobile) */}
+                    <div className="hidden md:block">
+                        <button 
+                            onClick={(e) => handleSubmit(e as any)}
+                            disabled={!title.trim() || loading}
+                            className={`px-6 py-2.5 rounded-xl font-bold text-sm text-white shadow-lg shadow-current/20 transition-all hover:scale-105 active:scale-95 ${currentMood.bg} ${!title.trim() ? 'opacity-50 cursor-not-allowed' : ''}`}
+                        >
+                            {loading ? 'Saving...' : 'Save Entry'}
+                        </button>
+                    </div>
+                    {/* Mobile Spacer to center title visually */}
+                    <div className="w-12 md:hidden"></div>
                 </div>
 
-                {/* --- EDITOR BODY --- */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar relative z-10 px-6 py-4 md:px-12 md:py-8">
+                {/* --- CONTENT AREA (Scrollable) --- */}
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-10 relative z-10 flex flex-col">
                     <input 
                         type="text" 
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
-                        placeholder="Untitled Thought..."
-                        className="w-full text-3xl md:text-5xl font-black text-slate-900 dark:text-white bg-transparent border-none focus:ring-0 placeholder:text-slate-300 dark:placeholder:text-slate-700 px-0 mb-6 leading-tight tracking-tight"
+                        placeholder="Title of your entry..."
+                        className="w-full bg-transparent border-none p-0 text-3xl md:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-700 focus:ring-0 mb-6 leading-tight tracking-tight"
                         autoFocus
                     />
-                    <textarea 
-                        value={content}
-                        onChange={(e) => setContent(e.target.value)}
-                        placeholder="Pour your mind out..."
-                        className="w-full h-full min-h-[400px] resize-none text-base md:text-lg leading-relaxed text-slate-600 dark:text-slate-300 bg-transparent border-none focus:ring-0 px-0 font-serif placeholder:text-slate-300 dark:placeholder:text-slate-700 pb-24"
-                    />
+                    
+                    <div className="relative flex-1 min-h-[40vh]">
+                        <textarea 
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            placeholder="Pour your mind out..."
+                            className="w-full h-full bg-transparent border-none p-0 text-lg md:text-xl leading-relaxed font-serif text-slate-700 dark:text-slate-300 placeholder:text-slate-300 dark:placeholder:text-slate-700 focus:ring-0 resize-none"
+                        />
+                        {!content && (
+                            <div className="absolute top-0 left-0 pointer-events-none opacity-10">
+                                <Quote size={64} className="text-slate-900 dark:text-white" />
+                            </div>
+                        )}
+                    </div>
                 </div>
 
-                {/* --- MOBILE TOOLBAR (Sticky Bottom) --- */}
-                <div className="md:hidden p-4 border-t border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-[#020617]/90 backdrop-blur-md flex justify-between items-center shrink-0 safe-area-bottom pb-6">
-                    <div className="flex gap-2">
+                {/* --- MOBILE/TABLET TOOLBAR (Sticky Bottom) --- */}
+                <div className="flex-none p-4 pb-6 md:pb-4 border-t border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-950/90 backdrop-blur-xl z-20 flex flex-col gap-4 md:hidden">
+                    {/* Mood Selector Row */}
+                    <div className="flex justify-between items-center bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl">
                         {moodOptions.map(m => (
                             <button
                                 key={m.id}
                                 onClick={() => setMood(m.id)}
-                                className={`p-2 rounded-full transition-all ${
+                                className={`flex-1 py-3 rounded-xl flex items-center justify-center gap-2 transition-all ${
                                     mood === m.id 
-                                    ? `${m.color} text-white shadow-md` 
-                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+                                    ? 'bg-white dark:bg-slate-800 shadow-md scale-[1.02] text-slate-900 dark:text-white ring-1 ring-black/5 dark:ring-white/10' 
+                                    : 'text-slate-400 dark:text-slate-500 hover:bg-white/50 dark:hover:bg-white/5'
                                 }`}
                             >
-                                <m.icon size={18} />
+                                <m.icon size={20} className={mood === m.id ? m.text : ''} />
                             </button>
                         ))}
                     </div>
+
+                    {/* Main Action Button */}
                     <button 
                         onClick={(e) => handleSubmit(e as any)}
-                        disabled={loading || !title.trim()}
-                        className={`p-3 rounded-full shadow-lg transition-all ${
-                            !title.trim() ? 'bg-slate-200 text-slate-400' : 'bg-pink-600 text-white'
-                        }`}
+                        disabled={!title.trim() || loading}
+                        className={`w-full py-4 rounded-2xl font-black text-base text-white shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2 ${currentMood.bg} ${!title.trim() ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                     >
                         {loading ? <Loader size={20} className="animate-spin" /> : <Save size={20} />}
+                        Save Journal
                     </button>
                 </div>
 
+                {/* Desktop Mood Selector (Floating) */}
+                <div className="hidden md:flex absolute bottom-8 left-1/2 -translate-x-1/2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-xl p-2 rounded-full border border-slate-200 dark:border-slate-700 shadow-2xl z-30">
+                    {moodOptions.map(m => (
+                        <button
+                            key={m.id}
+                            onClick={() => setMood(m.id)}
+                            className={`p-3 rounded-full transition-all duration-300 relative group ${
+                                mood === m.id 
+                                ? `${m.bg} text-white shadow-lg scale-110 mx-1` 
+                                : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'
+                            }`}
+                            title={m.label}
+                        >
+                            <m.icon size={20} />
+                            {/* Tooltip */}
+                            <span className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 px-2 py-1 bg-black text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
+                                {m.label}
+                            </span>
+                        </button>
+                    ))}
+                </div>
+
             </div>
-        </div>
+            
+            <style>{`
+                @keyframes slide-up-mobile {
+                    from { transform: translateY(100%); }
+                    to { transform: translateY(0); }
+                }
+                .animate-slide-up-mobile {
+                    animation: slide-up-mobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+                }
+            `}</style>
+        </div>,
+        document.body
     );
 };
 

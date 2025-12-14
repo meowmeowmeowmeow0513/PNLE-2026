@@ -59,34 +59,35 @@ const DailyDistribution = ({ tasks }: { tasks: Task[] }) => {
   };
 
   if (total === 0) return (
-      <div className="p-6 rounded-[2rem] bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-center flex flex-col items-center justify-center gap-2 min-h-[120px]">
+      <div className="p-3 sm:p-6 rounded-[2rem] bg-slate-50/50 dark:bg-white/5 border border-slate-200 dark:border-white/5 text-center flex flex-col items-center justify-center gap-2 min-h-[120px]">
           <div className="text-slate-400 dark:text-slate-500"><Sparkles size={24} /></div>
           <p className="text-xs font-bold text-slate-500 dark:text-slate-400">Rest Day</p>
       </div>
   );
 
   return (
-    <div className="p-6 bg-slate-50/80 dark:bg-black/20 border border-slate-200 dark:border-white/5 rounded-[2rem]">
-        <div className="flex items-center justify-between mb-4">
-            <h4 className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                <PieChart size={14} /> Time DNA
+    <div className="p-3 sm:p-6 bg-slate-50/80 dark:bg-black/20 border border-slate-200 dark:border-white/5 rounded-2xl sm:rounded-[2rem]">
+        <div className="flex items-center justify-between mb-2 sm:mb-4">
+            <h4 className="text-[10px] sm:text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                <PieChart size={12} className="sm:w-[14px] sm:h-[14px]" /> Time DNA
             </h4>
-            <span className="text-2xl font-black text-slate-800 dark:text-white">{progress}%</span>
+            <span className="text-lg sm:text-2xl font-black text-slate-800 dark:text-white">{progress}%</span>
         </div>
-        <div className="h-3 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden flex mb-4">
+        <div className="h-1.5 sm:h-3 w-full bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden flex mb-2 sm:mb-4">
             {Object.entries(stats.catMinutes).map(([cat, mins], idx) => {
                 const width = ((mins as number) / stats.totalMinutes) * 100;
                 return <div key={cat} style={{ width: `${width}%` }} className={`h-full ${getCategoryColor(cat)}`}></div>
             })}
         </div>
-        <div className="grid grid-cols-2 gap-2">
+        {/* Adaptive Grid for Stats: 2 col on mobile/larger */}
+        <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
             {Object.entries(stats.catMinutes).map(([cat, mins]) => (
-                <div key={cat} className="flex items-center justify-between px-2 py-1 rounded bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5">
-                    <div className="flex items-center gap-1.5">
-                        <div className={`w-1.5 h-1.5 rounded-full ${getCategoryColor(cat)}`}></div>
-                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase">{cat}</span>
+                <div key={cat} className="flex items-center justify-between px-1.5 py-0.5 sm:px-2 sm:py-1 rounded bg-white dark:bg-white/5 border border-slate-100 dark:border-white/5">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                        <div className={`w-1.5 h-1.5 rounded-full shrink-0 ${getCategoryColor(cat)}`}></div>
+                        <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 uppercase truncate">{cat}</span>
                     </div>
-                    <span className="text-[9px] font-mono text-slate-700 dark:text-slate-300">{formatDuration(mins as number)}</span>
+                    <span className="text-[9px] font-mono text-slate-700 dark:text-slate-300 ml-2 whitespace-nowrap">{formatDuration(mins as number)}</span>
                 </div>
             ))}
         </div>
@@ -562,6 +563,16 @@ const Planner: React.FC = () => {
             border-width: 6px !important;
         }
 
+        /* MOBILE OVERRIDES (<640px) */
+        @media (max-width: 639px) {
+            .fc-timegrid-slot { height: 3rem !important; }
+            .fc-toolbar-title { font-size: 1.1rem !important; }
+            .fc-col-header-cell-cushion { font-size: 0.7rem !important; padding-top: 2px !important; padding-bottom: 2px !important; }
+            .fc-timegrid-slot-label-cushion { font-size: 0.65rem !important; }
+            .fc-event { font-size: 0.65rem !important; }
+            .fc-timegrid-axis-cushion { max-width: 40px !important; overflow: hidden; }
+        }
+
         .agenda-scrollbar,
         .fc-scroller {
             scrollbar-width: thin;
@@ -640,7 +651,7 @@ const Planner: React.FC = () => {
       <div className="flex-1 flex overflow-hidden relative">
           
           {/* VIEW AREA: Switches between FullCalendar and ScheduleView */}
-          <div className={`flex-1 bg-white/40 dark:bg-[#020617]/40 backdrop-blur-sm relative z-10 flex flex-col min-w-0 transition-all duration-300 ease-in-out
+          <div className={`flex-1 bg-white/40 dark:bg-[#020617]/40 backdrop-blur-sm relative z-0 flex flex-col min-w-0 transition-all duration-300 ease-in-out
               ${mobileTab === 'agenda' ? 'hidden lg:flex' : 'flex'}
           `}>
               {currentView === 'schedule' ? (
@@ -681,20 +692,20 @@ const Planner: React.FC = () => {
 
           {/* AGENDA SIDEBAR */}
           <div className={`
-              bg-white/80 dark:bg-[#0f172a]/90 backdrop-blur-2xl border-l border-slate-200/50 dark:border-white/5 flex flex-col z-40 shadow-2xl lg:shadow-none 
+              bg-white/80 dark:bg-[#0f172a]/90 backdrop-blur-2xl border-l border-slate-200/50 dark:border-white/5 flex flex-col z-20 shadow-2xl lg:shadow-none 
               transition-all duration-300 ease-in-out transform
               ${mobileTab === 'agenda' ? 'w-full absolute inset-0 lg:static' : 'hidden lg:flex'}
               ${isSidebarOpen ? 'lg:w-96 lg:translate-x-0 lg:opacity-100' : 'lg:w-0 lg:translate-x-full lg:opacity-0 lg:overflow-hidden lg:border-l-0'}
           `}>
               
               {/* Sidebar Header */}
-              <div className="p-6 border-b border-slate-200/50 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-900/30 flex justify-between items-center backdrop-blur-sm relative z-20 shrink-0 min-w-[200px]">
+              <div className="p-3 sm:p-6 border-b border-slate-200/50 dark:border-slate-800/50 bg-slate-50/30 dark:bg-slate-900/30 flex justify-between items-center backdrop-blur-sm relative z-30 shrink-0 min-w-[200px] overflow-visible">
                   <div className="min-w-0">
-                      <h3 className="text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2 truncate">
+                      <h3 className="text-base sm:text-xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center gap-2 break-words">
                           <span className="w-2 h-2 rounded-full bg-pink-500 animate-pulse shadow-lg shadow-pink-500/50 shrink-0"></span>
                           {isSameDay(selectedDate, new Date()) ? 'Today' : format(selectedDate, 'EEEE')}
                       </h3>
-                      <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1 ml-4 truncate">{format(selectedDate, 'MMMM do')}</p>
+                      <p className="text-[10px] sm:text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1 ml-4 break-words">{format(selectedDate, 'MMMM do')}</p>
                   </div>
                   <div className="relative shrink-0" ref={menuRef}>
                       <button onClick={() => setShowAgendaMenu(!showAgendaMenu)} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white"><MoreHorizontal size={20} /></button>
@@ -710,7 +721,7 @@ const Planner: React.FC = () => {
               </div>
 
               {/* Task List (Mobile Landscape Optimized Grid) */}
-              <div className="flex-1 overflow-y-auto agenda-scrollbar p-6 relative z-10 min-w-[200px]">
+              <div className="flex-1 overflow-y-auto agenda-scrollbar p-3 sm:p-6 relative z-10 min-w-[200px]">
                   {agendaTasks.length === 0 ? (
                       <div className="h-full flex flex-col items-center justify-center text-center space-y-6">
                           <div className="relative">
@@ -730,9 +741,9 @@ const Planner: React.FC = () => {
                           </button>
                       </div>
                   ) : (
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-3 sm:gap-4">
                           {agendaTasks.map(task => (
-                              <div key={task.id} onClick={() => { setSelectedTask(task); setIsModalOpen(true); }} className={`group bg-white/70 dark:bg-slate-800/70 p-4 rounded-2xl border border-white/50 dark:border-white/5 shadow-sm hover:shadow-lg hover:border-pink-500/20 dark:hover:border-pink-500/20 transition-all cursor-pointer relative overflow-hidden backdrop-blur-sm ${task.completed ? 'opacity-60 grayscale-[0.5]' : ''}`}>
+                              <div key={task.id} onClick={() => { setSelectedTask(task); setIsModalOpen(true); }} className={`group bg-white/70 dark:bg-slate-800/70 p-2.5 sm:p-4 rounded-2xl border border-white/50 dark:border-white/5 shadow-sm hover:shadow-lg hover:border-pink-500/20 dark:hover:border-pink-500/20 transition-all cursor-pointer relative overflow-hidden backdrop-blur-sm ${task.completed ? 'opacity-60 grayscale-[0.5]' : ''}`}>
                                   {/* Left Border Indicator */}
                                   <div className={`absolute left-0 top-4 bottom-4 w-1 rounded-r-full ${
                                       task.category === 'Review' ? 'bg-rose-500' :
@@ -750,8 +761,8 @@ const Planner: React.FC = () => {
                                           {task.completed ? <CheckCircle2 size={20} /> : <Circle size={20} />}
                                       </button>
                                   </div>
-                                  <h4 className={`text-base font-bold text-slate-800 dark:text-white mb-1 leading-snug pl-3 ${task.completed ? 'line-through text-slate-500' : ''}`}>{task.title}</h4>
-                                  <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono font-bold mt-2 pl-3">
+                                  <h4 className={`text-xs sm:text-base font-bold text-slate-800 dark:text-white mb-1 leading-snug pl-3 ${task.completed ? 'line-through text-slate-500' : ''}`}>{task.title}</h4>
+                                  <div className="flex items-center gap-2 text-[10px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono font-bold mt-2 pl-3">
                                       <Clock size={12} className="text-pink-500" />
                                       {format(new Date(task.start), 'h:mm a')} - {format(new Date(task.end), 'h:mm a')}
                                   </div>
@@ -762,7 +773,7 @@ const Planner: React.FC = () => {
               </div>
               
               {/* Bottom Actions */}
-              <div className="p-4 bg-white/80 dark:bg-[#0f172a]/90 border-t border-slate-200/50 dark:border-slate-800 backdrop-blur-xl relative z-20 shrink-0 min-w-[200px]">
+              <div className="p-3 sm:p-4 bg-white/80 dark:bg-[#0f172a]/90 border-t border-slate-200/50 dark:border-slate-800 backdrop-blur-xl relative z-30 shrink-0 min-w-[200px]">
                   <DailyDistribution tasks={agendaTasks} />
               </div>
           </div>

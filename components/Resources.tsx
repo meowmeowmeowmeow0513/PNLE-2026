@@ -109,9 +109,6 @@ const Resources: React.FC = () => {
 
   // --- NEW: ADVANCED THEME ENGINE ---
   const getResourceVisuals = (color: string) => {
-      // 1. CRESCERE MODE (Warm, Luxury, Glass)
-      // FIX: Increased opacity to white/80-90 to avoid grayness
-      // FIX: Text colors reverted to Slate-900/500 for consistent readability
       if (isCrescere) {
           switch(color) {
               case 'red': return {
@@ -358,8 +355,8 @@ const Resources: React.FC = () => {
                     </span>
                   ))}
                 </div>
-                <h3 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight">{featuredResource.title}</h3>
-                <p className="text-blue-100 text-base md:text-lg max-w-2xl font-medium leading-relaxed">
+                <h3 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight break-words">{featuredResource.title}</h3>
+                <p className="text-blue-100 text-base md:text-lg max-w-2xl font-medium leading-relaxed break-words">
                   {featuredResource.description}
                 </p>
               </div>
@@ -390,12 +387,12 @@ const Resources: React.FC = () => {
                         setIsWebsitesModalOpen(true);
                     }
                     }}
-                    className={`group relative flex flex-col justify-between p-8 rounded-[2.5rem] border shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden transform-gpu will-change-transform ${visuals.bg} ${visuals.hoverBorder}`}
+                    className={`group relative flex flex-col justify-between p-6 sm:p-8 rounded-[2.5rem] border shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden transform-gpu will-change-transform min-h-[320px] h-auto ${visuals.bg} ${visuals.hoverBorder}`}
                 >
                     {/* Abstract Blob Background */}
                     <div className={`absolute -top-10 -right-10 w-48 h-48 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-700 ${visuals.blob}`}></div>
 
-                    <div className="relative z-10">
+                    <div className="relative z-10 flex-1 flex flex-col">
                         <div className="flex justify-between items-start mb-6">
                             <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-transform duration-500 group-hover:scale-110 shadow-sm border border-white/10 ${visuals.iconBg}`}>
                                 {getIcon(resource.iconName, "w-8 h-8")}
@@ -405,10 +402,10 @@ const Resources: React.FC = () => {
                             </div>
                         </div>
 
-                        <h3 className={`text-2xl font-black leading-tight mb-3 transition-colors ${visuals.text}`}>
+                        <h3 className={`text-2xl font-black leading-tight mb-3 transition-colors break-words ${visuals.text}`}>
                             {resource.title}
                         </h3>
-                        <p className={`text-sm font-medium leading-relaxed ${visuals.subtext}`}>
+                        <p className={`text-sm font-medium leading-relaxed break-words ${visuals.subtext}`}>
                             {resource.description}
                         </p>
                     </div>
@@ -427,7 +424,7 @@ const Resources: React.FC = () => {
         {/* Add New Placeholder (Styled to match) */}
         <button 
           onClick={() => setIsRequestModalOpen(true)}
-          className={`group relative rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center p-8 gap-4 transition-all duration-300 min-h-[300px] ${isCrescere ? 'border-rose-200 bg-rose-50/50 hover:bg-rose-100/50 hover:border-rose-400' : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 hover:border-pink-300 dark:hover:border-pink-500/50 hover:bg-pink-50/50 dark:hover:bg-pink-500/5'}`}
+          className={`group relative rounded-[2.5rem] border-2 border-dashed flex flex-col items-center justify-center p-8 gap-4 transition-all duration-300 min-h-[320px] h-auto ${isCrescere ? 'border-rose-200 bg-rose-50/50 hover:bg-rose-100/50 hover:border-rose-400' : 'border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/30 hover:border-pink-300 dark:hover:border-pink-500/50 hover:bg-pink-50/50 dark:hover:bg-pink-500/5'}`}
         >
           <div className={`w-16 h-16 rounded-full shadow-sm flex items-center justify-center group-hover:scale-110 transition-transform duration-300 group-hover:shadow-lg ${isCrescere ? 'bg-white text-rose-400 group-hover:text-rose-600' : 'bg-white dark:bg-slate-800 text-slate-400 dark:text-slate-500 group-hover:text-pink-500'}`}>
             <Plus size={32} />
@@ -441,30 +438,30 @@ const Resources: React.FC = () => {
 
       {/* --- CREDIBLE WEBSITES MODAL --- */}
       {isWebsitesModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setIsWebsitesModalOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in" onClick={() => setIsWebsitesModalOpen(false)}>
           <div 
-            className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-white/5 flex flex-col max-h-[85vh] animate-zoom-in"
+            className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl w-full max-w-2xl border border-slate-200 dark:border-white/5 flex flex-col max-h-[85vh] animate-zoom-in overflow-hidden relative"
             onClick={e => e.stopPropagation()}
           >
-            <div className="p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0B1121]/50 flex justify-between items-center relative overflow-hidden">
+            <div className="p-6 md:p-8 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-[#0B1121]/50 flex justify-between items-center relative shrink-0">
                 {/* Modal Header Background */}
                 <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-overlay pointer-events-none"></div>
                 
-                <div className="flex items-center gap-4 relative z-10">
-                    <div className="w-14 h-14 bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 rounded-2xl flex items-center justify-center shadow-sm">
-                        <Globe size={28} />
+                <div className="flex items-center gap-4 relative z-10 min-w-0 pr-4">
+                    <div className="w-12 h-12 md:w-14 md:h-14 bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 rounded-2xl flex items-center justify-center shadow-sm shrink-0">
+                        <Globe size={24} className="md:w-7 md:h-7" />
                     </div>
-                    <div>
-                        <h3 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">Verified Portals</h3>
-                        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">Credible sources for extra practice.</p>
+                    <div className="min-w-0">
+                        <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight truncate">Verified Portals</h3>
+                        <p className="text-xs md:text-sm text-slate-500 dark:text-slate-400 font-medium truncate">Credible sources for extra practice.</p>
                     </div>
                 </div>
-                <button onClick={() => setIsWebsitesModalOpen(false)} className="relative z-10 p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full transition-colors">
-                    <X size={24} />
+                <button onClick={() => setIsWebsitesModalOpen(false)} className="relative z-10 p-2 text-slate-400 hover:bg-slate-200 dark:hover:bg-white/10 rounded-full transition-colors shrink-0">
+                    <X size={20} />
                 </button>
             </div>
             
-            <div className="p-8 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-[#0f172a]">
+            <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-[#0f172a]">
                 <div className="grid grid-cols-1 gap-4">
                     {trustedWebsites.map((site, i) => (
                         <a 
@@ -472,17 +469,17 @@ const Resources: React.FC = () => {
                             href={site.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
-                            className="flex items-center gap-5 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b] hover:border-cyan-400 dark:hover:border-cyan-600 hover:shadow-lg dark:hover:shadow-cyan-900/20 transition-all group"
+                            className="flex items-start sm:items-center gap-4 sm:gap-5 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#1e293b] hover:border-cyan-400 dark:hover:border-cyan-600 hover:shadow-lg dark:hover:shadow-cyan-900/20 transition-all group h-auto"
                         >
-                            <div className="w-12 h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-cyan-500 group-hover:bg-cyan-50 dark:group-hover:bg-cyan-900/30 transition-colors">
-                                <LinkIcon size={20} />
+                            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center text-slate-400 group-hover:text-cyan-500 group-hover:bg-cyan-50 dark:group-hover:bg-cyan-900/30 transition-colors shrink-0 mt-1 sm:mt-0">
+                                <LinkIcon size={18} className="sm:w-5 sm:h-5" />
                             </div>
-                            <div className="flex-1">
-                                <h4 className="font-bold text-lg text-slate-800 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors flex items-center gap-2">
+                            <div className="flex-1 min-w-0">
+                                <h4 className="font-bold text-base sm:text-lg text-slate-800 dark:text-white group-hover:text-cyan-600 dark:group-hover:text-cyan-400 transition-colors flex items-center gap-2 flex-wrap">
                                     {site.name}
                                     <ExternalLink size={14} className="opacity-0 group-hover:opacity-100 transition-opacity transform group-hover:translate-x-1" />
                                 </h4>
-                                <p className="text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium">{site.desc}</p>
+                                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1 font-medium break-words leading-relaxed">{site.desc}</p>
                             </div>
                         </a>
                     ))}
@@ -494,8 +491,8 @@ const Resources: React.FC = () => {
 
       {/* --- REQUEST RESOURCE MODAL --- */}
       {isRequestModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4 animate-fade-in">
-          <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl w-full max-w-lg p-8 relative border border-slate-200 dark:border-white/5 animate-zoom-in overflow-hidden">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] shadow-2xl w-full max-w-lg p-6 md:p-8 relative border border-slate-200 dark:border-white/5 animate-zoom-in overflow-hidden flex flex-col max-h-[90vh]">
             
             {/* Background Texture */}
             <div className="absolute top-0 right-0 w-64 h-64 bg-pink-500/5 rounded-full blur-3xl pointer-events-none"></div>
@@ -507,16 +504,16 @@ const Resources: React.FC = () => {
               <X size={24} />
             </button>
 
-            <div className="mb-8 relative z-10">
-                <div className="w-16 h-16 bg-pink-50 dark:bg-pink-500/10 rounded-2xl flex items-center justify-center text-pink-500 mb-4 shadow-sm border border-pink-100 dark:border-pink-500/20">
-                    <Send size={32} />
+            <div className="mb-6 md:mb-8 relative z-10">
+                <div className="w-14 h-14 md:w-16 md:h-16 bg-pink-50 dark:bg-pink-500/10 rounded-2xl flex items-center justify-center text-pink-500 mb-4 shadow-sm border border-pink-100 dark:border-pink-500/20">
+                    <Send size={28} className="md:w-8 md:h-8" />
                 </div>
-                <h3 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Request a Resource</h3>
-                <p className="text-base text-slate-500 dark:text-slate-400 mt-2 font-medium">Found something useful? Let us add it to the hub.</p>
+                <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white tracking-tight">Request a Resource</h3>
+                <p className="text-sm md:text-base text-slate-500 dark:text-slate-400 mt-2 font-medium">Found something useful? Let us add it to the hub.</p>
             </div>
 
             {requestStatus === 'success' ? (
-                <div className="flex flex-col items-center justify-center py-10 text-center animate-in zoom-in bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800">
+                <div className="flex flex-col items-center justify-center py-10 text-center animate-in zoom-in bg-green-50 dark:bg-green-900/10 rounded-2xl border border-green-100 dark:border-green-800 flex-1">
                     <div className="w-20 h-20 bg-green-100 dark:bg-green-500/20 text-green-600 dark:text-green-400 rounded-full flex items-center justify-center mb-4">
                         <Check size={40} />
                     </div>
@@ -524,7 +521,7 @@ const Resources: React.FC = () => {
                     <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">Thanks for contributing to the batch.</p>
                 </div>
             ) : (
-                <form onSubmit={handleRequestSubmit} className="space-y-5 relative z-10">
+                <form onSubmit={handleRequestSubmit} className="space-y-5 relative z-10 overflow-y-auto custom-scrollbar flex-1 pb-2">
                     {/* Error Message */}
                     {requestStatus === 'error' && (
                         <div className="p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3">
@@ -541,7 +538,7 @@ const Resources: React.FC = () => {
                             placeholder="e.g. Awesome Anatomy Quiz"
                             value={requestForm.title}
                             onChange={(e) => setRequestForm({...requestForm, title: e.target.value})}
-                            className="w-full p-4 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all placeholder:font-normal"
+                            className="w-full p-4 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all placeholder:font-normal text-sm md:text-base"
                         />
                     </div>
                     <div className="space-y-2">
@@ -552,14 +549,14 @@ const Resources: React.FC = () => {
                             placeholder="https://..."
                             value={requestForm.url}
                             onChange={(e) => setRequestForm({...requestForm, url: e.target.value})}
-                            className="w-full p-4 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all placeholder:font-normal"
+                            className="w-full p-4 bg-slate-50 dark:bg-[#1e293b] border border-slate-200 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white font-semibold focus:outline-none focus:ring-4 focus:ring-pink-500/10 focus:border-pink-500 transition-all placeholder:font-normal text-sm md:text-base"
                         />
                     </div>
                     
                     <button 
                         type="submit"
                         disabled={requestStatus === 'loading'}
-                        className="w-full py-4 bg-pink-600 hover:bg-pink-500 text-white rounded-xl font-bold text-lg shadow-xl shadow-pink-500/20 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 active:scale-[0.98]"
+                        className="w-full py-4 bg-pink-600 hover:bg-pink-500 text-white rounded-xl font-bold text-base md:text-lg shadow-xl shadow-pink-500/20 transition-all flex items-center justify-center gap-2 mt-4 disabled:opacity-70 active:scale-[0.98]"
                     >
                         {requestStatus === 'loading' ? (
                             <>

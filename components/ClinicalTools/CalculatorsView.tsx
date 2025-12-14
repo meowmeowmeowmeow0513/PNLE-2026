@@ -51,11 +51,15 @@ const CalculatorInstance: React.FC<{ def: CalculatorDef }> = ({ def }) => {
     };
 
     const handleChange = (key: string, val: string) => {
-        // Prevent negative if field is number and has min=0
+        // Validation for number fields
         const field = def.fields.find(f => f.key === key);
-        if (field?.type === 'number' && field.min !== undefined && val !== '') {
+        if (field?.type === 'number' && val !== '') {
             const num = parseFloat(val);
-            if (!isNaN(num) && num < field.min) return; // Block update
+            // Allow typing intermediates like "0." or "-"
+            if (!isNaN(num)) {
+                if (field.min !== undefined && num < field.min) return; // Enforce Min
+                if (field.max !== undefined && num > field.max) return; // Enforce Max
+            }
         }
         setValues(prev => ({ ...prev, [key]: val }));
     };
@@ -127,6 +131,9 @@ const CalculatorInstance: React.FC<{ def: CalculatorDef }> = ({ def }) => {
                                     hasRightElement={!!f.unitOptions}
                                     className={!!f.unitOptions ? "flex-1" : "w-full"}
                                     unit={!f.unitOptions ? f.unit : undefined}
+                                    min={f.min}
+                                    max={f.max}
+                                    step={f.step}
                                 />
                                 {f.unitOptions && (
                                     <div className="w-24 shrink-0">

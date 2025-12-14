@@ -46,25 +46,27 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({ onClose, onMove, folders,
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in">
-      <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-6 relative border border-slate-100 dark:border-slate-700 flex flex-col max-h-[80vh]">
-        <button 
-          onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-        >
-          <X size={20} />
-        </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-fade-in safe-area-bottom">
+      <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-2xl w-full max-w-sm relative border border-slate-100 dark:border-slate-700 flex flex-col max-h-[85vh] overflow-hidden">
+        
+        <div className="p-6 pb-2 shrink-0 flex items-center justify-between">
+            <h3 className="text-xl font-bold text-slate-800 dark:text-white">Move to...</h3>
+            <button 
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors p-1"
+            >
+              <X size={20} />
+            </button>
+        </div>
 
-        <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-4">Move to...</h3>
-
-        <div className="flex-1 overflow-y-auto min-h-[200px] border border-slate-100 dark:border-slate-700 rounded-xl mb-4">
+        <div className="flex-1 overflow-y-auto custom-scrollbar px-2 mb-2">
             {/* Root Option */}
             <button
                 onClick={() => setSelectedFolderId(null)}
                 disabled={isInvalidDestination(null)}
-                className={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-slate-50 dark:border-slate-700 transition-colors ${
+                className={`w-full text-left px-4 py-3 flex items-center gap-3 rounded-xl transition-colors mb-1 ${
                     selectedFolderId === null 
-                    ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 font-bold' 
+                    ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 font-bold shadow-sm' 
                     : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                 } ${isInvalidDestination(null) ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
@@ -87,9 +89,9 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({ onClose, onMove, folders,
                         key={folder.id}
                         onClick={() => !disabled && setSelectedFolderId(folder.id)}
                         disabled={disabled}
-                        className={`w-full text-left px-4 py-3 flex items-center gap-3 border-b border-slate-50 dark:border-slate-700 transition-colors ${
+                        className={`w-full text-left px-4 py-3 flex items-center gap-3 rounded-xl transition-colors mb-1 ${
                             selectedFolderId === folder.id 
-                            ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 font-bold' 
+                            ? 'bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 font-bold shadow-sm' 
                             : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                         } ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}
                     >
@@ -101,17 +103,17 @@ const MoveItemModal: React.FC<MoveItemModalProps> = ({ onClose, onMove, folders,
             })}
         </div>
 
-        <div className="flex gap-3">
+        <div className="p-6 pt-2 border-t border-slate-100 dark:border-slate-700/50 shrink-0 flex gap-3 bg-white dark:bg-slate-800">
           <button
             onClick={onClose}
-            className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            className="flex-1 py-3 rounded-xl border border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleMove}
             disabled={loading || selectedFolderId === currentFolderId || isInvalidDestination(selectedFolderId)}
-            className="flex-1 py-2.5 rounded-xl bg-pink-500 hover:bg-pink-600 text-white font-bold shadow-lg shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
+            className="flex-1 py-3 rounded-xl bg-pink-600 hover:bg-pink-500 text-white font-bold text-sm shadow-lg shadow-pink-500/20 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all active:scale-95"
           >
             {loading ? 'Moving...' : 'Move Here'}
           </button>

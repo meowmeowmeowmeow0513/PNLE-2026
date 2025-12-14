@@ -1,3 +1,4 @@
+
 import React from 'react';
 import {
   LayoutDashboard,
@@ -60,15 +61,15 @@ const Sidebar: React.FC<SidebarProps> = ({
   const dur = reduceMotion ? 0 : 200;
 
   const getNavItemClass = (isActive: boolean, isSpecial?: boolean) => {
-    // Base: Added min-h to ensure touch targets don't shrink too small
-    const base = `relative flex items-center transition-all duration-${dur} ease-in-out font-medium select-none outline-none group overflow-hidden min-h-[3rem]`;
+    // App Shell Nav Item: flexible height to accommodate large text
+    const base = `relative flex items-center transition-all duration-${dur} ease-in-out font-medium select-none outline-none group w-full p-3 rounded-xl gap-3 cursor-pointer min-h-[3rem]`;
     
-    // Layout: 
-    // 1. Removed fixed heights, added py-3 for vertical breathing room
-    // 2. Added whitespace-normal break-words to handle XL fonts wrapping vertically
+    // Layout handling for Minimized state
+    // On Mobile: Always expanded layout
+    // On Desktop: Depends on isMinimized
     const layout = isMinimized
-        ? 'lg:w-12 lg:h-12 lg:justify-center lg:p-0 lg:rounded-2xl lg:mx-auto mb-2 w-[calc(100%-1rem)] px-4 py-3 justify-start rounded-xl mx-2 gap-3' 
-        : 'w-[calc(100%-1rem)] mx-2 px-4 py-3 justify-start rounded-xl mb-1 gap-3 h-auto whitespace-normal break-words';
+        ? 'lg:justify-center lg:px-0 lg:py-3' 
+        : 'justify-start';
 
     let themeClasses = '';
 
@@ -116,6 +117,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       ? 'from-white/0 via-pink-300/35 to-white/0'
       : 'from-white/0 via-pink-400/30 to-white/0';
 
+  // --- FOOTER COMPONENTS ---
   const MinimizedFooter = (
     <div
       className={`w-12 h-12 mx-auto rounded-2xl flex items-center justify-center border cursor-help relative group shrink-0
@@ -127,7 +129,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             : 'bg-white border-slate-200 text-pink-500 hover:bg-pink-50'
         }`}
     >
-      <Target size={20} />
+      <Target size={20} className="shrink-0" />
       <div className="absolute left-full ml-4 top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-900 text-white text-xs font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap pointer-events-none z-50 shadow-xl">
         Target: Aug 29, 2026
       </div>
@@ -137,12 +139,9 @@ const Sidebar: React.FC<SidebarProps> = ({
   const ExpandedFooter = (
     <div
       className={`rc-footer group relative overflow-hidden rounded-[1.5rem] 
-        /* COMPACT PADDING ON MOBILE (p-3), LUXURY ON PC (lg:p-5) */
-        p-3 lg:p-5 
-        border text-center shrink-0 w-full
+        p-4 lg:p-5 
+        border text-center w-full
         transition-[background-color,border-color,box-shadow] duration-[${dur}ms]
-        /* MOBILE CAP (25vh), DESKTOP CAP (35vh) */
-        max-h-[25vh] lg:max-h-[35vh] overflow-y-auto custom-scrollbar
         ${isCrescere
           ? 'bg-gradient-to-br from-white/85 via-white/70 to-rose-50/50 border-rose-100 shadow-[0_10px_30px_-18px_rgba(244,63,94,0.35)]'
           : isDark
@@ -152,11 +151,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     >
       <div className="absolute inset-0 opacity-[0.06] pointer-events-none bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
 
-      {/* MOBILE LANDSCAPE FIX: Hide big content on landscape phones */}
       <div className="relative z-10 flex flex-col items-center">
         
-        {/* === HEADER ROW === */}
-        <div className="w-full flex items-center justify-between mb-1 lg:mb-3 gap-2">
+        {/* Header Row */}
+        <div className="w-full flex items-center justify-between mb-3 gap-2">
           <p className={`text-[10px] font-black uppercase tracking-widest flex items-center gap-1.5 opacity-80 ${isCrescere ? 'text-rose-600' : 'text-slate-400'}`}>
             <Target size={12} className={`shrink-0 ${isCrescere ? 'text-rose-500' : 'text-pink-500'}`} />
             Target
@@ -174,39 +172,29 @@ const Sidebar: React.FC<SidebarProps> = ({
           </span>
         </div>
 
-        {/* === BIG DECORATIVE CONTENT (Hidden on short landscape screens) === */}
-        <div className="landscape:hidden flex flex-col items-center w-full">
-            <div className="flex flex-col items-center mb-2 lg:mb-4">
-                {/* COMPACT TEXT SIZE ON MOBILE (3xl), BIG ON PC (4xl) */}
-                <span className={`text-3xl lg:text-4xl font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>
-                    29
-                </span>
-                <span className={`text-[10px] font-bold uppercase tracking-[0.25em] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                    August
-                </span>
-            </div>
+        {/* Date Display */}
+        <div className="flex flex-col items-center mb-3">
+            <span className={`text-3xl lg:text-4xl font-black tracking-tighter leading-none ${isDark ? 'text-white' : 'text-slate-800'}`}>
+                29
+            </span>
+            <span className={`text-[10px] font-bold uppercase tracking-[0.25em] mt-1 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                August
+            </span>
+        </div>
 
-            {/* PROGRESS BAR */}
-            <div className={`relative h-1.5 w-full rounded-full overflow-hidden mb-2 lg:mb-3 ${isDark ? 'bg-white/10' : 'bg-slate-200/60'}`}>
-                <div className={`relative h-full w-[25%] rounded-full ${isCrescere ? 'bg-gradient-to-r from-rose-400 to-amber-400' : 'bg-gradient-to-r from-pink-500 to-purple-500'}`}>
-                    <div className="absolute inset-0 bg-white/30 animate-[shimmer_2s_infinite]"></div>
-                </div>
-            </div>
-
-            <div className="flex items-center justify-center gap-1.5 opacity-85">
-                <Sparkles size={12} className={`shrink-0 ${isCrescere ? 'text-amber-500' : 'text-yellow-500'}`} />
-                <p className={`text-[10px] font-bold italic truncate max-w-full ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
-                    "Trust the process"
-                </p>
+        {/* Progress Bar */}
+        <div className={`relative h-1.5 w-full rounded-full overflow-hidden mb-3 ${isDark ? 'bg-white/10' : 'bg-slate-200/60'}`}>
+            <div className={`relative h-full w-[25%] rounded-full ${isCrescere ? 'bg-gradient-to-r from-rose-400 to-amber-400' : 'bg-gradient-to-r from-pink-500 to-purple-500'}`}>
+                <div className="absolute inset-0 bg-white/30 animate-[shimmer_2s_infinite]"></div>
             </div>
         </div>
 
-        {/* === COMPACT LANDSCAPE CONTENT (Visible ONLY on short landscape screens) === */}
-        <div className="hidden landscape:flex w-full items-center justify-between mt-1 pt-2 border-t border-dashed border-slate-200 dark:border-white/10">
-             <span className="text-xs font-bold text-slate-500 dark:text-slate-400">Aug 29, 2026</span>
-             <Sparkles size={12} className={isCrescere ? 'text-rose-400' : 'text-pink-400'} />
+        <div className="flex items-center justify-center gap-1.5 opacity-85">
+            <Sparkles size={12} className={`shrink-0 ${isCrescere ? 'text-amber-500' : 'text-yellow-500'}`} />
+            <p className={`text-[10px] font-bold italic truncate max-w-full ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>
+                "Trust the process"
+            </p>
         </div>
-
       </div>
     </div>
   );
@@ -230,18 +218,21 @@ const Sidebar: React.FC<SidebarProps> = ({
         onClick={onClose}
       />
 
+      {/* 
+         APP SHELL SIDEBAR CONTAINER
+         - Fixed width on desktop (w-20 or w-72).
+         - Max width on mobile (w-[85vw]) to prevent overflow.
+         - Flex Column layout: Header (Fixed) -> Nav (Flexible/Scroll) -> Footer (Fixed).
+      */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 lg:static flex flex-col
-          /* FORCE HEIGHT TO VIEWPORT TO PREVENT OVERFLOW */
-          h-[100dvh]
+        className={`fixed inset-y-0 left-0 z-50 lg:static flex flex-col h-[100dvh]
           ${sidebarContainerClass}
           ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
           transition-all duration-300 ease-[cubic-bezier(0.2,0,0,1)]
           ${isMinimized ? 'lg:w-20' : 'lg:w-72'}
-          /* Width safety for small screens */
           w-[clamp(280px,85vw,20rem)]`}
       >
-        {/* Toggle (Desktop) */}
+        {/* Toggle Button (Desktop Only) */}
         {onToggleMinimize && (
           <button
             onClick={onToggleMinimize}
@@ -258,34 +249,25 @@ const Sidebar: React.FC<SidebarProps> = ({
           </button>
         )}
 
-        {/* Header - flex-none ensures it never shrinks */}
-        <div
-          className={`flex-none pt-6 pb-2 ${isMinimized ? 'px-0 flex justify-center' : 'px-6'} transition-all duration-300`}
-        >
-          <div className={`flex items-center ${isMinimized ? 'justify-center' : 'gap-3'} mb-2`}>
+        {/* --- 1. HEADER SECTION (Fixed Top) --- */}
+        <div className={`flex-none p-4 lg:p-6 transition-all duration-300 ${isMinimized ? 'lg:flex lg:justify-center lg:px-2' : ''}`}>
+          <div className="flex items-center gap-3">
             {/* Logo */}
             <button className={`rc-logo ${logoBase} ${logoBg}`}>
               <div className={`rc-ring absolute inset-0 rounded-2xl opacity-0 pointer-events-none transition-all duration-300 ${isCrescere ? 'ring-2 ring-rose-200/60' : 'ring-2 ring-pink-400/30'}`} />
               <div className={`rc-sheen absolute inset-0 bg-gradient-to-tr ${logoGlow} -translate-x-[160%] skew-x-[-18deg] opacity-0 pointer-events-none`} />
-              <GraduationCap size={24} className={`rc-cap relative z-10 drop-shadow-sm transition-transform duration-300`} />
+              <GraduationCap size={24} className={`rc-cap relative z-10 drop-shadow-sm transition-transform duration-300 shrink-0`} />
             </button>
 
-            {/* Header label */}
-            <div className={`min-w-0 overflow-hidden transition-all duration-300 ${isMinimized ? 'w-0 opacity-0 lg:hidden' : 'w-auto opacity-100'}`}>
-              <div className="flex flex-col leading-none">
-                <h1 className={`font-black text-xl tracking-tight break-words whitespace-normal ${isDark ? 'text-white' : 'text-slate-900'}`}>
+            {/* Title - Visible on Mobile, Hidden on Desktop Minimized */}
+            <div className={`flex flex-col justify-center min-w-0 transition-opacity duration-300 ${isMinimized ? 'lg:hidden' : 'block'}`}>
+                <h1 className={`font-black text-lg leading-tight tracking-tight break-words whitespace-normal ${isDark ? 'text-white' : 'text-slate-900'}`}>
                   Review <br/>
                   <span className="flex items-center gap-1 flex-wrap">
                     <span className={companionClass}>Companion</span>
                     <span className="inline-block animate-[spin_10s_linear_infinite] origin-center text-lg filter drop-shadow-sm">🌸</span>
                   </span>
                 </h1>
-                <div className="flex items-center gap-1.5 mt-1.5 opacity-90">
-                  <span className={`text-[10px] font-bold uppercase tracking-[0.15em] whitespace-normal ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                    Crescere '26
-                  </span>
-                </div>
-              </div>
             </div>
 
             {/* Mobile Close */}
@@ -298,8 +280,12 @@ const Sidebar: React.FC<SidebarProps> = ({
           </div>
         </div>
 
-        {/* Navigation - min-h-0 is CRITICAL for flex nesting scrolling */}
-        <div className="flex-1 overflow-y-auto overflow-x-hidden custom-scrollbar py-4 space-y-1 min-h-0">
+        {/* --- 2. NAVIGATION SECTION (Flexible Middle) --- 
+            - flex-1: Grows to fill available space.
+            - min-h-0: Allows it to shrink smaller than content (enabling scroll).
+            - overflow-y-auto: The scrollbar lives here.
+        */}
+        <nav className="flex-1 min-h-0 overflow-y-auto custom-scrollbar px-3 py-2 space-y-1">
           {navItems.map(item => {
             const isActive = activeItem === item.label;
             return (
@@ -315,24 +301,27 @@ const Sidebar: React.FC<SidebarProps> = ({
                 <span className={`relative z-10 flex items-center justify-center shrink-0 w-6`}>
                   {item.icon}
                 </span>
-                <span className={`relative z-10 text-sm font-medium tracking-tight text-left transition-all duration-300 
-                  ${isMinimized 
-                    ? 'lg:w-0 lg:opacity-0 lg:overflow-hidden whitespace-nowrap' 
-                    : 'w-auto opacity-100 whitespace-normal break-words leading-tight'
-                  }`}
-                >
+                
+                {/* Text Label - Hidden on Desktop Minimized, Visible on Mobile */}
+                <span className={`relative z-10 text-sm font-medium tracking-tight text-left transition-opacity duration-200
+                  ${isMinimized ? 'lg:hidden' : 'block'}
+                `}>
                   {item.label}
                 </span>
+
+                {/* Dot Indicator for Minimized State */}
                 {isMinimized && isActive && (
                   <div className={`absolute right-2 top-2 w-1.5 h-1.5 rounded-full hidden lg:block ${isCrescere ? 'bg-rose-500' : item.special ? 'bg-amber-500' : 'bg-pink-500'}`} />
                 )}
               </button>
             );
           })}
-        </div>
+        </nav>
 
-        {/* Footer - flex-none prevents squashing, max-h handles font blowout */}
-        <div className={`flex-none mt-auto p-4 transition-all duration-300 w-full`}>
+        {/* --- 3. FOOTER SECTION (Fixed Bottom) --- 
+            - flex-none: Never shrinks, always visible at bottom.
+        */}
+        <div className={`flex-none p-4 transition-all duration-300`}>
           {isMinimized ? (
             <>
                 <div className="hidden lg:block">{MinimizedFooter}</div>
@@ -342,6 +331,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             ExpandedFooter
           )}
         </div>
+
       </aside>
     </>
   );

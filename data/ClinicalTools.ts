@@ -107,9 +107,10 @@ export const calculators: CalculatorDef[] = [
         iconName: "pill",
         staticEquation: "D ÷ H × Q = X",
         fields: [
-            { key: "desired", label: "Desired Dose", type: "number", min: 0, placeholder: "500", unitOptions: ["mg", "g", "mcg", "units"], defaultUnit: "mg" },
-            { key: "have", label: "Stock Strength", type: "number", min: 0, placeholder: "250", unitOptions: ["mg", "g", "mcg", "units"], defaultUnit: "mg" },
-            { key: "quantity", label: "Stock Volume", type: "number", min: 0, placeholder: "5", unitOptions: ["mL", "tab", "cap"], defaultUnit: "mL" },
+            // Max increased to 10M to allow for Units (e.g. Penicillin)
+            { key: "desired", label: "Desired Dose", type: "number", min: 0, max: 10000000, step: 0.01, placeholder: "500", unitOptions: ["mg", "g", "mcg", "units"], defaultUnit: "mg" },
+            { key: "have", label: "Stock Strength", type: "number", min: 0, max: 10000000, step: 0.01, placeholder: "250", unitOptions: ["mg", "g", "mcg", "units"], defaultUnit: "mg" },
+            { key: "quantity", label: "Stock Volume", type: "number", min: 0, max: 5000, step: 0.1, placeholder: "5", unitOptions: ["mL", "tab", "cap"], defaultUnit: "mL" },
         ],
         compute: (inputs) => {
             const d = toNum(inputs.desired);
@@ -162,13 +163,13 @@ export const calculators: CalculatorDef[] = [
             },
             
             // Vol is needed for Pump, Drip, Time
-            { key: "vol", label: "Total Volume", type: "number", min: 0, placeholder: "1000", unit: "mL", showIf: { key: "mode", value: ["pump", "drip", "time"] } },
+            { key: "vol", label: "Total Volume", type: "number", min: 0, max: 10000, step: 1, placeholder: "1000", unit: "mL", showIf: { key: "mode", value: ["pump", "drip", "time"] } },
             
             // Time is needed for Pump, Drip, Vol
-            { key: "time", label: "Duration", type: "number", min: 0, placeholder: "8", unitOptions: ["hr", "min"], defaultUnit: "hr", showIf: { key: "mode", value: ["pump", "drip", "vol"] } },
+            { key: "time", label: "Duration", type: "number", min: 0, max: 100, step: 0.25, placeholder: "8", unitOptions: ["hr", "min"], defaultUnit: "hr", showIf: { key: "mode", value: ["pump", "drip", "vol"] } },
             
             // Rate (mL/hr) is needed for Time, Vol
-            { key: "rate", label: "Pump Rate", type: "number", min: 0, placeholder: "125", unit: "mL/hr", showIf: { key: "mode", value: ["time", "vol"] } },
+            { key: "rate", label: "Pump Rate", type: "number", min: 0, max: 2000, step: 0.1, placeholder: "125", unit: "mL/hr", showIf: { key: "mode", value: ["time", "vol"] } },
 
             // Drop Factor needed ONLY for Drip
             { key: "df", label: "Drop Factor", type: "select", options: [
@@ -246,9 +247,9 @@ export const calculators: CalculatorDef[] = [
         iconName: "baby",
         staticEquation: "Wt(kg) × Dose(mg/kg) = Total",
         fields: [
-            { key: "weight", label: "Weight", type: "number", min: 0, placeholder: "10", unitOptions: ["kg", "lb"], defaultUnit: "kg" },
-            { key: "dose", label: "Rec. Dose", type: "number", min: 0, placeholder: "15", unit: "mg/kg" },
-            { key: "conc", label: "Stock Strength", type: "number", min: 0, placeholder: "100", unit: "mg/mL" }
+            { key: "weight", label: "Weight", type: "number", min: 0, max: 200, step: 0.01, placeholder: "10", unitOptions: ["kg", "lb"], defaultUnit: "kg" },
+            { key: "dose", label: "Rec. Dose", type: "number", min: 0, max: 5000, step: 0.01, placeholder: "15", unit: "mg/kg" },
+            { key: "conc", label: "Stock Strength", type: "number", min: 0, max: 10000, step: 0.01, placeholder: "100", unit: "mg/mL" }
         ],
         compute: (inputs) => {
             const w = toNum(inputs.weight);
@@ -328,8 +329,8 @@ export const calculators: CalculatorDef[] = [
         iconName: "flame",
         staticEquation: "4mL × kg × %TBSA",
         fields: [
-            { key: "kg", label: "Weight", type: "number", min: 0, placeholder: "70", unit: "kg" },
-            { key: "tbsa", label: "Burn Area", type: "number", min: 0, max: 100, placeholder: "25", unit: "%TBSA" },
+            { key: "kg", label: "Weight", type: "number", min: 0, max: 500, step: 0.1, placeholder: "70", unit: "kg" },
+            { key: "tbsa", label: "Burn Area", type: "number", min: 0, max: 100, step: 0.5, placeholder: "25", unit: "%TBSA" },
         ],
         compute: (inputs) => {
             const kg = toNum(inputs.kg);
@@ -356,8 +357,8 @@ export const calculators: CalculatorDef[] = [
         iconName: "activity",
         staticEquation: "(SBP + 2(DBP)) ÷ 3",
         fields: [
-            { key: "sbp", label: "Systolic BP", type: "number", min: 0, placeholder: "120", unit: "mmHg" },
-            { key: "dbp", label: "Diastolic BP", type: "number", min: 0, placeholder: "80", unit: "mmHg" },
+            { key: "sbp", label: "Systolic BP", type: "number", min: 0, max: 300, step: 1, placeholder: "120", unit: "mmHg" },
+            { key: "dbp", label: "Diastolic BP", type: "number", min: 0, max: 200, step: 1, placeholder: "80", unit: "mmHg" },
         ],
         compute: (inputs) => {
             const s = toNum(inputs.sbp);
@@ -380,9 +381,9 @@ export const calculators: CalculatorDef[] = [
         iconName: "flask",
         staticEquation: "WBC × (%Segs + %Bands)",
         fields: [
-            { key: "wbc", label: "WBC Count", type: "number", min: 0, placeholder: "4500", unit: "/mm³" },
-            { key: "segs", label: "Segmented %", type: "number", min: 0, max: 100, placeholder: "40", unit: "%" },
-            { key: "bands", label: "Bands %", type: "number", min: 0, max: 100, placeholder: "5", unit: "%" },
+            { key: "wbc", label: "WBC Count", type: "number", min: 0, max: 500000, step: 100, placeholder: "4500", unit: "/mm³" },
+            { key: "segs", label: "Segmented %", type: "number", min: 0, max: 100, step: 1, placeholder: "40", unit: "%" },
+            { key: "bands", label: "Bands %", type: "number", min: 0, max: 100, step: 1, placeholder: "5", unit: "%" },
         ],
         compute: (inputs) => {
             const w = toNum(inputs.wbc);
@@ -422,7 +423,7 @@ export const calculators: CalculatorDef[] = [
                     { label: "Length / Height", value: "length" },
                 ]
             },
-            { key: "val", label: "Value", type: "number", placeholder: "0" },
+            { key: "val", label: "Value", type: "number", min: -500, max: 1000000, step: 0.01, placeholder: "0" },
             
             // Temperature Options
             { key: "from_temp", label: "From", type: "select", options: [{label: "Celsius", value: "c"}, {label: "Fahrenheit", value: "f"}], showIf: {key: "category", value: "temp"} },
