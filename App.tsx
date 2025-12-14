@@ -15,6 +15,7 @@ import LandingPage from './components/LandingPage';
 import OnboardingFlow from './components/OnboardingFlow';
 import GlobalYoutubePlayer from './components/GlobalYoutubePlayer';
 import ClinicalTools from './components/ClinicalTools';
+// --- CRITICAL IMPORT: Ensure PwaInstallPrompt.tsx is inside /components folder ---
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
@@ -234,7 +235,7 @@ const AppContent: React.FC = () => {
 
             <GlobalYoutubePlayer activeItem={activeItem} />
 
-            {/* --- THIS IS THE MISSING PIECE --- */}
+            {/* --- PWA INSTALL PROMPT --- */}
             <PwaInstallPrompt />
             
           </div>
