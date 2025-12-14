@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -177,14 +176,6 @@ const AppContent: React.FC = () => {
           .animate-zoom-in { animation: zoom-in 0.2s ease-out forwards; }
         `}</style>
 
-        {/* 
-           RESPONSIVE LAYOUT ENGINE
-           Mobile: Flex-col (Sidebar is fixed overlay)
-           Desktop: Flex-row (Sidebar is static flow)
-           
-           This ensures that when sidebar expands/collapses on desktop, 
-           the Main Content area naturally resizes and recenters content via flex-1.
-        */}
         <div
           className={`relative h-screen font-sans selection:bg-pink-500/30 overflow-hidden transition-colors duration-500 text-slate-900 dark:text-white
           flex flex-row`}
@@ -218,7 +209,6 @@ const AppContent: React.FC = () => {
             </div>
           </div>
 
-          {/* Sidebar - Component handles its own Fixed (mobile) vs Static (desktop) behavior */}
           <Sidebar
             activeItem={activeItem}
             onNavigate={setActiveItem}
@@ -228,7 +218,6 @@ const AppContent: React.FC = () => {
             onToggleMinimize={toggleSidebarMinimize}
           />
 
-          {/* Main Content Area - Flex Grow to fill remaining space */}
           <div className="flex-1 flex flex-col h-full min-w-0 relative z-10 transition-[margin,width] duration-300 ease-in-out">
             <TopBar
               title={activeItem}
@@ -244,6 +233,10 @@ const AppContent: React.FC = () => {
             </main>
 
             <GlobalYoutubePlayer activeItem={activeItem} />
+
+            {/* --- THIS IS THE MISSING PIECE --- */}
+            <PwaInstallPrompt />
+            
           </div>
         </div>
       </TaskProvider>
