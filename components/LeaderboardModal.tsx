@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { X, Trophy, Medal, Zap, Flame, User, Crown, Search, RefreshCw, AlertTriangle, Share2, Check, Loader2 } from 'lucide-react';
+import { X, Trophy, Medal, Zap, Flame, User, Crown, Share2, Loader2, Check, Shield } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { sendDiscordNotification } from '../utils/discordWebhook';
 
@@ -25,31 +25,22 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
     const { currentUser } = useAuth();
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    
-    // Sharing State
     const [sharing, setSharing] = useState(false);
     const [shared, setShared] = useState(false);
 
     const fetchLeaderboard = async () => {
         setLoading(true);
-        setError('');
         try {
             const q = query(
                 collection(db, 'leaderboard'),
                 orderBy('totalXP', 'desc'),
-                limit(20)
+                limit(50) 
             );
             const snapshot = await getDocs(q);
             const data = snapshot.docs.map(doc => doc.data() as LeaderboardEntry);
             setEntries(data);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Failed to fetch leaderboard", error);
-            if (error.code === 'permission-denied') {
-                setError("Access Denied: Please update Firestore Security Rules.");
-            } else {
-                setError("Unable to load rankings. Check your connection.");
-            }
         } finally {
             setLoading(false);
         }
@@ -57,7 +48,6 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
 
     useEffect(() => {
         fetchLeaderboard();
-        // Prevent background scrolling
         document.body.style.overflow = 'hidden';
         return () => { document.body.style.overflow = 'unset'; };
     }, []);
@@ -69,26 +59,35 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
             const myEntryIndex = entries.findIndex(e => e.uid === currentUser.uid);
             const myEntry = entries[myEntryIndex];
             
-            let message = "";
-            let title = "Leaderboard Update";
-            let color = 0xf59e0b; // Gold default
+            // Build Top 10 List
+            const top10 = entries.slice(0, 10);
+            let leaderboardList = top10.map((entry, i) => {
+                let rankIcon = `${i + 1}.`;
+                if (i === 0) rankIcon = "🥇";
+                if (i === 1) rankIcon = "🥈";
+                if (i === 2) rankIcon = "🥉";
+                return `${rankIcon} **${entry.displayName}** — ${entry.totalXP.toLocaleString()} XP`;
+            }).join('\n');
+
+            let footerMessage = "";
+            let title = "🏆 Global Leaderboard";
+            let color = 0x3b82f6; // Blue default
 
             if (myEntry) {
                 const rank = myEntryIndex + 1;
-                message = `🏆 **${myEntry.displayName}** holds **Rank #${rank}** on the Global Leaderboard!\n\n⚡ **${myEntry.totalXP.toLocaleString()} XP**\n🔥 **${myEntry.currentStreak} Day Streak**`;
+                // Add separator and user stats if they exist
+                footerMessage = `\n\n━━━━━━━━━━━━━━━\n✨ **Your Standing:**\n**#${rank} ${myEntry.displayName}**\n⚡ **${myEntry.totalXP.toLocaleString()} XP** • 🔥 **${myEntry.currentStreak} Day Streak**`;
                 
                 if (rank === 1) color = 0xf59e0b; // Gold
                 else if (rank === 2) color = 0x94a3b8; // Silver
                 else if (rank === 3) color = 0xb45309; // Bronze
-                else color = 0x3b82f6; // Blue
             } else {
-                message = `**${currentUser.displayName || 'A Student'}** is grinding to reach the Top 20! Watch out!`;
-                title = "New Challenger";
+                footerMessage = `\n\n━━━━━━━━━━━━━━━\n**${currentUser.displayName || 'A Student'}** is currently unranked. Grind to join the list!`;
             }
 
-            await sendDiscordNotification(title, message, 'stats', 'milestone', color);
-            
-            // Show Success State
+            const fullMessage = `${leaderboardList}${footerMessage}`;
+
+            await sendDiscordNotification(title, fullMessage, 'stats', 'milestone', color);
             setShared(true);
             setTimeout(() => setShared(false), 3000);
         } catch (e) {
@@ -98,202 +97,161 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
         }
     };
 
-    // Get Rank Icon
-    const getRankIcon = (index: number) => {
-        if (index === 0) return <div className="p-2 bg-yellow-100 dark:bg-yellow-500/20 rounded-full text-yellow-600 dark:text-yellow-400 border border-yellow-200 dark:border-yellow-500/30 shadow-[0_0_15px_rgba(250,204,21,0.4)] animate-pulse"><Crown size={24} fill="currentColor" /></div>;
-        if (index === 1) return <div className="p-2 bg-slate-100 dark:bg-slate-700 rounded-full text-slate-500 dark:text-slate-300 border border-slate-200 dark:border-slate-600"><Medal size={24} /></div>;
-        if (index === 2) return <div className="p-2 bg-amber-100 dark:bg-amber-900/40 rounded-full text-amber-700 dark:text-amber-500 border border-amber-200 dark:border-amber-700"><Medal size={24} /></div>;
-        return <span className="font-mono font-bold text-slate-400 dark:text-slate-500 text-lg w-8 text-center">#{index + 1}</span>;
+    const getRankVisuals = (index: number) => {
+        switch(index) {
+            case 0: return {
+                bg: 'bg-gradient-to-r from-yellow-50 to-amber-100 dark:from-yellow-900/20 dark:to-amber-900/10',
+                border: 'border-amber-200 dark:border-amber-500/30',
+                icon: <Crown size={20} className="text-amber-500 fill-current animate-pulse" />,
+                text: 'text-amber-700 dark:text-amber-400',
+                rankBadge: 'bg-amber-400 text-amber-900'
+            };
+            case 1: return {
+                bg: 'bg-gradient-to-r from-slate-50 to-gray-100 dark:from-slate-800/50 dark:to-gray-800/30',
+                border: 'border-slate-200 dark:border-slate-600',
+                icon: <Medal size={20} className="text-slate-400 fill-current" />,
+                text: 'text-slate-700 dark:text-slate-300',
+                rankBadge: 'bg-slate-300 text-slate-800'
+            };
+            case 2: return {
+                bg: 'bg-gradient-to-r from-orange-50 to-red-50 dark:from-orange-900/20 dark:to-red-900/10',
+                border: 'border-orange-200 dark:border-orange-500/30',
+                icon: <Medal size={20} className="text-orange-500 fill-current" />,
+                text: 'text-orange-800 dark:text-orange-300',
+                rankBadge: 'bg-orange-400 text-orange-900'
+            };
+            default: return {
+                bg: 'bg-white dark:bg-slate-800/50',
+                border: 'border-slate-100 dark:border-slate-700',
+                icon: <span className="font-black text-slate-400 text-sm">#{index + 1}</span>,
+                text: 'text-slate-600 dark:text-slate-400',
+                rankBadge: 'bg-slate-100 text-slate-500'
+            };
+        }
     };
 
-    const LoadingSkeleton = () => (
-        <div className="space-y-4 p-4 md:p-6">
-            {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-3xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/50 relative overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-100/50 dark:via-white/5 to-transparent -translate-x-full animate-[shimmer_1.5s_infinite]"></div>
-                    <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
-                    <div className="w-12 h-12 rounded-full bg-slate-200 dark:bg-slate-800 shrink-0" />
-                    <div className="flex-1 space-y-2">
-                        <div className="h-4 w-32 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                        <div className="h-3 w-20 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                    </div>
-                    <div className="w-16 h-8 bg-slate-200 dark:bg-slate-800 rounded-lg shrink-0" />
-                </div>
-            ))}
-            <style>{`
-                @keyframes shimmer {
-                    100% { transform: translateX(100%); }
-                }
-            `}</style>
-        </div>
-    );
-
     return createPortal(
-        <div className="fixed inset-0 z-[9999] flex items-end md:items-center justify-center p-0 md:p-6 animate-fade-in">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-0 md:p-4 sm:p-6 animate-fade-in">
             {/* Backdrop */}
-            <div className="absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity" onClick={onClose} />
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-md transition-opacity" onClick={onClose} />
 
-            {/* 
-                MODAL CONTAINER
-                Mobile: Fixed to bottom, rounded-t-[2.5rem], full width, max-h-[92%]
-                Desktop: Relative, rounded-[2.5rem], width restricted, height auto
-            */}
-            <div 
-                className={`
-                    relative z-10 
-                    w-full h-[92dvh] md:h-[85vh] 
-                    md:w-[48rem] lg:w-[56rem] 
-                    bg-white dark:bg-[#0f172a] 
-                    rounded-t-[2.5rem] md:rounded-[2.5rem] 
-                    shadow-2xl border-t md:border border-slate-200 dark:border-white/10 
-                    flex flex-col 
-                    animate-slide-up-mobile md:animate-zoom-in
-                    overflow-hidden
-                `}
-                onClick={e => e.stopPropagation()}
-            >
-                {/* Mobile Handle */}
-                <div className="md:hidden w-full flex justify-center pt-4 pb-2 shrink-0 cursor-pointer" onClick={onClose}>
-                    <div className="w-16 h-1.5 bg-slate-200 dark:bg-slate-800 rounded-full" />
-                </div>
-
-                {/* Header */}
-                <div className="p-6 md:p-8 bg-white/50 dark:bg-slate-900/50 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center relative overflow-hidden shrink-0 backdrop-blur-md">
-                    {/* Background Glow */}
-                    <div className="absolute top-0 right-0 w-96 h-96 bg-yellow-500/10 rounded-full blur-[80px] -mr-20 -mt-20 pointer-events-none"></div>
+            {/* Modal Card - Fullscreen Mobile, Card Desktop */}
+            <div className="relative w-full h-full md:h-auto md:max-h-[90vh] md:max-w-2xl bg-white dark:bg-[#0f172a] rounded-none md:rounded-[2.5rem] shadow-2xl border-0 md:border border-slate-200 dark:border-slate-700 flex flex-col overflow-hidden animate-zoom-in">
+                
+                {/* Header with Visual Flair */}
+                <div className="relative px-6 py-5 md:px-8 md:py-6 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/50 shrink-0 overflow-hidden">
+                    {/* Abstract Background Elements */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-amber-500/10 rounded-full blur-[80px] -mr-16 -mt-16 pointer-events-none"></div>
+                    <div className="absolute bottom-0 left-0 w-48 h-48 bg-pink-500/10 rounded-full blur-[60px] -ml-16 -mb-10 pointer-events-none"></div>
                     
-                    <div className="flex items-center gap-4 relative z-10">
-                        <div className="p-3 bg-gradient-to-br from-yellow-100 to-amber-100 dark:from-yellow-900/20 dark:to-amber-900/20 text-amber-600 dark:text-amber-400 rounded-2xl shadow-sm border border-amber-200 dark:border-amber-500/30">
-                            <Trophy size={32} />
+                    <div className="relative z-10 flex justify-between items-center">
+                        <div className="flex items-center gap-4">
+                            <div className="p-2 md:p-3 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-xl md:rounded-2xl shadow-lg shadow-orange-500/20 transform -rotate-3">
+                                <Trophy size={24} className="md:w-7 md:h-7 fill-current" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl md:text-2xl font-black text-slate-900 dark:text-white tracking-tight leading-none">Global Rankings</h3>
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1 flex items-center gap-2">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                                    Live • Top 50
+                                </p>
+                            </div>
                         </div>
-                        <div>
-                            <h3 className="text-2xl md:text-3xl font-black text-slate-900 dark:text-white uppercase tracking-tight leading-none">Leaderboard</h3>
-                            <p className="text-xs md:text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Global Top 20</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-2 relative z-10">
-                        <button 
-                            onClick={handleShare}
-                            disabled={sharing || shared}
-                            className={`p-3 rounded-xl transition-all shadow-sm flex items-center justify-center border border-transparent ${
-                                shared 
-                                ? 'bg-emerald-500 text-white' 
-                                : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/30 hover:text-indigo-600 dark:hover:text-indigo-400 hover:border-indigo-200'
-                            }`}
-                            title="Share Rank to Discord"
-                        >
-                            {sharing ? <Loader2 size={20} className="animate-spin" /> : shared ? <Check size={20} /> : <Share2 size={20} />}
-                        </button>
-                        <button 
-                            onClick={fetchLeaderboard}
-                            className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-500 dark:text-slate-400 transition-colors shadow-sm"
-                            title="Refresh"
-                        >
-                            <RefreshCw size={20} className={loading ? 'animate-spin' : ''} />
-                        </button>
-                        <button onClick={onClose} className="p-3 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl text-slate-500 dark:text-slate-400 transition-colors shadow-sm hidden md:flex">
-                            <X size={20} />
+                        <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors">
+                            <X size={24} />
                         </button>
                     </div>
                 </div>
 
                 {/* List Content */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50/50 dark:bg-[#0B1121] pb-10">
+                <div className="flex-1 overflow-y-auto custom-scrollbar p-4 md:p-6 space-y-3 bg-slate-50 dark:bg-[#0B1121]">
                     {loading ? (
-                        <LoadingSkeleton />
-                    ) : error ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-center p-8 opacity-70">
-                            <div className="w-20 h-20 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-6 text-red-500 shadow-lg shadow-red-500/10">
-                                <AlertTriangle size={40} />
-                            </div>
-                            <p className="text-lg font-bold text-slate-800 dark:text-slate-200 mb-2">Connection Error</p>
-                            <p className="text-xs text-red-500 bg-red-50 dark:bg-red-900/10 p-4 rounded-xl border border-red-200 dark:border-red-800/50 max-w-sm mx-auto leading-relaxed">
-                                {error}
-                            </p>
-                            <button onClick={fetchLeaderboard} className="mt-6 px-6 py-3 bg-slate-200 dark:bg-slate-800 rounded-full font-bold text-xs uppercase tracking-widest text-slate-600 dark:text-slate-300 hover:bg-slate-300 dark:hover:bg-slate-700 transition-colors">
-                                Retry Connection
-                            </button>
+                        <div className="flex flex-col items-center justify-center h-64 gap-4 text-slate-400">
+                            <Loader2 size={32} className="animate-spin text-pink-500" />
+                            <span className="text-sm font-bold uppercase tracking-wider">Retrieving Data...</span>
                         </div>
                     ) : entries.length === 0 ? (
-                        <div className="flex flex-col items-center justify-center h-64 text-center p-8 opacity-60">
-                            <div className="w-24 h-24 bg-slate-100 dark:bg-slate-800 rounded-full flex items-center justify-center mb-6">
-                                <Search size={40} className="text-slate-400" />
-                            </div>
-                            <h4 className="text-xl font-bold text-slate-700 dark:text-slate-300">Leaderboard Empty</h4>
-                            <p className="text-sm text-slate-500 mt-2 max-w-[200px]">Be the first to complete a mission and claim the throne!</p>
+                        <div className="text-center py-20 text-slate-400 opacity-60">
+                            <Trophy size={48} className="mx-auto mb-4" />
+                            <p className="font-bold text-lg">No champions yet.</p>
+                            <p className="text-sm">Be the first to claim the throne!</p>
                         </div>
                     ) : (
-                        <div className="space-y-4 p-4 md:p-6">
-                            {entries.map((entry, idx) => {
-                                const isMe = entry.uid === currentUser?.uid;
-                                return (
-                                    <div 
-                                        key={idx}
-                                        className={`flex items-center gap-4 p-4 md:p-5 rounded-3xl border transition-all duration-300 ${
-                                            isMe 
-                                            ? 'bg-white dark:bg-slate-900 border-pink-500 shadow-xl shadow-pink-500/10 ring-2 ring-pink-500/20 z-10 transform scale-[1.02]' 
-                                            : 'bg-white dark:bg-slate-900/40 border-slate-100 dark:border-slate-800/60 hover:border-slate-300 dark:hover:border-slate-700 shadow-sm hover:shadow-md'
-                                        }`}
-                                    >
-                                        <div className="w-12 flex items-center justify-center shrink-0">
-                                            {getRankIcon(idx)}
-                                        </div>
-                                        
-                                        <div className={`w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-2 shrink-0 ${isMe ? 'border-pink-500' : 'border-slate-100 dark:border-slate-700'}`}>
+                        entries.map((entry, idx) => {
+                            const isMe = entry.uid === currentUser?.uid;
+                            const visuals = getRankVisuals(idx);
+                            
+                            return (
+                                <div 
+                                    key={idx}
+                                    className={`relative flex items-center gap-3 md:gap-4 p-3 md:p-4 rounded-2xl md:rounded-3xl border transition-all duration-300 group ${
+                                        isMe 
+                                        ? 'bg-white dark:bg-slate-800 border-pink-500 shadow-xl shadow-pink-500/10 ring-2 ring-pink-500 z-10 transform scale-[1.01]' 
+                                        : `${visuals.bg} ${visuals.border} hover:shadow-lg`
+                                    }`}
+                                >
+                                    {/* Rank Indicator */}
+                                    <div className="flex flex-col items-center justify-center w-8 shrink-0">
+                                        {visuals.icon}
+                                    </div>
+
+                                    {/* Avatar */}
+                                    <div className={`w-10 h-10 md:w-14 md:h-14 rounded-full p-[2px] shrink-0 ${idx < 3 ? 'bg-gradient-to-br from-amber-300 via-orange-300 to-yellow-200' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                                        <div className="w-full h-full rounded-full overflow-hidden bg-slate-100 dark:bg-slate-800">
                                             {entry.photoURL ? (
                                                 <img src={entry.photoURL} alt={entry.displayName} className="w-full h-full object-cover" />
                                             ) : (
-                                                <div className="w-full h-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                                                    <User size={24} />
+                                                <div className="w-full h-full flex items-center justify-center text-slate-400">
+                                                    <User size={18} className="md:w-5 md:h-5" />
                                                 </div>
                                             )}
                                         </div>
+                                    </div>
 
-                                        <div className="flex-1 min-w-0">
-                                            <div className="flex items-center gap-2 mb-1">
-                                                <h4 className={`text-sm md:text-base font-bold truncate ${isMe ? 'text-pink-600 dark:text-pink-400' : 'text-slate-800 dark:text-white'}`}>
-                                                    {entry.displayName}
-                                                </h4>
-                                                {isMe && <span className="text-[9px] bg-pink-100 dark:bg-pink-900/30 text-pink-600 dark:text-pink-300 px-2 py-0.5 rounded-full font-black uppercase tracking-wider">You</span>}
-                                            </div>
-                                            <p className={`text-[10px] md:text-xs font-bold uppercase tracking-wider truncate ${entry.rankColor ? `text-${entry.rankColor}-500` : 'text-slate-400'}`}>
-                                                {entry.rankTitle || 'Novice'}
-                                            </p>
+                                    {/* User Info */}
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2 mb-0.5">
+                                            <span className={`text-sm md:text-base font-black truncate ${isMe ? 'text-slate-900 dark:text-white' : visuals.text}`}>
+                                                {entry.displayName}
+                                            </span>
+                                            {isMe && <span className="text-[9px] font-black bg-pink-500 text-white px-2 py-0.5 rounded-full uppercase tracking-wider shadow-sm">You</span>}
                                         </div>
-
-                                        <div className="text-right flex flex-col items-end gap-1.5">
-                                            <div className="flex items-center gap-1.5 bg-emerald-50 dark:bg-emerald-500/10 px-3 py-1 rounded-lg border border-emerald-100 dark:border-emerald-500/20">
-                                                <Zap size={12} className="text-emerald-500 fill-current" />
-                                                <span className="font-black text-sm text-emerald-700 dark:text-emerald-400">{entry.totalXP.toLocaleString()}</span>
-                                            </div>
-                                            <div className="flex items-center gap-1 text-orange-500 text-[10px] font-bold opacity-80 px-1">
-                                                <Flame size={12} fill="currentColor" />
-                                                <span>{entry.currentStreak} day streak</span>
-                                            </div>
+                                        <div className="flex items-center gap-3 text-[10px] md:text-xs font-bold text-slate-400 dark:text-slate-500">
+                                            <span className="flex items-center gap-1 text-orange-500"><Flame size={10} className="md:w-3 md:h-3" fill="currentColor" /> {entry.currentStreak} Day Streak</span>
+                                            <span className="flex items-center gap-1 text-purple-500 hidden sm:flex"><Shield size={10} className="md:w-3 md:h-3" /> {entry.rankTitle}</span>
                                         </div>
                                     </div>
-                                );
-                            })}
-                        </div>
+
+                                    {/* XP Stat */}
+                                    <div className="text-right shrink-0">
+                                        <div className="text-base md:text-xl font-black text-slate-800 dark:text-white flex items-center justify-end gap-1">
+                                            <Zap size={14} className="text-amber-400 fill-current md:w-4 md:h-4" />
+                                            {entry.totalXP.toLocaleString()}
+                                        </div>
+                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">XP</span>
+                                    </div>
+                                </div>
+                            );
+                        })
                     )}
                 </div>
-                
-                {/* Footer */}
-                <div className="p-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-center text-[10px] text-slate-400 uppercase tracking-widest font-bold pb-8 md:pb-4">
-                    Updates in Real-time • Top 20 Global
+
+                {/* Footer Action */}
+                <div className="p-4 md:p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 relative z-20 pb-8 md:pb-6">
+                    <button 
+                        onClick={handleShare}
+                        disabled={sharing || shared}
+                        className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl active:scale-95 ${
+                            shared 
+                            ? 'bg-emerald-500 text-white cursor-default' 
+                            : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
+                        }`}
+                    >
+                        {sharing ? <Loader2 size={18} className="animate-spin" /> : shared ? <Check size={18} /> : <Share2 size={18} />}
+                        {shared ? 'Posted to Discord!' : 'Share Top 10 to Discord'}
+                    </button>
                 </div>
             </div>
-            
-            <style>{`
-                @keyframes slide-up-mobile {
-                    from { transform: translateY(100%); }
-                    to { transform: translateY(0); }
-                }
-                .animate-slide-up-mobile {
-                    animation: slide-up-mobile 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-                }
-            `}</style>
         </div>,
         document.body
     );
