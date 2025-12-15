@@ -17,23 +17,32 @@ const WEBHOOK_STATS = getEnv('VITE_DISCORD_WEBHOOK_STATS');
 
 export type DiscordChannel = 'updates' | 'stats';
 
+/**
+ * Sends a rich embed notification to a Discord channel via Webhook.
+ * 
+ * @param title - The title of the embed (bold)
+ * @param message - The main body text
+ * @param channel - 'stats' (for user achievements) or 'updates' (for system logs)
+ * @param type - Determines the side-strip color of the embed
+ * @param customColor - (Optional) Override the color with a decimal value
+ */
 export const sendDiscordNotification = async (
   title: string, 
   message: string, 
   channel: DiscordChannel = 'stats',
   type: 'info' | 'alert' | 'success' | 'milestone' = 'info',
-  customColor?: number // Optional specific color override
+  customColor?: number 
 ) => {
   const url = channel === 'updates' ? WEBHOOK_UPDATES : WEBHOOK_STATS;
 
   // Safety check: If no URL is configured, just log to console (Dev mode or unconfigured)
   if (!url) {
-      console.log(`[Discord Mock] ${title}: ${message}`);
+      console.warn(`[Discord Mock] URL not set for '${channel}'. Notification suppressed:`, { title, message });
       return;
   }
 
-  // Default Colors
-  let color = 14362487; // Pink default
+  // Default Colors (Decimal format for Discord API)
+  let color = 14362487; // Pink default (info)
   if (type === 'alert') color = 15158332; // Red
   if (type === 'success') color = 3066993; // Green
   if (type === 'milestone') color = 15844367; // Gold
@@ -53,7 +62,7 @@ export const sendDiscordNotification = async (
         description: message,
         color: color,
         footer: {
-          text: "PNLE Review Companion App"
+          text: "PNLE Review Companion App • Batch 2026"
         },
         timestamp: new Date().toISOString()
       }
@@ -62,11 +71,11 @@ export const sendDiscordNotification = async (
 
   try {
     // Fire and forget - don't await response to block UI
-    fetch(url, {
+    await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
-    }).catch(err => console.error("Discord Webhook Error:", err));
+    });
   } catch (error) {
     console.error("Failed to send Discord webhook", error);
   }
