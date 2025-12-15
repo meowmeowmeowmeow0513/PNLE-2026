@@ -108,23 +108,33 @@ export const useGamification = () => {
   };
 
   // Helper: Sync to Global Leaderboard
+  // Now includes robust fallbacks for display names
   const syncToLeaderboard = async (currentStats: UserGamificationStats) => {
       if (!currentUser) return;
       try {
           const rankInfo = CAREER_LADDER.find(r => currentStats.totalXP >= r.minXP && currentStats.totalXP <= r.maxXP) || CAREER_LADDER[CAREER_LADDER.length - 1];
           
+          // Use user's name, or part of email, or "Student Nurse"
+          const displayName = currentUser.displayName 
+            ? currentUser.displayName 
+            : currentUser.email 
+                ? currentUser.email.split('@')[0] 
+                : 'Student Nurse';
+
           await setDoc(doc(db, 'leaderboard', currentUser.uid), {
               uid: currentUser.uid,
-              displayName: currentUser.displayName || 'Student Nurse',
-              photoURL: currentUser.photoURL,
-              totalXP: currentStats.totalXP,
-              currentStreak: currentStats.currentStreak,
+              displayName: displayName,
+              photoURL: currentUser.photoURL || null,
+              totalXP: currentStats.totalXP || 0,
+              currentStreak: currentStats.currentStreak || 0,
               rankTitle: rankInfo.title,
               rankColor: rankInfo.color,
               updatedAt: new Date().toISOString()
           }, { merge: true });
+          
+          console.log("Leaderboard synced successfully");
       } catch (e) {
-          console.error("Leaderboard sync failed", e);
+          console.error("Leaderboard sync failed. Check Firestore Rules.", e);
       }
   };
 
@@ -249,6 +259,8 @@ export const useGamification = () => {
           syncToLeaderboard(merged);
       } else {
           setStats(currentData);
+          // Always try to sync on load to ensure name/photo updates
+          syncToLeaderboard(currentData);
       }
       
       setLoading(false);

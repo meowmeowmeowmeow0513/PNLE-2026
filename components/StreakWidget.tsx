@@ -1,10 +1,9 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Snowflake, Award, Info, Lock, CheckCircle2, ShieldCheck, Flame, CalendarClock, Zap, Share2, Trophy } from 'lucide-react';
+import { Snowflake, Award, Info, Lock, CheckCircle2, ShieldCheck, Flame, CalendarClock, Zap, Trophy } from 'lucide-react';
 import { UserGamificationStats } from '../types';
 import { CAREER_LADDER } from '../hooks/useGamification';
-import { sendDiscordNotification } from '../utils/discordWebhook';
 import { useAuth } from '../AuthContext';
 import LeaderboardModal from './LeaderboardModal';
 
@@ -17,7 +16,6 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
   const { currentUser } = useAuth();
   const [showLadder, setShowLadder] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
-  const [sharing, setSharing] = useState(false);
   const { currentStreak, streakFreezes, totalXP } = stats;
 
   const currentRank = CAREER_LADDER.find(r => totalXP >= r.minXP && totalXP <= r.maxXP) || CAREER_LADDER[CAREER_LADDER.length - 1];
@@ -36,17 +34,14 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
 
   // --- COMBUSTION ENGINE (Dynamic Flame & Color Logic) ---
   const getStreakVisuals = (days: number) => {
-      // 151+ Days: "Crescere Mode" (Pink/Rose + Gold Accents) - Batch Color
       if (days >= 151) return { 
           flameColor: 'text-pink-500 dark:text-pink-400', 
           shadow: 'drop-shadow-[0_0_20px_rgba(236,72,153,0.8)]', 
-          animate: 'animate-pulse',
+          animate: 'animate-pulse', 
           textGradient: 'from-pink-500 via-rose-500 to-amber-400 dark:from-pink-300 dark:via-rose-400 dark:to-amber-200', 
           label: 'LEGENDARY',
           glowColor: 'bg-pink-500'
       }; 
-      
-      // 90-150 Days: "Nebula" (Purple/Violet - Cosmic)
       if (days >= 90) return { 
           flameColor: 'text-purple-500 dark:text-purple-400', 
           shadow: 'drop-shadow-[0_0_15px_rgba(168,85,247,0.8)]', 
@@ -55,8 +50,6 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
           label: 'UNSTOPPABLE',
           glowColor: 'bg-purple-500'
       }; 
-      
-      // 30-89 Days: "Plasma" (Cyan/Blue - High Heat)
       if (days >= 30) return { 
           flameColor: 'text-cyan-500 dark:text-cyan-400', 
           shadow: 'drop-shadow-[0_0_15px_rgba(6,182,212,0.8)]', 
@@ -65,8 +58,6 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
           label: 'ELECTRIFIED',
           glowColor: 'bg-cyan-500'
       }; 
-      
-      // 7-29 Days: "Ignition" (Amber/Gold - Steady Burn)
       if (days >= 7) return { 
           flameColor: 'text-amber-500 dark:text-amber-400', 
           shadow: 'drop-shadow-[0_0_12px_rgba(245,158,11,0.7)]', 
@@ -75,13 +66,11 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
           label: 'BURNING HOT',
           glowColor: 'bg-amber-500'
       }; 
-      
-      // 0-6 Days: "Spark" (Orange - Starting Up)
       return { 
           flameColor: 'text-orange-500 dark:text-orange-500', 
           shadow: 'drop-shadow-[0_0_8px_rgba(249,115,22,0.6)]', 
           animate: 'animate-bounce',
-          textGradient: 'from-slate-700 to-slate-500 dark:from-white dark:to-slate-400', // Clean default for low streak
+          textGradient: 'from-slate-700 to-slate-500 dark:from-white dark:to-slate-400',
           label: 'SPARK',
           glowColor: 'bg-orange-500'
       }; 
@@ -146,24 +135,6 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
   const theme = getTheme(currentRank.color);
   const isExpert = currentRank.id === 4;
 
-  const handleShareToDiscord = async () => {
-      setSharing(true);
-      try {
-          const userName = currentUser?.displayName || 'Student';
-          await sendDiscordNotification(
-              "Rank Status Update",
-              `**${userName}** is currently a **${currentRank.title}**!\n🔥 Current Streak: **${currentStreak} Days**\n⚡ Total XP: **${totalXP}**`,
-              'stats',
-              'info',
-              currentRank.hex
-          );
-      } catch (e) {
-          console.error("Failed to share", e);
-      } finally {
-          setTimeout(() => setSharing(false), 1000);
-      }
-  };
-
   if (loading) return <div className="h-[280px] bg-slate-200 dark:bg-slate-800 rounded-3xl animate-pulse"></div>;
 
   return (
@@ -196,8 +167,8 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                 </div>
             </div>
 
-            {/* Vertical Action Toolbar */}
-            <div className="flex flex-col gap-2">
+            {/* Horizontal Action Toolbar (Updated for visibility and balance) */}
+            <div className="flex items-center gap-2">
                 {/* 1. Freeze (Status) */}
                 <div className="w-9 h-9 rounded-xl bg-cyan-50/80 dark:bg-cyan-900/30 border border-cyan-100 dark:border-cyan-700/50 flex flex-col items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-sm backdrop-blur-md" title="Duty Leaves">
                     <Snowflake size={12} />
@@ -211,16 +182,6 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                     title="Global Rankings"
                 >
                     <Trophy size={16} />
-                </button>
-
-                {/* 3. Share */}
-                <button 
-                    onClick={handleShareToDiscord}
-                    disabled={sharing}
-                    className="w-9 h-9 rounded-xl bg-indigo-50/80 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-700/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm hover:scale-105 transition-all backdrop-blur-md"
-                    title="Share Status"
-                >
-                    <Share2 size={16} className={sharing ? 'animate-spin' : ''} />
                 </button>
             </div>
         </div>

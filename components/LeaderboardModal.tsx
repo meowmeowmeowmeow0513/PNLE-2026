@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { X, Trophy, Medal, Zap, Flame, User, Crown, Search } from 'lucide-react';
+import { X, Trophy, Medal, Zap, Flame, User, Crown, Search, RefreshCw } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 
 interface LeaderboardEntry {
@@ -24,24 +24,29 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
     const { currentUser } = useAuth();
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState('');
+
+    const fetchLeaderboard = async () => {
+        setLoading(true);
+        setError('');
+        try {
+            const q = query(
+                collection(db, 'leaderboard'),
+                orderBy('totalXP', 'desc'),
+                limit(20)
+            );
+            const snapshot = await getDocs(q);
+            const data = snapshot.docs.map(doc => doc.data() as LeaderboardEntry);
+            setEntries(data);
+        } catch (error) {
+            console.error("Failed to fetch leaderboard", error);
+            setError("Unable to load rankings. Check connection or permissions.");
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchLeaderboard = async () => {
-            try {
-                const q = query(
-                    collection(db, 'leaderboard'),
-                    orderBy('totalXP', 'desc'),
-                    limit(20)
-                );
-                const snapshot = await getDocs(q);
-                const data = snapshot.docs.map(doc => doc.data() as LeaderboardEntry);
-                setEntries(data);
-            } catch (error) {
-                console.error("Failed to fetch leaderboard", error);
-            } finally {
-                setLoading(false);
-            }
-        };
         fetchLeaderboard();
     }, []);
 
@@ -92,15 +97,32 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
                             <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Global Rankings</p>
                         </div>
                     </div>
-                    <button onClick={onClose} className="relative z-10 p-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 transition-colors shadow-sm">
-                        <X size={20} />
-                    </button>
+                    <div className="flex items-center gap-2 relative z-10">
+                        <button 
+                            onClick={fetchLeaderboard}
+                            className="p-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 transition-colors shadow-sm"
+                            title="Refresh"
+                        >
+                            <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+                        </button>
+                        <button onClick={onClose} className="p-2 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full text-slate-400 transition-colors shadow-sm">
+                            <X size={20} />
+                        </button>
+                    </div>
                 </div>
 
                 {/* List */}
                 <div className="flex-1 overflow-y-auto custom-scrollbar bg-slate-50 dark:bg-slate-950/50">
                     {loading ? (
                         <LoadingSkeleton />
+                    ) : error ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center p-8 opacity-60">
+                            <div className="w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-4 text-red-500">
+                                <X size={32} />
+                            </div>
+                            <p className="text-sm font-bold text-slate-600 dark:text-slate-400">{error}</p>
+                            <button onClick={fetchLeaderboard} className="mt-4 text-xs text-blue-500 underline">Try Again</button>
+                        </div>
                     ) : entries.length === 0 ? (
                         <div className="flex flex-col items-center justify-center h-64 text-center p-8 opacity-60">
                             <div className="w-20 h-20 bg-slate-200 dark:bg-slate-800 rounded-full flex items-center justify-center mb-4">
