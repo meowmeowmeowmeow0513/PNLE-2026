@@ -3,7 +3,7 @@ import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { db } from '../firebase';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { X, Trophy, Medal, Zap, Flame, User, Crown, Share2, Loader2, Check, Shield } from 'lucide-react';
+import { X, Trophy, Medal, Zap, Flame, User, Crown, Share2, Loader2, Check, Shield, Clock } from 'lucide-react';
 import { useAuth } from '../AuthContext';
 import { sendDiscordNotification } from '../utils/discordWebhook';
 
@@ -21,12 +21,15 @@ interface LeaderboardModalProps {
     onClose: () => void;
 }
 
+const COOLDOWN_DURATION = 86400; // 24 hours in seconds
+
 const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
     const { currentUser } = useAuth();
     const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [sharing, setSharing] = useState(false);
     const [shared, setShared] = useState(false);
+    const [cooldown, setCooldown] = useState(0);
 
     const fetchLeaderboard = async () => {
         setLoading(true);
@@ -49,11 +52,42 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
     useEffect(() => {
         fetchLeaderboard();
         document.body.style.overflow = 'hidden';
+
+        // Check for existing cooldown
+        const lastShare = localStorage.getItem('last_leaderboard_share');
+        if (lastShare) {
+            const timePassed = Math.floor((Date.now() - parseInt(lastShare)) / 1000);
+            if (timePassed < COOLDOWN_DURATION) {
+                setCooldown(COOLDOWN_DURATION - timePassed);
+            }
+        }
+
         return () => { document.body.style.overflow = 'unset'; };
     }, []);
 
+    // Cooldown Timer Tick
+    useEffect(() => {
+        if (cooldown > 0) {
+            const timer = setInterval(() => {
+                setCooldown(prev => prev - 1);
+            }, 1000);
+            return () => clearInterval(timer);
+        }
+    }, [cooldown]);
+
+    const formatCooldown = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        
+        if (h > 0) {
+            return `${h}h ${m}m`;
+        }
+        return `${m}:${s.toString().padStart(2, '0')}`;
+    };
+
     const handleShare = async () => {
-        if (!currentUser) return;
+        if (!currentUser || cooldown > 0) return;
         setSharing(true);
         try {
             const myEntryIndex = entries.findIndex(e => e.uid === currentUser.uid);
@@ -88,6 +122,12 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
             const fullMessage = `${leaderboardList}${footerMessage}`;
 
             await sendDiscordNotification(title, fullMessage, 'stats', 'milestone', color);
+            
+            // Set Cooldown
+            const now = Date.now();
+            localStorage.setItem('last_leaderboard_share', now.toString());
+            setCooldown(COOLDOWN_DURATION);
+
             setShared(true);
             setTimeout(() => setShared(false), 3000);
         } catch (e) {
@@ -240,15 +280,21 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
                 <div className="p-4 md:p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 relative z-20 pb-8 md:pb-6">
                     <button 
                         onClick={handleShare}
-                        disabled={sharing || shared}
+                        disabled={sharing || shared || cooldown > 0}
                         className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-widest flex items-center justify-center gap-2 transition-all shadow-lg hover:shadow-xl active:scale-95 ${
                             shared 
                             ? 'bg-emerald-500 text-white cursor-default' 
-                            : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
+                            : cooldown > 0
+                                ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-200 dark:border-slate-700'
+                                : 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:bg-slate-800 dark:hover:bg-slate-100'
                         }`}
                     >
-                        {sharing ? <Loader2 size={18} className="animate-spin" /> : shared ? <Check size={18} /> : <Share2 size={18} />}
-                        {shared ? 'Posted to Discord!' : 'Share Top 10 to Discord'}
+                        {sharing ? <Loader2 size={18} className="animate-spin" /> : 
+                         shared ? <Check size={18} /> : 
+                         cooldown > 0 ? <Clock size={18} /> :
+                         <Share2 size={18} />
+                        }
+                        {shared ? 'Posted to Discord!' : cooldown > 0 ? `Wait ${formatCooldown(cooldown)} to Share` : 'Share Top 10 to Discord'}
                     </button>
                 </div>
             </div>
@@ -258,3 +304,4 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
 };
 
 export default LeaderboardModal;
+
