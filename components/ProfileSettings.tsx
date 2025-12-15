@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { storage } from '../firebase';
@@ -9,7 +10,7 @@ import {
     Camera, X, Loader, Check, User, Mail, Trash2,
     AlertTriangle, Save, Moon, Sun,
     Shield, KeyRound, Palette, ChevronRight,
-    RefreshCw, Crown, Type, Eye, Move
+    RefreshCw, Crown, Move, Eye, Bell
 } from 'lucide-react';
 
 interface ProfileSettingsProps {
@@ -38,6 +39,9 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
     const [loading, setLoading] = useState(false);
     const [deleteLoading, setDeleteLoading] = useState(false);
     const [resetLoading, setResetLoading] = useState(false);
+    
+    // Notification State
+    const [pushEnabled, setPushEnabled] = useState(false);
 
     const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -50,6 +54,13 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
             return () => clearTimeout(timer);
         }
     }, [message]);
+
+    // Check Notification Permission on Mount
+    useEffect(() => {
+        if ('Notification' in window) {
+            setPushEnabled(Notification.permission === 'granted');
+        }
+    }, []);
 
     // lock body scroll
     useEffect(() => {
@@ -127,6 +138,30 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
             setShowDeleteConfirm(false);
         } finally {
             setDeleteLoading(false);
+        }
+    };
+
+    const toggleNotifications = async () => {
+        if (!('Notification' in window)) {
+            setMessage({ type: 'error', text: 'Notifications not supported on this device.' });
+            return;
+        }
+
+        if (pushEnabled) {
+            // Cannot programmatically revoke, just update state UI
+            setPushEnabled(false);
+            // In a real app, you would also unsubscribe from FCM topic here
+        } else {
+            const permission = await Notification.requestPermission();
+            if (permission === 'granted') {
+                setPushEnabled(true);
+                new Notification("System Online", {
+                    body: "Notifications are now active for Crecere.",
+                    icon: "/vite.svg"
+                });
+            } else {
+                setMessage({ type: 'error', text: 'Permission denied. Check browser settings.' });
+            }
         }
     };
 
@@ -537,8 +572,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                                             <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white mb-1">Account Security</h3>
                                             <p className="text-sm text-slate-500 mb-6">Manage your login and data.</p>
 
-                                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm">
-                                                <div className="flex items-start sm:items-center justify-between mb-4 gap-3 flex-col sm:flex-row">
+                                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm space-y-4">
+                                                <div className="flex items-start sm:items-center justify-between gap-3 flex-col sm:flex-row">
                                                     <div className="flex items-center gap-3">
                                                         <div className="p-2.5 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-xl">
                                                             <KeyRound size={20} />
@@ -558,6 +593,27 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                                                     {resetLoading ? <Loader size={16} className="animate-spin" /> : <Mail size={16} />}
                                                     Send Reset Link to Email
                                                 </button>
+                                            </div>
+
+                                            {/* NOTIFICATIONS TOGGLE */}
+                                            <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-5 shadow-sm mt-4">
+                                                <div className="flex items-center justify-between mb-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="p-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl">
+                                                            <Bell size={20} />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-bold text-slate-800 dark:text-white text-sm">Push Notifications</p>
+                                                            <p className="text-xs text-slate-500">Alerts for streaks & study reminders</p>
+                                                        </div>
+                                                    </div>
+                                                    <button 
+                                                        onClick={toggleNotifications}
+                                                        className={`w-12 h-7 rounded-full transition-colors relative shrink-0 ${pushEnabled ? 'bg-indigo-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                                                    >
+                                                        <div className={`absolute top-1 w-5 h-5 bg-white rounded-full transition-transform shadow-sm ${pushEnabled ? 'translate-x-6' : 'translate-x-1'}`} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
 

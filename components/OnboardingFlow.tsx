@@ -4,6 +4,7 @@ import { useAuth } from '../AuthContext';
 import { db } from '../firebase';
 import { doc, updateDoc } from 'firebase/firestore';
 import { ArrowRight, Trophy, ShieldCheck, Sparkles, User, Loader2, CheckCircle, Heart, Scroll } from 'lucide-react';
+import { sendDiscordNotification } from '../utils/discordWebhook';
 
 const OnboardingFlow: React.FC = () => {
   const { currentUser, reloadUser, completeOnboarding, updateUserProfile } = useAuth();
@@ -44,6 +45,14 @@ const OnboardingFlow: React.FC = () => {
         hasCompletedOnboarding: true,
         onboardingCompletedAt: new Date().toISOString()
       });
+
+      // Send Discord Notification
+      sendDiscordNotification(
+        "New Recruit Joined",
+        `**${name}** has initialized their system.\nGoal: ${goal === 'top' ? 'Topnotcher' : 'Board Passer'}`,
+        'stats',
+        'success'
+      );
 
       setIsExiting(true);
       

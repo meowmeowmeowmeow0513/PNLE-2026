@@ -1,9 +1,12 @@
 
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Snowflake, Award, Info, Lock, CheckCircle2, ShieldCheck, Flame, CalendarClock, Zap } from 'lucide-react';
+import { Snowflake, Award, Info, Lock, CheckCircle2, ShieldCheck, Flame, CalendarClock, Zap, Share2, Trophy } from 'lucide-react';
 import { UserGamificationStats } from '../types';
 import { CAREER_LADDER } from '../hooks/useGamification';
+import { sendDiscordNotification } from '../utils/discordWebhook';
+import { useAuth } from '../AuthContext';
+import LeaderboardModal from './LeaderboardModal';
 
 interface StreakWidgetProps {
   stats: UserGamificationStats;
@@ -11,7 +14,10 @@ interface StreakWidgetProps {
 }
 
 const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
+  const { currentUser } = useAuth();
   const [showLadder, setShowLadder] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const { currentStreak, streakFreezes, totalXP } = stats;
 
   const currentRank = CAREER_LADDER.find(r => totalXP >= r.minXP && totalXP <= r.maxXP) || CAREER_LADDER[CAREER_LADDER.length - 1];
@@ -140,6 +146,24 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
   const theme = getTheme(currentRank.color);
   const isExpert = currentRank.id === 4;
 
+  const handleShareToDiscord = async () => {
+      setSharing(true);
+      try {
+          const userName = currentUser?.displayName || 'Student';
+          await sendDiscordNotification(
+              "Rank Status Update",
+              `**${userName}** is currently a **${currentRank.title}**!\n🔥 Current Streak: **${currentStreak} Days**\n⚡ Total XP: **${totalXP}**`,
+              'stats',
+              'info',
+              currentRank.hex
+          );
+      } catch (e) {
+          console.error("Failed to share", e);
+      } finally {
+          setTimeout(() => setSharing(false), 1000);
+      }
+  };
+
   if (loading) return <div className="h-[280px] bg-slate-200 dark:bg-slate-800 rounded-3xl animate-pulse"></div>;
 
   return (
@@ -172,12 +196,32 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                 </div>
             </div>
 
-            <div className="flex flex-col items-end">
-                {/* Freeze Badge - Adaptive */}
-                <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-cyan-100/50 border border-cyan-200 text-cyan-700 dark:bg-cyan-500/10 dark:border-cyan-500/20 dark:text-cyan-100 backdrop-blur-md" title="Duty Leaves (Freezes)">
-                    <Snowflake size={14} className="text-cyan-500 dark:text-cyan-400" />
-                    <span className="font-bold text-xs">{streakFreezes}</span>
+            {/* Vertical Action Toolbar */}
+            <div className="flex flex-col gap-2">
+                {/* 1. Freeze (Status) */}
+                <div className="w-9 h-9 rounded-xl bg-cyan-50/80 dark:bg-cyan-900/30 border border-cyan-100 dark:border-cyan-700/50 flex flex-col items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-sm backdrop-blur-md" title="Duty Leaves">
+                    <Snowflake size={12} />
+                    <span className="text-[8px] font-black leading-none mt-0.5">{streakFreezes}</span>
                 </div>
+
+                {/* 2. Leaderboard */}
+                <button 
+                    onClick={() => setShowLeaderboard(true)}
+                    className="w-9 h-9 rounded-xl bg-yellow-50/80 dark:bg-yellow-900/30 border border-yellow-100 dark:border-yellow-700/50 flex items-center justify-center text-yellow-600 dark:text-yellow-400 shadow-sm hover:scale-105 transition-all backdrop-blur-md"
+                    title="Global Rankings"
+                >
+                    <Trophy size={16} />
+                </button>
+
+                {/* 3. Share */}
+                <button 
+                    onClick={handleShareToDiscord}
+                    disabled={sharing}
+                    className="w-9 h-9 rounded-xl bg-indigo-50/80 dark:bg-indigo-900/30 border border-indigo-100 dark:border-indigo-700/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 shadow-sm hover:scale-105 transition-all backdrop-blur-md"
+                    title="Share Status"
+                >
+                    <Share2 size={16} className={sharing ? 'animate-spin' : ''} />
+                </button>
             </div>
         </div>
 
@@ -346,6 +390,8 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
         </div>,
         document.body
     )}
+
+    {showLeaderboard && <LeaderboardModal onClose={() => setShowLeaderboard(false)} />}
     </>
   );
 };

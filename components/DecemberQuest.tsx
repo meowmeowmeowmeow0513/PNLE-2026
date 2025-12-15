@@ -3,8 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { 
     HeartPulse, Dices, Timer, CheckCircle2,
     Crosshair, Crown, Activity, Shield,
-    Info, Terminal, Battery, BarChart3, Radio, FileText,
-    Zap, AlertTriangle, ChevronRight, Lock
+    Info, Terminal, Battery, BarChart3, Radio, FileText
 } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import ACLSSimulator from './ACLSSimulator';
@@ -147,6 +146,7 @@ const DecemberQuest: React.FC = () => {
                 origin: { y: 0.6 },
                 colors: ['#fbbf24', '#ffffff', '#ec4899']
             });
+            // Visual notification only - no webhook
             setTimeout(() => setShowLevelUp(false), 4000);
         }
     };
@@ -176,7 +176,6 @@ const DecemberQuest: React.FC = () => {
         }
     };
 
-    const progressPct = (questState.xp / MAX_XP) * 100;
     const dailyProgressPct = (questState.dailyXP / DAILY_XP_CAP) * 100;
     
     // --- UPDATED RANK SYSTEM ---
@@ -277,7 +276,7 @@ const DecemberQuest: React.FC = () => {
                             </span>
                         </h1>
                         <p className="text-slate-500 dark:text-slate-400 font-medium text-sm md:text-base max-w-md leading-relaxed">
-                            Engage in high-fidelity clinical scenarios. Master ACLS protocols, rapid assessment, and critical thinking.
+                            Engage in high-fidelity clinical scenarios. Master ACLS algorithms and rapid assessment.
                         </p>
                     </div>
                     

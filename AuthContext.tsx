@@ -1,7 +1,6 @@
 import React, { useContext, useState, useEffect, ReactNode } from "react";
 import { auth, googleProvider, db } from "./firebase";
 import { 
-  User, 
   createUserWithEmailAndPassword, 
   signInWithEmailAndPassword, 
   signInWithPopup, 
@@ -10,8 +9,8 @@ import {
   onAuthStateChanged,
   updateProfile,
   sendEmailVerification,
-  UserCredential
 } from "firebase/auth";
+import type { User, UserCredential } from "firebase/auth";
 import { doc, setDoc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 
 type OnboardingStatus = 'loading' | 'pending' | 'completed';

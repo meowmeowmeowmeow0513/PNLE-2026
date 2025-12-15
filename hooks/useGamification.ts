@@ -1,12 +1,14 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import { db } from '../firebase';
-import { doc, setDoc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { doc, setDoc, updateDoc, onSnapshot, runTransaction } from 'firebase/firestore';
 import { useAuth } from '../AuthContext';
 import { UserGamificationStats, Mission, MissionActionType, BennerRank } from '../types';
 import confetti from 'canvas-confetti';
+import { sendDiscordNotification } from '../utils/discordWebhook';
 
 // --- CONFIGURATION: BENNER'S CAREER LADDER ---
+// Added hex colors for Discord embedding
 export const CAREER_LADDER = [
   { 
     id: 0, 
@@ -14,6 +16,7 @@ export const CAREER_LADDER = [
     minXP: 0, 
     maxXP: 499, 
     color: 'slate',
+    hex: 0x64748b,
     description: 'The Foundation. Rigid adherence to rules and plans.' 
   },
   { 
@@ -22,6 +25,7 @@ export const CAREER_LADDER = [
     minXP: 500, 
     maxXP: 1499, 
     color: 'blue',
+    hex: 0x3b82f6,
     description: 'The Awakening. Recognizing recurring meaningful patterns.' 
   },
   { 
@@ -30,6 +34,7 @@ export const CAREER_LADDER = [
     minXP: 1500, 
     maxXP: 2999, 
     color: 'emerald',
+    hex: 0x10b981,
     description: 'The Professional. Efficiency and long-term planning.' 
   },
   { 
@@ -38,6 +43,7 @@ export const CAREER_LADDER = [
     minXP: 3000, 
     maxXP: 4999, 
     color: 'violet',
+    hex: 0x8b5cf6,
     description: 'The Specialist. Holistic understanding and decision making.' 
   },
   { 
@@ -46,6 +52,7 @@ export const CAREER_LADDER = [
     minXP: 5000, 
     maxXP: 999999, 
     color: 'amber',
+    hex: 0xf59e0b,
     description: 'The Topnotcher. Intuitive grasp of complex situations.' 
   },
 ];
@@ -57,7 +64,6 @@ const DAILY_TEMPLATES: Omit<Mission, 'current' | 'isCompleted' | 'isClaimed' | '
     { id: 'd3', label: 'Daily Login', target: 1, xpReward: 5, actionType: 'login', icon: 'login' },
 ];
 
-// Weekly missions updated to prevent "fast forward" abuse on timer
 const WEEKLY_TEMPLATES: Omit<Mission, 'current' | 'isCompleted' | 'isClaimed' | 'type' | 'lastReset'>[] = [
     { id: 'w1', label: 'Task Warrior (30 Tasks)', target: 30, xpReward: 120, actionType: 'complete_task', icon: 'list' },
     { id: 'w2', label: 'Heavy Duty (50 Tasks)', target: 50, xpReward: 250, actionType: 'complete_task', icon: 'layers' },
@@ -90,6 +96,36 @@ export const useGamification = () => {
       const monday = new Date(d.setDate(diff));
       const offset = monday.getTimezoneOffset() * 60000;
       return new Date(monday.getTime() - offset).toISOString().split('T')[0];
+  };
+
+  // Helper to determine streak flame color for Discord
+  const getStreakColor = (days: number) => {
+      if (days >= 151) return 0xec4899; // Pink (Legendary)
+      if (days >= 90) return 0xa855f7; // Purple (Nebula)
+      if (days >= 30) return 0x06b6d4; // Cyan (Plasma)
+      if (days >= 7) return 0xf59e0b; // Amber (Ignition)
+      return 0xf97316; // Orange (Spark)
+  };
+
+  // Helper: Sync to Global Leaderboard
+  const syncToLeaderboard = async (currentStats: UserGamificationStats) => {
+      if (!currentUser) return;
+      try {
+          const rankInfo = CAREER_LADDER.find(r => currentStats.totalXP >= r.minXP && currentStats.totalXP <= r.maxXP) || CAREER_LADDER[CAREER_LADDER.length - 1];
+          
+          await setDoc(doc(db, 'leaderboard', currentUser.uid), {
+              uid: currentUser.uid,
+              displayName: currentUser.displayName || 'Student Nurse',
+              photoURL: currentUser.photoURL,
+              totalXP: currentStats.totalXP,
+              currentStreak: currentStats.currentStreak,
+              rankTitle: rankInfo.title,
+              rankColor: rankInfo.color,
+              updatedAt: new Date().toISOString()
+          }, { merge: true });
+      } catch (e) {
+          console.error("Leaderboard sync failed", e);
+      }
   };
 
   // --- 1. REAL-TIME LISTENER & INTEGRITY CHECKS ---
@@ -166,13 +202,12 @@ export const useGamification = () => {
           needsUpdate = true;
       }
 
-      // 4. TEMPLATE SYNCHRONIZATION (Force Update if Code changes targets/labels)
+      // 4. TEMPLATE SYNCHRONIZATION
       const syncMissions = (stored: Mission[], templates: typeof DAILY_TEMPLATES) => {
           let hasChanges = false;
           const synced = stored.map(s => {
               const t = templates.find(temp => temp.id === s.id);
               if (t) {
-                  // If Target, Label, or Reward changed in code vs DB
                   if (s.target !== t.target || s.xpReward !== t.xpReward || s.label !== t.label) {
                       hasChanges = true;
                       const isNowCompleted = s.current >= t.target;
@@ -189,14 +224,12 @@ export const useGamification = () => {
           return { hasChanges, synced };
       };
 
-      // Check Daily
       const dailySync = syncMissions(currentData.dailyMissions || [], DAILY_TEMPLATES);
       if (dailySync.hasChanges) {
           updates.dailyMissions = dailySync.synced;
           needsUpdate = true;
       }
 
-      // Check Weekly
       const weeklySync = syncMissions(currentData.weeklyMissions || [], WEEKLY_TEMPLATES);
       if (weeklySync.hasChanges) {
           updates.weeklyMissions = weeklySync.synced;
@@ -212,6 +245,8 @@ export const useGamification = () => {
           } else {
               await updateDoc(userStatsRef, updates);
           }
+          // Sync to Global Leaderboard on update
+          syncToLeaderboard(merged);
       } else {
           setStats(currentData);
       }
@@ -226,10 +261,6 @@ export const useGamification = () => {
   const trackAction = useCallback(async (action: MissionActionType) => {
     if (!currentUser) return;
     
-    // --- XP BALANCING ---
-    // Login = 0 Base XP (Reward comes from Mission Claim)
-    // Task = 5 XP
-    // Pomodoro = 15 XP
     let baseXP = 0;
     if (action === 'complete_task') baseXP = 5;
     if (action === 'finish_pomodoro') baseXP = 15;
@@ -238,67 +269,84 @@ export const useGamification = () => {
 
     try {
         const today = getTodayString();
-        // We do a transaction to ensure atomicity
-        await import('firebase/firestore').then(async ({ runTransaction }) => {
-            await runTransaction(db, async (transaction) => {
-                const sfDoc = await transaction.get(userStatsRef);
-                if (!sfDoc.exists()) return;
+        let streakMilestoneReached = 0;
+        let newStats: UserGamificationStats | null = null;
 
-                const data = sfDoc.data() as UserGamificationStats;
-                const updates: any = {};
-                let shouldUpdate = false;
+        await runTransaction(db, async (transaction) => {
+            const sfDoc = await transaction.get(userStatsRef);
+            if (!sfDoc.exists()) return;
 
-                // 1. ADD XP
-                if (baseXP > 0) {
-                    updates.totalXP = (data.totalXP || 0) + baseXP;
-                    shouldUpdate = true;
+            const data = sfDoc.data() as UserGamificationStats;
+            const updates: any = {};
+            let shouldUpdate = false;
+
+            // 1. ADD XP
+            if (baseXP > 0) {
+                updates.totalXP = (data.totalXP || 0) + baseXP;
+                shouldUpdate = true;
+            }
+
+            // 2. UPDATE STREAK (If first action of day)
+            if (data.lastStudyDate !== today && (action === 'complete_task' || action === 'finish_pomodoro' || action === 'login')) {
+                const newStreak = (data.currentStreak || 0) + 1;
+                updates.currentStreak = newStreak;
+                updates.bestStreak = Math.max(newStreak, data.bestStreak || 0);
+                updates.lastStudyDate = today;
+                updates.totalSessions = (data.totalSessions || 0) + 1;
+                
+                if (newStreak % 7 === 0) {
+                    updates.streakFreezes = (data.streakFreezes || 0) + 1;
                 }
+                
+                streakMilestoneReached = newStreak;
+                shouldUpdate = true;
+            }
 
-                // 2. UPDATE STREAK (If first action of day)
-                if (data.lastStudyDate !== today && (action === 'complete_task' || action === 'finish_pomodoro' || action === 'login')) {
-                    const newStreak = (data.currentStreak || 0) + 1;
-                    updates.currentStreak = newStreak;
-                    updates.bestStreak = Math.max(newStreak, data.bestStreak || 0);
-                    updates.lastStudyDate = today;
-                    updates.totalSessions = (data.totalSessions || 0) + 1;
-                    
-                    // Bonus: Every 7 days, get a freeze
-                    if (newStreak % 7 === 0) {
-                        updates.streakFreezes = (data.streakFreezes || 0) + 1;
-                    }
-                    shouldUpdate = true;
-                }
-
-                // 3. UPDATE MISSIONS
-                const updateList = (list: Mission[]) => {
-                    return list.map(m => {
-                        if (m.actionType === action && !m.isCompleted) {
-                            // CRITICAL FIX: Prevent Login Spamming
-                            // Only allow 'login' mission increment if we haven't logged in today yet
-                            // OR if we just updated the streak above (meaning it was the first action)
-                            if (action === 'login' && data.lastStudyDate === today) {
-                                // If the DB says we already studied today, we skip incrementing the login counter
-                                return m; 
-                            }
-
-                            const newCurrent = m.current + 1;
-                            shouldUpdate = true;
-                            return { ...m, current: newCurrent, isCompleted: newCurrent >= m.target };
+            // 3. UPDATE MISSIONS
+            const updateList = (list: Mission[]) => {
+                return list.map(m => {
+                    if (m.actionType === action && !m.isCompleted) {
+                        if (action === 'login' && data.lastStudyDate === today) {
+                            return m; 
                         }
-                        return m;
-                    });
-                };
 
-                const newDaily = updateList(data.dailyMissions || []);
-                const newWeekly = updateList(data.weeklyMissions || []);
+                        const newCurrent = m.current + 1;
+                        shouldUpdate = true;
+                        return { ...m, current: newCurrent, isCompleted: newCurrent >= m.target };
+                    }
+                    return m;
+                });
+            };
 
-                if (shouldUpdate) {
-                    updates.dailyMissions = newDaily;
-                    updates.weeklyMissions = newWeekly;
-                    transaction.update(userStatsRef, updates);
-                }
-            });
+            const newDaily = updateList(data.dailyMissions || []);
+            const newWeekly = updateList(data.weeklyMissions || []);
+
+            if (shouldUpdate) {
+                updates.dailyMissions = newDaily;
+                updates.weeklyMissions = newWeekly;
+                transaction.update(userStatsRef, updates);
+                newStats = { ...data, ...updates };
+            }
         });
+
+        // 4. SYNC TO LEADERBOARD
+        if (newStats) {
+            syncToLeaderboard(newStats);
+        }
+
+        // 5. DISCORD NOTIFICATION (Streak Milestone)
+        const MILESTONES = [1, 3, 7, 14, 30, 60, 90, 100, 150, 365];
+        if (streakMilestoneReached > 0 && MILESTONES.includes(streakMilestoneReached)) {
+            const color = getStreakColor(streakMilestoneReached);
+            sendDiscordNotification(
+                "Streak Milestone",
+                `**${currentUser.displayName || 'Student'}** is on fire! 🔥\n**${streakMilestoneReached} Day Streak** achieved. Consistency is key!`,
+                'stats',
+                'milestone',
+                color
+            );
+        }
+
     } catch (e) {
         console.error("Transaction failed: ", e);
     }
@@ -319,6 +367,10 @@ export const useGamification = () => {
               
               const newTotalXP = stats.totalXP + mission.xpReward;
 
+              // Check for Rank Up
+              const oldRank = CAREER_LADDER.find(r => stats.totalXP >= r.minXP && stats.totalXP <= r.maxXP) || CAREER_LADDER[0];
+              const newRank = CAREER_LADDER.find(r => newTotalXP >= r.minXP && newTotalXP <= r.maxXP) || CAREER_LADDER[CAREER_LADDER.length - 1];
+
               confetti({
                   particleCount: 150,
                   spread: 60,
@@ -332,42 +384,46 @@ export const useGamification = () => {
               };
 
               await updateDoc(doc(db, 'users', currentUser.uid, 'stats', 'gamification'), updates);
+              
+              // Sync Leaderboard
+              syncToLeaderboard({ ...stats, ...updates });
+
+              // 5. DISCORD NOTIFICATION (Rank Up - Global Career only)
+              if (newRank.id > oldRank.id) {
+                  sendDiscordNotification(
+                      "Rank Promotion",
+                      `**${currentUser.displayName || 'Student'}** has been promoted to **${newRank.title}**! 🎓\nNext target: ${CAREER_LADDER[newRank.id + 1]?.title || 'Max Rank'}`,
+                      'stats',
+                      'success',
+                      newRank.hex
+                  );
+              }
           }
       }
   }, [currentUser, stats]);
 
-  // --- 4. DERIVED DATA (RANKS) ---
-  const rankData = useMemo(() => {
-    const xp = stats?.totalXP || 0;
-    const currentRank = CAREER_LADDER.find(r => xp >= r.minXP && xp <= r.maxXP) || CAREER_LADDER[CAREER_LADDER.length - 1];
-    const nextRank = CAREER_LADDER.find(r => r.id === currentRank.id + 1) || null;
-    
-    let progress = 0;
-    let xpToNext = 0;
+  // Derived Data
+  const currentRank = useMemo(() => {
+      if (!stats) return CAREER_LADDER[0];
+      return CAREER_LADDER.find(r => stats.totalXP >= r.minXP && stats.totalXP <= r.maxXP) || CAREER_LADDER[CAREER_LADDER.length - 1];
+  }, [stats]);
 
-    if (nextRank) {
-        const range = currentRank.maxXP - currentRank.minXP; 
-        const earned = xp - currentRank.minXP;
-        progress = Math.min(100, Math.max(0, (earned / range) * 100));
-        xpToNext = nextRank.minXP - xp;
-    } else {
-        progress = 100;
-        xpToNext = 0;
-    }
+  const nextRank = useMemo(() => {
+      return CAREER_LADDER.find(r => r.id === currentRank.id + 1) || null;
+  }, [currentRank]);
 
-    return {
-        currentRank,
-        nextRank,
-        progress,
-        xpToNext
-    };
-  }, [stats?.totalXP]);
+  const progress = useMemo(() => {
+      if (!nextRank) return 100;
+      const totalRange = currentRank.maxXP - currentRank.minXP;
+      const earned = (stats?.totalXP || 0) - currentRank.minXP;
+      return Math.min(100, Math.max(0, (earned / totalRange) * 100));
+  }, [stats, currentRank, nextRank]);
 
-  return {
-    stats,
-    rankData,
-    loading,
-    trackAction,
-    claimMission
+  return { 
+      stats, 
+      loading, 
+      trackAction, 
+      claimMission,
+      rankData: { currentRank, nextRank, progress } 
   };
 };
