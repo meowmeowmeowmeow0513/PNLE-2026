@@ -101,7 +101,8 @@ const MnemonicWidget: React.FC<MnemonicWidgetProps> = ({ className }) => {
 
     try {
         const apiKey = process.env.API_KEY;
-        if (!apiKey) throw new Error("API Key is missing.");
+        
+        if (!apiKey) throw new Error("API Key is missing in environment variables.");
 
         const ai = new GoogleGenAI({ apiKey });
         

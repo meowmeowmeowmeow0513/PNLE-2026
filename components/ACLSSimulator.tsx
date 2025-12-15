@@ -446,6 +446,12 @@ const ACLSSimulator: React.FC<ACLSSimulatorProps> = ({ startTutorial, onTutorial
         setDebriefLoading(true);
         try {
             const apiKey = process.env.API_KEY;
+            
+            if (!apiKey) {
+                setDebriefContent("API Key missing. Cannot generate AI feedback.");
+                return;
+            }
+
             const ai = new GoogleGenAI({ apiKey });
             
             const logSummary = logs.map(l => `[${l.time}] ${l.text}`).join('\n');

@@ -35,10 +35,11 @@ export const sendDiscordNotification = async (
 ) => {
   const url = channel === 'updates' ? WEBHOOK_UPDATES : WEBHOOK_STATS;
 
-  // Safety check: If no URL is configured, just log to console (Dev mode or unconfigured)
+  // Mock Success if no URL is configured (Dev/Preview Mode)
   if (!url) {
-      console.warn(`[Discord Mock] URL not set for '${channel}'. Notification suppressed:`, { title, message });
-      return;
+      console.warn(`[Discord Mock] URL not set for '${channel}'. Simulating success notification:`, { title, message });
+      // Return a resolved promise to simulate network delay for UI feedback (spinner -> checkmark)
+      return new Promise((resolve) => setTimeout(resolve, 800));
   }
 
   // Default Colors (Decimal format for Discord API)

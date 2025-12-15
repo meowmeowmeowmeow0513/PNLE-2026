@@ -133,8 +133,12 @@ export const useGamification = () => {
           }, { merge: true });
           
           console.log("Leaderboard synced successfully");
-      } catch (e) {
-          console.error("Leaderboard sync failed. Check Firestore Rules.", e);
+      } catch (e: any) {
+          if (e.code === 'permission-denied') {
+              console.error("Leaderboard Sync Failed: PERMISSION DENIED. Update Firestore Rules for /leaderboard collection.");
+          } else {
+              console.error("Leaderboard sync failed", e);
+          }
       }
   };
 
