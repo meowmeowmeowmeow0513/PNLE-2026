@@ -3,9 +3,11 @@ import React, { useState } from 'react';
 import { useGamification, CAREER_LADDER } from '../hooks/useGamification';
 import { Trophy, CheckCircle, Circle, Lock, Award, Info, ClipboardList, Clock, Briefcase, ChevronRight } from 'lucide-react';
 import { createPortal } from 'react-dom';
+import { useTheme } from '../ThemeContext';
 
 const MissionBoard: React.FC = () => {
   const { stats, rankData, loading, claimMission } = useGamification();
+  const { fontSize } = useTheme();
   const [activeTab, setActiveTab] = useState<'daily' | 'weekly'>('daily');
   const [showLadder, setShowLadder] = useState(false);
 
@@ -26,10 +28,12 @@ const MissionBoard: React.FC = () => {
 
   const theme = getTheme(rankData.currentRank.color);
   const missions = activeTab === 'daily' ? stats.dailyMissions : stats.weeklyMissions;
+  const isLargeFont = fontSize === 'extra-large';
 
+  // Added glassmorphism hover effects to the main container
   return (
     <>
-    <div className="bg-white/80 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl p-5 flex flex-col relative overflow-hidden group">
+    <div className="bg-white/80 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-white/5 rounded-3xl shadow-sm dark:shadow-xl p-5 flex flex-col relative overflow-hidden group transition-all duration-300 hover:shadow-2xl hover:-translate-y-1 hover:border-pink-500/20 transform-gpu will-change-transform">
         
         {/* --- HEADER (Compact) --- */}
         <div className="flex justify-between items-center mb-4">
@@ -116,7 +120,8 @@ const MissionBoard: React.FC = () => {
                                 {mission.current}/{mission.target}
                             </span>
                         </div>
-                        <h4 className={`font-bold text-xs truncate ${mission.isClaimed ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
+                        {/* Allows wrapping on huge font setting */}
+                        <h4 className={`font-bold text-xs ${isLargeFont ? 'whitespace-normal' : 'truncate'} ${mission.isClaimed ? 'text-slate-400 line-through' : 'text-slate-700 dark:text-slate-200'}`}>
                             {mission.label}
                         </h4>
                         
@@ -151,7 +156,7 @@ const MissionBoard: React.FC = () => {
         </div>
     </div>
 
-    {/* --- CAREER LADDER MODAL (Same as before) --- */}
+    {/* --- CAREER LADDER MODAL --- */}
     {showLadder && createPortal(
         <div 
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fade-in" 
@@ -177,17 +182,9 @@ const MissionBoard: React.FC = () => {
                         return (
                             <div 
                                 key={rank.id}
-                                className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${
-                                    isCurrent 
-                                    ? 'bg-slate-100 dark:bg-slate-800 border-pink-500 shadow-md' 
-                                    : isUnlocked 
-                                        ? 'bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60' 
-                                        : 'bg-slate-50 dark:bg-slate-900 border-transparent opacity-40'
-                                }`}
+                                className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${isCurrent ? 'bg-slate-100 dark:bg-slate-800 border-pink-500 shadow-md' : isUnlocked ? 'bg-white dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-60' : 'bg-slate-50 dark:bg-slate-900 border-transparent opacity-40'}`}
                             >
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                                    isUnlocked ? `bg-${rank.color}-500/20 text-${rank.color}-600 dark:text-${rank.color}-400` : 'bg-slate-200 dark:bg-slate-800 text-slate-400'
-                                }`}>
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isUnlocked ? `bg-${rank.color}-500/20 text-${rank.color}-600 dark:text-${rank.color}-400` : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}`}>
                                     {isUnlocked ? <Trophy size={18} /> : <Lock size={18} />}
                                 </div>
                                 

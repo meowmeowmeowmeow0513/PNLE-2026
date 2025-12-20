@@ -5,6 +5,7 @@ import { Snowflake, Award, Info, Lock, CheckCircle2, ShieldCheck, Flame, Calenda
 import { UserGamificationStats } from '../types';
 import { CAREER_LADDER } from '../hooks/useGamification';
 import { useAuth } from '../AuthContext';
+import { useTheme } from '../ThemeContext';
 import LeaderboardModal from './LeaderboardModal';
 
 interface StreakWidgetProps {
@@ -14,6 +15,7 @@ interface StreakWidgetProps {
 
 const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
   const { currentUser } = useAuth();
+  const { fontSize } = useTheme();
   const [showLadder, setShowLadder] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const { currentStreak, streakFreezes, totalXP } = stats;
@@ -31,6 +33,8 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
   } else {
       progress = 100;
   }
+
+  const isLargeFont = fontSize === 'large' || fontSize === 'extra-large';
 
   // --- COMBUSTION ENGINE (Dynamic Flame & Color Logic) ---
   const getStreakVisuals = (days: number) => {
@@ -167,7 +171,7 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                 </div>
             </div>
 
-            {/* Horizontal Action Toolbar (Updated for visibility and balance) */}
+            {/* Horizontal Action Toolbar */}
             <div className="flex items-center gap-2">
                 {/* 1. Freeze (Status) */}
                 <div className="w-9 h-9 rounded-xl bg-cyan-50/80 dark:bg-cyan-900/30 border border-cyan-100 dark:border-cyan-700/50 flex flex-col items-center justify-center text-cyan-600 dark:text-cyan-400 shadow-sm backdrop-blur-md" title="Duty Leaves">
@@ -195,12 +199,12 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                     </div>
                 )}
                 
-                {/* The Main Number - Now Synced with Flame Color */}
-                <span className={`text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b ${streakVisuals.textGradient} drop-shadow-sm dark:drop-shadow-2xl`}>
+                {/* The Main Number - Adaptive Sizing */}
+                <span className={`${isLargeFont ? 'text-6xl' : 'text-7xl'} font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-b ${streakVisuals.textGradient} drop-shadow-sm dark:drop-shadow-2xl`}>
                     {currentStreak}
                 </span>
                 
-                {/* Glow behind the number for extra aesthetics */}
+                {/* Glow behind the number */}
                 {currentStreak > 7 && (
                     <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 ${streakVisuals.glowColor} rounded-full blur-[60px] opacity-10 pointer-events-none`}></div>
                 )}
@@ -236,7 +240,7 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
         </div>
     </div>
 
-    {/* --- CAREER LADDER & INFO MODAL --- */}
+    {/* --- MODALS --- */}
     {showLadder && createPortal(
         <div 
             className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 dark:bg-black/80 backdrop-blur-sm animate-fade-in" 
@@ -246,7 +250,6 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                 className="w-full max-w-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-3xl overflow-hidden shadow-2xl relative animate-zoom-in flex flex-col max-h-[85vh]"
                 onClick={e => e.stopPropagation()}
             >
-                {/* Modal Header */}
                 <div className="p-6 bg-slate-50 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center shrink-0">
                     <div>
                         <h3 className="text-xl font-bold text-slate-900 dark:text-white flex items-center gap-2">
@@ -260,58 +263,23 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                     </button>
                 </div>
 
-                {/* Modal Content */}
                 <div className="overflow-y-auto custom-scrollbar p-6 space-y-8">
-                    
-                    {/* 1. Mechanics Section */}
                     <div className="space-y-4">
                         <div className="flex gap-4">
                              <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/20 text-orange-600 dark:text-orange-500 flex items-center justify-center shrink-0 border border-orange-200 dark:border-orange-500/30">
                                  <Flame size={20} />
                              </div>
                              <div>
-                                 <h4 className="text-slate-900 dark:text-white font-bold text-sm">Daily Streak & Combustion</h4>
+                                 <h4 className="text-slate-900 dark:text-white font-bold text-sm">Daily Streak</h4>
                                  <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
-                                     The longer your streak, the hotter the flame burns.
-                                 </p>
-                                 <div className="flex gap-2 mt-2">
-                                     <div className="h-2 w-2 rounded-full bg-orange-500" title="0-6 Days"></div>
-                                     <div className="h-2 w-2 rounded-full bg-amber-400" title="7-29 Days"></div>
-                                     <div className="h-2 w-2 rounded-full bg-cyan-400" title="30-89 Days"></div>
-                                     <div className="h-2 w-2 rounded-full bg-purple-500" title="90-150 Days"></div>
-                                     <div className="h-2 w-2 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 ring-1 ring-white/50" title="151+ Days"></div>
-                                 </div>
-                             </div>
-                        </div>
-
-                        <div className="flex gap-4">
-                             <div className="w-10 h-10 rounded-xl bg-cyan-100 dark:bg-cyan-500/20 text-cyan-600 dark:text-cyan-400 flex items-center justify-center shrink-0 border border-cyan-200 dark:border-cyan-500/30">
-                                 <Snowflake size={20} />
-                             </div>
-                             <div>
-                                 <h4 className="text-slate-900 dark:text-white font-bold text-sm">Duty Leave (Freeze)</h4>
-                                 <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
-                                     Missed a day? A freeze is used <span className="text-slate-900 dark:text-white font-semibold">automatically</span> to protect your streak. You earn <span className="text-cyan-600 dark:text-cyan-400 font-bold">+1 Freeze</span> for every 7 days of perfect attendance.
-                                 </p>
-                             </div>
-                        </div>
-
-                        <div className="flex gap-4">
-                             <div className="w-10 h-10 rounded-xl bg-purple-100 dark:bg-purple-500/20 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 border border-purple-200 dark:border-purple-500/30">
-                                 <CalendarClock size={20} />
-                             </div>
-                             <div>
-                                 <h4 className="text-slate-900 dark:text-white font-bold text-sm">Clinical Hours (XP)</h4>
-                                 <p className="text-slate-500 dark:text-slate-400 text-xs mt-1 leading-relaxed">
-                                     XP represents your Clinical Hours. Earn XP by finishing missions and tasks. Reaching XP milestones promotes you to the next rank.
+                                     Consistency is key. The longer your streak, the hotter the flame.
                                  </p>
                              </div>
                         </div>
                     </div>
-
+                    
                     <div className="border-t border-slate-200 dark:border-slate-700/50"></div>
 
-                    {/* 2. Career Ladder Section */}
                     <div>
                         <h4 className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4">Rank Progression</h4>
                         <div className="space-y-3">
@@ -319,18 +287,8 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                                 const isUnlocked = totalXP >= rank.minXP;
                                 const isCurrent = currentRank.id === rank.id;
                                 return (
-                                    <div key={rank.id} className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${
-                                        isCurrent 
-                                        ? 'bg-slate-100 dark:bg-slate-800 border-pink-500/50 shadow-lg' 
-                                        : isUnlocked 
-                                            ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-80 dark:opacity-60' 
-                                            : 'bg-slate-50 dark:bg-slate-900 border-transparent opacity-40'
-                                    }`}>
-                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                                            isUnlocked 
-                                            ? `bg-${rank.color}-100 dark:bg-${rank.color}-500/20 text-${rank.color}-600 dark:text-${rank.color}-400` 
-                                            : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600'
-                                        }`}>
+                                    <div key={rank.id} className={`flex items-center gap-4 p-3 rounded-xl border transition-all ${isCurrent ? 'bg-slate-100 dark:bg-slate-800 border-pink-500/50 shadow-lg' : isUnlocked ? 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 opacity-80' : 'bg-slate-50 dark:bg-slate-900 border-transparent opacity-40'}`}>
+                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${isUnlocked ? `bg-${rank.color}-100 dark:bg-${rank.color}-500/20 text-${rank.color}-600 dark:text-${rank.color}-400` : 'bg-slate-200 dark:bg-slate-800 text-slate-400'}`}>
                                             {isUnlocked ? <CheckCircle2 size={18} /> : <Lock size={18} />}
                                         </div>
                                         <div className="flex-1 min-w-0">
@@ -345,7 +303,6 @@ const StreakWidget: React.FC<StreakWidgetProps> = ({ stats, loading }) => {
                             })}
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>,

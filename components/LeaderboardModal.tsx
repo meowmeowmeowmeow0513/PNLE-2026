@@ -304,4 +304,3 @@ const LeaderboardModal: React.FC<LeaderboardModalProps> = ({ onClose }) => {
 };
 
 export default LeaderboardModal;
-

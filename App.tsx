@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -15,7 +16,6 @@ import LandingPage from './components/LandingPage';
 import OnboardingFlow from './components/OnboardingFlow';
 import GlobalYoutubePlayer from './components/GlobalYoutubePlayer';
 import ClinicalTools from './components/ClinicalTools';
-// --- CRITICAL IMPORT: Ensure PwaInstallPrompt.tsx is inside /components folder ---
 import PwaInstallPrompt from './components/PwaInstallPrompt';
 import { NavigationItem } from './types';
 import { useAuth } from './AuthContext';
@@ -76,7 +76,7 @@ const AppContent: React.FC = () => {
   const renderContent = () => {
     switch (activeItem) {
       case 'Dashboard':
-        return <Dashboard onNavigate={setActiveItem} />;
+        return <Dashboard onNavigate={setActiveItem} isSidebarExpanded={!sidebarMinimized} />;
       case 'Planner':
         return <Planner />;
       case 'Pomodoro Timer':
@@ -88,11 +88,11 @@ const AppContent: React.FC = () => {
       case 'Exam TOS':
         return <ExamTOS />;
       case 'Personal Folder':
-        return <PersonalFolder />;
+        return <PersonalFolder isSidebarExpanded={!sidebarMinimized} />;
       case 'December Quest':
         return <DecemberQuest />;
       default:
-        return <Dashboard onNavigate={setActiveItem} />;
+        return <Dashboard onNavigate={setActiveItem} isSidebarExpanded={!sidebarMinimized} />;
     }
   };
 
@@ -100,13 +100,7 @@ const AppContent: React.FC = () => {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617] text-white gap-4 font-sans">
         <Loader className="animate-spin text-pink-500" size={48} />
-        <p className="text-slate-500 text-sm font-medium">Loading Application...</p>
-        <button
-          onClick={() => logout()}
-          className="mt-8 text-xs text-slate-600 hover:text-slate-400 underline flex items-center gap-1 transition-colors"
-        >
-          <LogOut size={12} /> Stuck? Emergency Sign Out
-        </button>
+        <p className="text-slate-500 text-sm font-medium">Initialising...</p>
       </div>
     );
   }
@@ -126,87 +120,58 @@ const AppContent: React.FC = () => {
     return <OnboardingFlow />;
   }
 
-  if (onboardingStatus !== 'completed') {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center bg-[#020617] gap-4 font-sans">
-        <Loader className="animate-spin text-pink-500" size={48} />
-        <p className="text-slate-400 text-sm">Preparing Dashboard...</p>
-        <button onClick={() => logout()} className="mt-8 text-xs text-slate-500 underline">
-          <LogOut size={12} /> Cancel
-        </button>
-      </div>
-    );
-  }
-
   return (
     <PomodoroProvider>
       <TaskProvider>
         <style>{`
-          @keyframes aurora {
-            0% { transform: translate(0px, 0px) scale(1); opacity: 0.4; }
-            33% { transform: translate(30px, -50px) scale(1.1); opacity: 0.6; }
-            66% { transform: translate(-20px, 20px) scale(0.9); opacity: 0.4; }
-            100% { transform: translate(0px, 0px) scale(1); opacity: 0.4; }
+          @keyframes aurora-luxe {
+            0% { transform: translate(-20%, -20%) scale(1); opacity: 0.3; }
+            50% { transform: translate(10%, 10%) scale(1.1); opacity: 0.5; }
+            100% { transform: translate(-20%, -20%) scale(1); opacity: 0.3; }
           }
-          @keyframes drift-1 {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(10%, 5%) rotate(5deg) scale(1.1); }
-            100% { transform: translate(0, 0) rotate(0deg); }
-          }
-          @keyframes drift-2 {
-            0% { transform: translate(0, 0) rotate(0deg); }
-            50% { transform: translate(-5%, 10%) rotate(-5deg) scale(1.05); }
-            100% { transform: translate(0, 0) rotate(0deg); }
-          }
-          @keyframes drift-3 {
-            0% { transform: translate(0, 0) scale(1); }
-            50% { transform: translate(5%, -5%) scale(1.15); }
-            100% { transform: translate(0, 0) scale(1); }
+          @keyframes aurora-luxe-alt {
+            0% { transform: translate(20%, 20%) scale(1.1); opacity: 0.2; }
+            50% { transform: translate(-10%, -10%) scale(1); opacity: 0.4; }
+            100% { transform: translate(20%, 20%) scale(1.1); opacity: 0.2; }
           }
 
-          .animate-aurora { animation: aurora 15s infinite ease-in-out; }
-          .animate-aurora-delayed { animation: aurora 20s infinite ease-in-out reverse; }
-
-          .animate-drift-slow-1 { animation: drift-1 60s infinite ease-in-out; }
-          .animate-drift-slow-2 { animation: drift-2 70s infinite ease-in-out reverse; }
-          .animate-drift-slow-3 { animation: drift-3 80s infinite ease-in-out; }
+          .animate-aurora-luxe { animation: aurora-luxe 20s infinite ease-in-out; }
+          .animate-aurora-luxe-alt { animation: aurora-luxe-alt 25s infinite ease-in-out; }
 
           @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
-          .animate-fade-in { animation: fade-in 0.2s ease-out forwards; }
-          @keyframes zoom-in { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
-          .animate-zoom-in { animation: zoom-in 0.2s ease-out forwards; }
+          .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
+          @keyframes zoom-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
+          .animate-zoom-in { animation: zoom-in 0.3s ease-out forwards; }
         `}</style>
 
         <div
-          className={`relative h-screen font-sans selection:bg-pink-500/30 overflow-hidden transition-colors duration-500 text-slate-900 dark:text-white
-          flex flex-row`}
+          className={`relative h-[100dvh] font-sans selection:bg-pink-500/30 overflow-hidden transition-colors duration-700 text-slate-900 dark:text-slate-100
+          flex flex-row p-0 md:p-3 lg:p-4 gap-0 md:gap-2 lg:gap-3`}
         >
           {/* --- GLOBAL BACKGROUND SYSTEM --- */}
-          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-slate-50 dark:bg-black">
-            {/* CRESCERE */}
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-white dark:bg-[#020617]">
+            
+            {/* DARK MODE: DEEP NAVY */}
+            <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${themeMode === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="absolute inset-0 bg-[#020617]" />
+              <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-pink-600/10 rounded-full blur-[140px] animate-aurora-luxe" />
+              <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-600/10 rounded-full blur-[140px] animate-aurora-luxe-alt" />
+              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-overlay" />
+            </div>
+
+            {/* CRESCERE MODE: ROSE WATER */}
             <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${themeMode === 'crescere' ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute inset-0 bg-[#fff5f5]" />
-              <div className="absolute inset-0 overflow-hidden">
-                <div className="absolute -top-[30%] -right-[30%] w-[120vw] h-[120vw] bg-gradient-to-b from-rose-200/40 to-transparent rounded-full blur-[100px] animate-drift-slow-1 mix-blend-multiply opacity-50" />
-                <div className="absolute -bottom-[30%] -left-[30%] w-[120vw] h-[120vw] bg-gradient-to-t from-amber-100/40 to-transparent rounded-full blur-[100px] animate-drift-slow-2 mix-blend-multiply opacity-50" />
-                <div className="absolute top-[20%] left-[20%] w-[60vw] h-[60vw] bg-gradient-to-r from-purple-100/30 to-transparent rounded-full blur-[120px] animate-drift-slow-3 mix-blend-multiply opacity-30" />
-              </div>
-              <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 ${themeMode === 'crescere' ? '' : 'mix-blend-overlay'}`} />
-              <div className="absolute inset-0 bg-[radial-gradient(transparent_0%,_rgba(255,241,242,0.4)_100%)]" />
+              <div className="absolute inset-0 bg-[#fffbfc]" />
+              <div className="absolute -top-[10%] -right-[10%] w-[80%] h-[80%] bg-rose-100/40 rounded-full blur-[100px] animate-aurora-luxe" />
+              <div className="absolute -bottom-[10%] -left-[10%] w-[80%] h-[80%] bg-amber-50/50 rounded-full blur-[100px] animate-aurora-luxe-alt" />
+              <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5`} />
             </div>
 
-            {/* DARK */}
-            <div className={`absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-slate-900 via-[#020617] to-[#020617] transition-opacity duration-700 ease-in-out ${themeMode === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-pink-900/10 rounded-full blur-[120px] animate-aurora" />
-              <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-purple-900/10 rounded-full blur-[120px] animate-aurora-delayed" />
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay" />
-            </div>
-
-            {/* LIGHT */}
-            <div className={`absolute inset-0 bg-[#f8fafc] transition-opacity duration-700 ease-in-out ${themeMode === 'light' ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/40 rounded-full blur-[100px] -mr-20 -mt-20 pointer-events-none mix-blend-multiply" />
-              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-50/40 rounded-full blur-[100px] -ml-20 -mb-20 pointer-events-none mix-blend-multiply" />
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5 mix-blend-overlay pointer-events-none" />
+            {/* LIGHT MODE: CRISP SLATE */}
+            <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${themeMode === 'light' ? 'opacity-100' : 'opacity-0'}`}>
+              <div className="absolute inset-0 bg-[#f8fafc]" />
+              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/60 rounded-full blur-[120px] mix-blend-multiply" />
+              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-50/60 rounded-full blur-[120px] mix-blend-multiply" />
             </div>
           </div>
 
@@ -219,7 +184,19 @@ const AppContent: React.FC = () => {
             onToggleMinimize={toggleSidebarMinimize}
           />
 
-          <div className="flex-1 flex flex-col h-full min-w-0 relative z-10 transition-[margin,width] duration-300 ease-in-out">
+          {/* CONTENT ISLAND */}
+          <div className={`
+            flex-1 flex flex-col h-full min-w-0 relative z-10 
+            transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] 
+            overflow-hidden md:rounded-[2.5rem] 
+            border transition-colors
+            ${themeMode === 'crescere' 
+                ? 'bg-white/40 border-white/60 shadow-[0_20px_50px_-15px_rgba(244,63,94,0.1)]' 
+                : themeMode === 'dark'
+                    ? 'bg-slate-900/40 border-white/10 shadow-2xl backdrop-blur-3xl'
+                    : 'bg-white/60 border-slate-200/50 shadow-xl backdrop-blur-2xl'
+            }
+          `}>
             <TopBar
               title={activeItem}
               onMenuClick={() => setSidebarOpen(true)}
@@ -227,17 +204,14 @@ const AppContent: React.FC = () => {
               toggleTheme={() => { }}
             />
 
-            <main className="flex-1 overflow-y-auto p-4 md:p-8 scroll-smooth custom-scrollbar relative">
+            <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8 scroll-smooth custom-scrollbar relative">
               <div className="max-w-7xl mx-auto pb-20 animate-fade-in">
                 {renderContent()}
               </div>
             </main>
 
             <GlobalYoutubePlayer activeItem={activeItem} />
-
-            {/* --- PWA INSTALL PROMPT --- */}
             <PwaInstallPrompt />
-            
           </div>
         </div>
       </TaskProvider>

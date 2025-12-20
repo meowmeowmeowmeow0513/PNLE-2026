@@ -37,13 +37,14 @@
 
       body {
         font-family: var(--font-primary);
-        background-color: #F3F4F6; /* very light gray */
-        transition: background-color 0.3s ease;
+        background-color: #F8FAFC; 
+        transition: background-color 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+        overflow: hidden;
       }
       
-      /* Standard Dark Mode */
+      /* Deep Navy Dark Mode */
       html.dark body {
-        background-color: #020617; /* slate-950/Cosmic base */
+        background-color: #020617; 
       }
 
       /* --- ACCESSIBILITY: FONT SCALING --- */
@@ -67,20 +68,23 @@
         animation: none !important;
       }
 
-      /* Custom scrollbar for notes */
+      /* Custom scrollbar */
       .custom-scrollbar::-webkit-scrollbar {
         width: 8px;
+        height: 8px;
       }
       .custom-scrollbar::-webkit-scrollbar-track {
         background: transparent;
       }
       .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #CBD5E1;
+        background-color: rgba(0,0,0,0.1);
         border-radius: 20px;
       }
-      /* Dark mode scrollbar */
       .dark .custom-scrollbar::-webkit-scrollbar-thumb {
-        background-color: #334155;
+        background-color: rgba(255,255,255,0.1);
+      }
+      .dark .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+        background-color: rgba(255,255,255,0.2);
       }
     </style>
     <script>
@@ -106,7 +110,8 @@
               },
               navy: {
                 800: '#0B1C2C',
-                900: '#051422',
+                900: '#020617',
+                950: '#010413',
               }
             }
           }
@@ -138,8 +143,8 @@
       }
     }
     </script>
-    <link rel="stylesheet" href="/index.css">
-  </head>
+      <link rel="stylesheet" href="/index.css">
+</head>
   <body>
     <div id="root"></div>
     <script type="module" src="/index.tsx"></script>

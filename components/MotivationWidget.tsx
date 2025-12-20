@@ -21,14 +21,14 @@ const MotivationWidget: React.FC<MotivationWidgetProps> = ({ className }) => {
   const quoteClass = `
     text-white/95 
     ${isMono ? 'font-normal not-italic tracking-wide' : 'font-medium italic'} 
-    ${isLargeText ? 'leading-loose text-xl' : 'leading-relaxed text-lg'}
+    ${isLargeText ? 'leading-loose text-lg sm:text-xl' : 'leading-relaxed text-sm sm:text-base'}
     text-shadow-sm transition-all duration-300
   `;
 
   const containerClass = `
     relative w-full rounded-3xl overflow-hidden shadow-lg group 
     border border-slate-200 dark:border-white/5 bg-slate-900 
-    flex flex-col
+    flex flex-col min-h-[180px]
     ${className || ''}
   `;
 
@@ -47,23 +47,23 @@ const MotivationWidget: React.FC<MotivationWidgetProps> = ({ className }) => {
       </div>
 
       {/* Content */}
-      <div className="relative z-10 p-8 flex flex-col justify-end h-full">
+      <div className="relative z-10 p-5 sm:p-6 flex flex-col justify-end h-full">
          <div className="mb-auto transform group-hover:-translate-y-1 transition-transform duration-500">
-            <Quote size={32} className="text-pink-500 mb-4 opacity-80" />
+            <Quote className="text-pink-500 mb-2 sm:mb-3 opacity-80 w-5 h-5 sm:w-6 sm:h-6" />
             <p className={quoteClass}>
                 "Passing the PNLE is not about being the smartest — it’s about being prepared, consistent, and confident. Keep pushing, keep believing. Your license is waiting."
             </p>
          </div>
          
-         <div className="flex items-center justify-between border-t border-white/10 pt-4 mt-6">
+         <div className="flex items-center justify-between border-t border-white/10 pt-3 mt-4">
             <div className="flex items-center gap-3">
-                <div className="h-10 w-1 bg-pink-500 rounded-full shadow-[0_0_10px_#ec4899]"></div>
-                <div>
-                    <span className="block text-sm font-bold text-white">Ma'am Chona</span>
-                    <span className="block text-xs text-slate-400 uppercase tracking-widest">Batch Adviser • Crescere</span>
+                <div className="h-8 w-1 sm:h-10 bg-pink-500 rounded-full shadow-[0_0_10px_#ec4899]"></div>
+                <div className="min-w-0">
+                    <span className="block text-xs sm:text-sm font-bold text-white truncate">Ma'am Chona</span>
+                    <span className="block text-[10px] sm:text-xs text-slate-400 uppercase tracking-widest truncate">Batch Adviser • Crescere</span>
                 </div>
             </div>
-            <Sparkles size={20} className="text-amber-400 animate-pulse" />
+            <Sparkles size={18} className="text-amber-400 animate-pulse shrink-0" />
          </div>
       </div>
     </div>
