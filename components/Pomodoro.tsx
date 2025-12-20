@@ -1,10 +1,10 @@
-
 import React, { useEffect, useState, useRef, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { 
     Play, Pause, RotateCcw, Waves, MonitorPlay, 
-    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud, ShieldCheck, ArrowRight, XCircle, Maximize2
+    Brain, Target, Music, Settings, X, Save, Trophy, SkipForward, Layers, AlertTriangle, Zap, Coffee, Heart, Cat, Dog, Sparkles, Star, Edit2, Check, Fish, Bone, CloudRain, Volume2, Cloud, ShieldCheck, ArrowRight, XCircle, Maximize2, Info
 } from 'lucide-react';
-import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType, SoundscapeType } from './PomodoroContext';
+import { usePomodoro, PresetName, TimerSettings, TimerMode, PetType, SoundscapeType, PetStage } from './PomodoroContext';
 import { useTasks } from '../TaskContext';
 import { isWithinInterval } from 'date-fns';
 import confetti from 'canvas-confetti';
@@ -29,6 +29,7 @@ const petStyles = `
   @keyframes glow-pulse { 0%, 100% { filter: drop-shadow(0 0 2px rgba(255,255,255,0.5)); } 50% { filter: drop-shadow(0 0 8px rgba(255,255,255,0.8)); } }
   @keyframes halo-spin { 0% { transform: rotate(0deg) scale(1); } 50% { transform: rotate(180deg) scale(1.1); } 100% { transform: rotate(360deg) scale(1); } }
   @keyframes sunburst { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+  @keyframes egg-wobble { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg); } }
 
   /* Classes */
   .pet-container { perspective: 1000px; }
@@ -39,6 +40,7 @@ const petStyles = `
   .pet-ear-L { animation: ear-wiggle 5s infinite 1s; transform-origin: bottom right; transform-box: fill-box; }
   .pet-ear-R { animation: ear-wiggle 5s infinite 2s; transform-origin: bottom left; transform-box: fill-box; }
   .pet-squish { animation: squish-happy 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+  .pet-wobble { animation: egg-wobble 2s ease-in-out infinite; transform-origin: bottom center; }
   .zzz-bubble { animation: sleep-bubble 3s linear infinite; }
   .love-popup { animation: pop-up 0.8s ease-out forwards; }
   .pet-glow { animation: glow-pulse 3s infinite; }
@@ -48,13 +50,14 @@ const petStyles = `
 // --- INTERACTIVE PET AVATAR ---
 interface PetAvatarProps {
     type: PetType;
+    stage: PetStage;
     status: 'sleeping' | 'awake' | 'celebrating';
     hasHalo?: boolean;
     onPet?: (e: React.MouseEvent) => void;
     scale?: number;
 }
 
-const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, hasHalo, onPet, scale = 1 }) => {
+const PetAvatar: React.FC<PetAvatarProps> = ({ type, stage, status, hasHalo, onPet, scale = 1 }) => {
     const [isInteracting, setIsInteracting] = useState(false);
 
     const handleClick = (e: React.MouseEvent) => {
@@ -67,177 +70,233 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, hasHalo, onPet, sca
 
     const containerClass = `w-40 h-40 overflow-visible cursor-pointer ${isInteracting ? 'pet-squish' : status === 'celebrating' ? 'animate-bounce' : 'pet-breathe'}`;
 
+    const NurseCap = () => (
+        <g transform="translate(70, 45) scale(0.8)">
+            <path d="M10 40 L20 10 L80 10 L90 40 Z" fill="white" stroke="#e2e8f0" strokeWidth="2" />
+            <rect x="45" y="18" width="10" height="14" fill="#ef4444" />
+            <rect x="37" y="22" width="26" height="6" fill="#ef4444" />
+        </g>
+    );
+
     // --- COSMIC CAT RENDERER (Blob Style) ---
-    const renderCat = () => (
-        <svg viewBox="0 0 200 200" className={containerClass} style={{ transform: `scale(${scale})` }}>
-            <defs>
-                <linearGradient id="catBody" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#f0abfc" /> {/* Pink-300 */}
-                    <stop offset="100%" stopColor="#c026d3" /> {/* Fuchsia-600 */}
-                </linearGradient>
-                <linearGradient id="catBelly" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#fdf4ff" /> 
-                    <stop offset="100%" stopColor="#fae8ff" /> 
-                </linearGradient>
-                <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-                    <feMerge>
-                        <feMergeNode in="coloredBlur" />
-                        <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                </filter>
-            </defs>
+    const renderCat = () => {
+        // EGG STAGE
+        if (stage === 'egg') {
+            return (
+                <svg viewBox="0 0 200 200" className={`${containerClass} pet-wobble`} style={{ transform: `scale(${scale})` }}>
+                    <defs>
+                        <linearGradient id="eggCat" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#f0abfc" />
+                            <stop offset="100%" stopColor="#c026d3" />
+                        </linearGradient>
+                    </defs>
+                    <ellipse cx="100" cy="120" rx="50" ry="65" fill="url(#eggCat)" stroke="#a21caf" strokeWidth="3" />
+                    {status === 'sleeping' && <text x="140" y="80" fontSize="24" className="zzz-bubble">Z</text>}
+                </svg>
+            );
+        }
 
-            {hasHalo && (
-                <ellipse cx="100" cy="60" rx="40" ry="10" fill="none" stroke="#fbbf24" strokeWidth="4" className="animate-[halo-spin_4s_linear_infinite]" style={{ transformOrigin: '100px 60px' }} />
-            )}
+        const isLegendary = stage === 'legendary';
+        const isBaby = stage === 'baby';
+        const scaleFactor = isBaby ? 0.7 : isLegendary ? 1.1 : 1;
 
-            {/* Tail */}
-            <path 
-                d="M160 150 Q 190 120 180 100 Q 170 80 150 120" 
-                fill="none" 
-                stroke="#d946ef" 
-                strokeWidth="12" 
-                strokeLinecap="round" 
-                className={status === 'sleeping' ? '' : 'pet-tail-slow'} 
-            />
+        return (
+            <svg viewBox="0 0 200 200" className={containerClass} style={{ transform: `scale(${scale * scaleFactor})` }}>
+                <defs>
+                    <linearGradient id="catBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#f0abfc" /> {/* Pink-300 */}
+                        <stop offset="100%" stopColor="#c026d3" /> {/* Fuchsia-600 */}
+                    </linearGradient>
+                    <linearGradient id="catBelly" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#fdf4ff" /> 
+                        <stop offset="100%" stopColor="#fae8ff" /> 
+                    </linearGradient>
+                    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+                        <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
 
-            {/* Body (Loaf Shape) */}
-            <g transform="translate(100, 130)">
-                <ellipse cx="0" cy="0" rx="70" ry="50" fill="url(#catBody)" filter="url(#glow)" />
-                <ellipse cx="0" cy="15" rx="40" ry="30" fill="url(#catBelly)" opacity="0.6" />
-            </g>
+                {hasHalo && (
+                    <ellipse cx="100" cy="60" rx="40" ry="10" fill="none" stroke="#fbbf24" strokeWidth="4" className="animate-[halo-spin_4s_linear_infinite]" style={{ transformOrigin: '100px 60px' }} />
+                )}
 
-            {/* Head Group */}
-            <g transform="translate(100, 95)">
-                {/* Ears */}
-                <path d="M-45 -20 L-55 -65 L-15 -35 Z" fill="url(#catBody)" stroke="#a21caf" strokeWidth="4" strokeLinejoin="round" className="pet-ear-L" />
-                <path d="M45 -20 L55 -65 L15 -35 Z" fill="url(#catBody)" stroke="#a21caf" strokeWidth="4" strokeLinejoin="round" className="pet-ear-R" />
-                
-                {/* Head Base */}
-                <ellipse cx="0" cy="0" rx="55" ry="45" fill="url(#catBody)" filter="url(#glow)" />
-                
-                {/* Face */}
-                {status === 'sleeping' ? (
-                    <g fill="none" stroke="#701a75" strokeWidth="3" strokeLinecap="round" transform="translate(0, 5)">
-                        <path d="M-25 0 Q-15 8 -5 0" /> {/* Left Eye Closed */}
-                        <path d="M5 0 Q15 8 25 0" />   {/* Right Eye Closed */}
-                        <path d="M-2 15 Q0 18 2 15" strokeWidth="2" /> {/* Mouth */}
-                    </g>
-                ) : (
-                    <g transform="translate(0, 5)">
-                        {/* Eyes Open */}
-                        <g fill="#4a044e">
-                            <ellipse cx="-20" cy="-5" rx="6" ry="8" className="pet-blink" />
-                            <ellipse cx="20" cy="-5" rx="6" ry="8" className="pet-blink" />
-                            <circle cx="-18" cy="-8" r="2" fill="white" />
-                            <circle cx="22" cy="-8" r="2" fill="white" />
+                {/* Tail */}
+                <path 
+                    d="M160 150 Q 190 120 180 100 Q 170 80 150 120" 
+                    fill="none" 
+                    stroke="#d946ef" 
+                    strokeWidth={isBaby ? "8" : "12"} 
+                    strokeLinecap="round" 
+                    className={status === 'sleeping' ? '' : 'pet-tail-slow'} 
+                />
+
+                {/* Body (Loaf Shape) */}
+                <g transform="translate(100, 130)">
+                    <ellipse cx="0" cy="0" rx={isBaby ? 50 : 70} ry={isBaby ? 35 : 50} fill="url(#catBody)" filter="url(#glow)" />
+                    <ellipse cx="0" cy="15" rx={isBaby ? 30 : 40} ry={isBaby ? 20 : 30} fill="url(#catBelly)" opacity="0.6" />
+                </g>
+
+                {/* Head Group */}
+                <g transform={`translate(100, ${isBaby ? 105 : 95})`}>
+                    {/* Ears */}
+                    <path d="M-45 -20 L-55 -65 L-15 -35 Z" fill="url(#catBody)" stroke="#a21caf" strokeWidth="4" strokeLinejoin="round" className="pet-ear-L" />
+                    <path d="M45 -20 L55 -65 L15 -35 Z" fill="url(#catBody)" stroke="#a21caf" strokeWidth="4" strokeLinejoin="round" className="pet-ear-R" />
+                    
+                    {/* Head Base */}
+                    <ellipse cx="0" cy="0" rx={isBaby ? 45 : 55} ry={isBaby ? 35 : 45} fill="url(#catBody)" filter="url(#glow)" />
+                    
+                    {/* Face */}
+                    {status === 'sleeping' ? (
+                        <g fill="none" stroke="#701a75" strokeWidth="3" strokeLinecap="round" transform="translate(0, 5)">
+                            <path d="M-25 0 Q-15 8 -5 0" /> {/* Left Eye Closed */}
+                            <path d="M5 0 Q15 8 25 0" />   {/* Right Eye Closed */}
+                            <path d="M-2 15 Q0 18 2 15" strokeWidth="2" /> {/* Mouth */}
                         </g>
-                        {/* Cheeks */}
-                        <circle cx="-35" cy="10" r="6" fill="#fbcfe8" opacity="0.6" />
-                        <circle cx="35" cy="10" r="6" fill="#fbcfe8" opacity="0.6" />
-                        {/* Mouth */}
-                        <path d="M-5 12 Q0 16 5 12" fill="none" stroke="#701a75" strokeWidth="3" strokeLinecap="round" />
+                    ) : (
+                        <g transform="translate(0, 5)">
+                            {/* Eyes Open */}
+                            <g fill="#4a044e">
+                                <ellipse cx="-20" cy="-5" rx={isBaby ? 8 : 6} ry={isBaby ? 10 : 8} className="pet-blink" />
+                                <ellipse cx="20" cy="-5" rx={isBaby ? 8 : 6} ry={isBaby ? 10 : 8} className="pet-blink" />
+                                <circle cx="-18" cy="-8" r="2" fill="white" />
+                                <circle cx="22" cy="-8" r="2" fill="white" />
+                            </g>
+                            {/* Cheeks */}
+                            <circle cx="-35" cy="10" r="6" fill="#fbcfe8" opacity="0.6" />
+                            <circle cx="35" cy="10" r="6" fill="#fbcfe8" opacity="0.6" />
+                            {/* Mouth */}
+                            <path d="M-5 12 Q0 16 5 12" fill="none" stroke="#701a75" strokeWidth="3" strokeLinecap="round" />
+                        </g>
+                    )}
+                </g>
+                
+                {isLegendary && <NurseCap />}
+
+                {/* ZZZ Particles */}
+                {status === 'sleeping' && (
+                    <g className="zzz-bubble" style={{ transformOrigin: '140px 60px' }}>
+                        <text x="140" y="60" fontSize="24" fill="#a855f7" fontWeight="bold" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>Z</text>
                     </g>
                 )}
-            </g>
-            
-            {/* ZZZ Particles */}
-            {status === 'sleeping' && (
-                <g className="zzz-bubble" style={{ transformOrigin: '140px 60px' }}>
-                    <text x="140" y="60" fontSize="24" fill="#a855f7" fontWeight="bold" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>Z</text>
-                </g>
-            )}
-        </svg>
-    );
+            </svg>
+        );
+    };
 
     // --- SUNNY DOGE RENDERER (Blob Style) ---
-    const renderDog = () => (
-        <svg viewBox="0 0 200 200" className={containerClass} style={{ transform: `scale(${scale})` }}>
-            <defs>
-                <linearGradient id="dogBody" x1="0%" y1="0%" x2="100%" y2="100%">
-                    <stop offset="0%" stopColor="#fcd34d" /> {/* Amber-300 */}
-                    <stop offset="100%" stopColor="#d97706" /> {/* Amber-600 */}
-                </linearGradient>
-                <linearGradient id="dogSnout" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#fffbeb" /> 
-                    <stop offset="100%" stopColor="#fef3c7" /> 
-                </linearGradient>
-                <filter id="glowDog" x="-20%" y="-20%" width="140%" height="140%">
-                    <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-                    <feMerge>
-                        <feMergeNode in="coloredBlur" />
-                        <feMergeNode in="SourceGraphic" />
-                    </feMerge>
-                </filter>
-            </defs>
+    const renderDog = () => {
+        // EGG STAGE
+        if (stage === 'egg') {
+            return (
+                <svg viewBox="0 0 200 200" className={`${containerClass} pet-wobble`} style={{ transform: `scale(${scale})` }}>
+                    <defs>
+                        <linearGradient id="eggDog" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#fcd34d" />
+                            <stop offset="100%" stopColor="#d97706" />
+                        </linearGradient>
+                    </defs>
+                    <ellipse cx="100" cy="120" rx="50" ry="65" fill="url(#eggDog)" stroke="#b45309" strokeWidth="3" />
+                    {status === 'sleeping' && <text x="140" y="80" fontSize="24" className="zzz-bubble">Z</text>}
+                </svg>
+            );
+        }
 
-            {hasHalo && (
-                <ellipse cx="100" cy="50" rx="40" ry="10" fill="none" stroke="#fbbf24" strokeWidth="4" className="animate-[halo-spin_4s_linear_infinite]" style={{ transformOrigin: '100px 50px' }} />
-            )}
+        const isLegendary = stage === 'legendary';
+        const isBaby = stage === 'baby';
+        const scaleFactor = isBaby ? 0.7 : isLegendary ? 1.1 : 1;
 
-            {/* Tail (Wagging) */}
-            <path 
-                d="M150 140 Q 170 110 180 130" 
-                fill="none" 
-                stroke="#b45309" 
-                strokeWidth="10" 
-                strokeLinecap="round" 
-                className={status === 'sleeping' ? '' : 'pet-tail-fast'} 
-            />
+        return (
+            <svg viewBox="0 0 200 200" className={containerClass} style={{ transform: `scale(${scale * scaleFactor})` }}>
+                <defs>
+                    <linearGradient id="dogBody" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#fcd34d" /> {/* Amber-300 */}
+                        <stop offset="100%" stopColor="#d97706" /> {/* Amber-600 */}
+                    </linearGradient>
+                    <linearGradient id="dogSnout" x1="0%" y1="0%" x2="0%" y2="100%">
+                        <stop offset="0%" stopColor="#fffbeb" /> 
+                        <stop offset="100%" stopColor="#fef3c7" /> 
+                    </linearGradient>
+                    <filter id="glowDog" x="-20%" y="-20%" width="140%" height="140%">
+                        <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+                        <feMerge>
+                            <feMergeNode in="coloredBlur" />
+                            <feMergeNode in="SourceGraphic" />
+                        </feMerge>
+                    </filter>
+                </defs>
 
-            {/* Body */}
-            <g transform="translate(100, 135)">
-                <rect x="-60" y="-45" width="120" height="90" rx="40" fill="url(#dogBody)" filter="url(#glowDog)" />
-                <ellipse cx="0" cy="10" rx="35" ry="25" fill="url(#dogSnout)" opacity="0.5" />
-            </g>
+                {hasHalo && (
+                    <ellipse cx="100" cy="50" rx="40" ry="10" fill="none" stroke="#fbbf24" strokeWidth="4" className="animate-[halo-spin_4s_linear_infinite]" style={{ transformOrigin: '100px 50px' }} />
+                )}
 
-            {/* Head Group */}
-            <g transform="translate(100, 90)">
-                {/* Ears */}
-                <path d="M-40 -35 L-50 -10 L-25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' || status === 'celebrating' ? 'pet-ear-L' : ''} />
-                <path d="M40 -35 L50 -10 L25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' || status === 'celebrating' ? 'pet-ear-R' : ''} />
+                {/* Tail (Wagging) */}
+                <path 
+                    d="M150 140 Q 170 110 180 130" 
+                    fill="none" 
+                    stroke="#b45309" 
+                    strokeWidth={isBaby ? "6" : "10"} 
+                    strokeLinecap="round" 
+                    className={status === 'sleeping' ? '' : 'pet-tail-fast'} 
+                />
 
-                {/* Head Base */}
-                <rect x="-50" y="-45" width="100" height="90" rx="35" fill="url(#dogBody)" filter="url(#glowDog)" />
-                
-                {/* Snout Area */}
-                <ellipse cx="0" cy="20" rx="35" ry="28" fill="url(#dogSnout)" />
+                {/* Body */}
+                <g transform="translate(100, 135)">
+                    <rect x={isBaby ? "-45" : "-60"} y={isBaby ? "-35" : "-45"} width={isBaby ? "90" : "120"} height={isBaby ? "70" : "90"} rx="40" fill="url(#dogBody)" filter="url(#glowDog)" />
+                    <ellipse cx="0" cy="10" rx={isBaby ? 25 : 35} ry={isBaby ? 18 : 25} fill="url(#dogSnout)" opacity="0.5" />
+                </g>
 
-                {/* Face */}
-                {status === 'sleeping' ? (
-                    <g fill="none" stroke="#78350f" strokeWidth="3" strokeLinecap="round" transform="translate(0, -5)">
-                        <path d="M-20 0 Q-10 5 0 0" />
-                        <path d="M0 0 Q10 5 20 0" />
-                        <circle cx="0" cy="15" r="5" fill="#451a03" stroke="none" />
-                    </g>
-                ) : (
-                    <g transform="translate(0, -5)">
-                        {/* Eyes */}
-                        <g fill="#451a03">
-                            <circle cx="-20" cy="-5" r="7" className="pet-blink" />
-                            <circle cx="20" cy="-5" r="7" className="pet-blink" />
-                            <circle cx="-18" cy="-8" r="2.5" fill="white" />
-                            <circle cx="22" cy="-8" r="2.5" fill="white" />
+                {/* Head Group */}
+                <g transform={`translate(100, ${isBaby ? 100 : 90})`}>
+                    {/* Ears */}
+                    <path d="M-40 -35 L-50 -10 L-25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' || status === 'celebrating' ? 'pet-ear-L' : ''} />
+                    <path d="M40 -35 L50 -10 L25 -5 Z" fill="#b45309" stroke="#92400e" strokeWidth="3" strokeLinejoin="round" className={status === 'awake' || status === 'celebrating' ? 'pet-ear-R' : ''} />
+
+                    {/* Head Base */}
+                    <rect x={isBaby ? "-40" : "-50"} y={isBaby ? "-35" : "-45"} width={isBaby ? "80" : "100"} height={isBaby ? "70" : "90"} rx="35" fill="url(#dogBody)" filter="url(#glowDog)" />
+                    
+                    {/* Snout Area */}
+                    <ellipse cx="0" cy="20" rx={isBaby ? 25 : 35} ry={isBaby ? 20 : 28} fill="url(#dogSnout)" />
+
+                    {/* Face */}
+                    {status === 'sleeping' ? (
+                        <g fill="none" stroke="#78350f" strokeWidth="3" strokeLinecap="round" transform="translate(0, -5)">
+                            <path d="M-20 0 Q-10 5 0 0" />
+                            <path d="M0 0 Q10 5 20 0" />
+                            <circle cx="0" cy="15" r="5" fill="#451a03" stroke="none" />
                         </g>
-                        {/* Nose */}
-                        <path d="M-8 15 Q0 10 8 15 Q0 25 -8 15" fill="#451a03" />
-                        {/* Mouth */}
-                        <path d="M0 25 L0 30 M-10 30 Q0 38 10 30" fill="none" stroke="#451a03" strokeWidth="3" strokeLinecap="round" />
-                        {/* Tongue */}
-                        <path d="M-5 35 Q0 45 5 35" fill="#ef4444" />
+                    ) : (
+                        <g transform="translate(0, -5)">
+                            {/* Eyes */}
+                            <g fill="#451a03">
+                                <circle cx="-20" cy="-5" r={isBaby ? 9 : 7} className="pet-blink" />
+                                <circle cx="20" cy="-5" r={isBaby ? 9 : 7} className="pet-blink" />
+                                <circle cx="-18" cy="-8" r="2.5" fill="white" />
+                                <circle cx="22" cy="-8" r="2.5" fill="white" />
+                            </g>
+                            {/* Nose */}
+                            <path d="M-8 15 Q0 10 8 15 Q0 25 -8 15" fill="#451a03" />
+                            {/* Mouth */}
+                            <path d="M0 25 L0 30 M-10 30 Q0 38 10 30" fill="none" stroke="#451a03" strokeWidth="3" strokeLinecap="round" />
+                            {/* Tongue */}
+                            <path d="M-5 35 Q0 45 5 35" fill="#ef4444" />
+                        </g>
+                    )}
+                </g>
+
+                {isLegendary && <NurseCap />}
+
+                {/* ZZZ Particles */}
+                {status === 'sleeping' && (
+                    <g className="zzz-bubble" style={{ transformOrigin: '140px 50px' }}>
+                        <text x="140" y="50" fontSize="24" fill="#f59e0b" fontWeight="bold" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>Z</text>
                     </g>
                 )}
-            </g>
-
-            {/* ZZZ Particles */}
-            {status === 'sleeping' && (
-                <g className="zzz-bubble" style={{ transformOrigin: '140px 50px' }}>
-                    <text x="140" y="50" fontSize="24" fill="#f59e0b" fontWeight="bold" style={{filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))'}}>Z</text>
-                </g>
-            )}
-        </svg>
-    );
+            </svg>
+        );
+    };
 
     return (
         <div 
@@ -251,9 +310,86 @@ const PetAvatar: React.FC<PetAvatarProps> = ({ type, status, hasHalo, onPet, sca
     );
 };
 
+// --- PET INFO MODAL ---
+const PetInfoModal = ({ onClose }: { onClose: () => void }) => {
+    return createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm animate-fade-in" onClick={onClose}>
+            <div className="bg-white dark:bg-slate-900 w-full max-w-lg rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 relative animate-zoom-in" onClick={e => e.stopPropagation()}>
+                
+                <div className="p-6 md:p-8 bg-gradient-to-br from-pink-50 to-purple-50 dark:from-pink-900/10 dark:to-purple-900/10 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex justify-between items-start">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-white dark:bg-slate-800 rounded-2xl shadow-sm text-pink-500">
+                                <Heart size={24} fill="currentColor" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Companion Guide</h3>
+                                <p className="text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest mt-1">Care & Evolution</p>
+                            </div>
+                        </div>
+                        <button onClick={onClose} className="p-2 bg-white/50 dark:bg-black/20 hover:bg-white dark:hover:bg-black/40 rounded-full transition-colors text-slate-500 dark:text-slate-400">
+                            <X size={20} />
+                        </button>
+                    </div>
+                </div>
+
+                <div className="p-6 md:p-8 space-y-8 overflow-y-auto custom-scrollbar max-h-[60vh]">
+                    {/* EVOLUTION CHAIN */}
+                    <div>
+                        <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+                            <Sparkles size={14} /> Evolution Stages
+                        </h4>
+                        <div className="space-y-4">
+                            {[
+                                { stage: 'Egg', time: '0 - 1 hr', desc: 'A new beginning.' },
+                                { stage: 'Baby', time: '1 - 5 hrs', desc: 'Needs constant attention.' },
+                                { stage: 'Child', time: '5 - 16 hrs', desc: 'Growing and learning.' },
+                                { stage: 'Teen', time: '16 - 40 hrs', desc: 'Developing personality.' },
+                                { stage: 'Legend', time: '40+ hrs', desc: 'Fully trained Nurse Companion.' }
+                            ].map((s, i) => (
+                                <div key={i} className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-100 dark:border-slate-700/50">
+                                    <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs ${i === 4 ? 'bg-amber-400 text-amber-900' : 'bg-slate-200 dark:bg-slate-700 text-slate-500'}`}>
+                                        {i + 1}
+                                    </div>
+                                    <div className="flex-1">
+                                        <div className="flex justify-between items-center">
+                                            <span className="font-bold text-slate-800 dark:text-white text-sm">{s.stage}</span>
+                                            <span className="font-mono text-xs text-pink-500 font-bold">{s.time}</span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 mt-0.5">{s.desc}</p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* MECHANICS */}
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 rounded-2xl bg-blue-50 dark:bg-blue-900/10 border border-blue-100 dark:border-blue-800">
+                            <Zap size={20} className="text-blue-500 mb-2" />
+                            <h5 className="font-bold text-slate-800 dark:text-white text-xs uppercase mb-1">Focus Energy</h5>
+                            <p className="text-[10px] text-slate-500 leading-relaxed">
+                                Your pet gains XP while the timer is running. Consistency is key to growth.
+                            </p>
+                        </div>
+                        <div className="p-4 rounded-2xl bg-amber-50 dark:bg-amber-900/10 border border-amber-100 dark:border-amber-800">
+                            <ShieldCheck size={20} className="text-amber-500 mb-2" />
+                            <h5 className="font-bold text-slate-800 dark:text-white text-xs uppercase mb-1">Integrity Halo</h5>
+                            <p className="text-[10px] text-slate-500 leading-relaxed">
+                                Completing sessions without quitting earns a golden halo. Integrity matters.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>,
+        document.body
+    );
+};
+
 // --- ENHANCED NOTIFICATION WINDOW ---
 const NotificationWindow = () => {
-    const { completionEvent, clearCompletionEvent, petType, petName, focusIntegrity, toggleTimer, stopSessionEarly, getPetMessage } = usePomodoro();
+    const { completionEvent, clearCompletionEvent, petType, petStage, focusIntegrity, toggleTimer, stopSessionEarly, getPetMessage } = usePomodoro();
     const [show, setShow] = useState(false);
     const [animationState, setAnimationState] = useState<'enter' | 'idle' | 'exit'>('enter');
 
@@ -360,7 +496,7 @@ const NotificationWindow = () => {
                     </div>
 
                     <div className="relative z-10 filter drop-shadow-2xl">
-                        <PetAvatar type={petType} status={petStatus} scale={1.3} hasHalo={focusIntegrity > 90} />
+                        <PetAvatar type={petType} stage={petStage} status={petStatus} scale={1.3} hasHalo={focusIntegrity > 90} />
                     </div>
                     {/* Sparkles */}
                     <Sparkles className={`absolute top-0 right-10 ${accentColor} animate-bounce`} size={24} />
@@ -404,12 +540,15 @@ const NotificationWindow = () => {
 
 // --- MAIN WIDGET ---
 const FocusPetWidget = () => {
-    const { isActive, mode, timeLeft, timerSettings, petType, setPetType, petName, setPetName, focusIntegrity, getPetMessage } = usePomodoro();
+    const { isActive, mode, timeLeft, timerSettings, petType, setPetType, petName, setPetName, petStage, totalFocusMinutes, focusIntegrity, getPetMessage } = usePomodoro();
     const [hearts, setHearts] = useState<{ id: number, x: number, y: number, r: number, content: React.ReactNode }[]>([]);
     
     // Rename State
     const [isEditingName, setIsEditingName] = useState(false);
     const [tempName, setTempName] = useState(petName);
+    
+    // Info Modal State
+    const [showInfo, setShowInfo] = useState(false);
 
     // Sync temp name when petName changes (e.g. switching pets)
     useEffect(() => {
@@ -494,7 +633,19 @@ const FocusPetWidget = () => {
         setIsEditingName(false);
     };
 
+    const getStageTitle = (s: PetStage) => {
+        switch(s) {
+            case 'egg': return 'Egg';
+            case 'baby': return 'Baby';
+            case 'child': return 'Child';
+            case 'teen': return 'Teen';
+            case 'legendary': return 'RN';
+            default: return '';
+        }
+    }
+
     return (
+        <>
         <div className="flex-1 flex flex-col bg-white/60 dark:bg-[#0f172a]/60 backdrop-blur-xl border border-slate-200 dark:border-slate-800 rounded-3xl p-4 shadow-sm relative overflow-hidden group min-h-[220px]">
             {/* Background Decor */}
             <div className={`absolute top-0 right-0 w-40 h-40 rounded-full blur-[60px] pointer-events-none transition-colors duration-1000 ${petType === 'cat' ? 'bg-pink-500/20' : 'bg-amber-500/20'}`}></div>
@@ -517,9 +668,23 @@ const FocusPetWidget = () => {
                 </button>
             </div>
 
+            {/* Level Badge & Info Trigger */}
+            <div className="absolute top-4 left-4 z-30 flex items-center gap-2">
+                <span className={`px-2 py-1 rounded-md text-[9px] font-black uppercase tracking-wider ${petType === 'cat' ? 'bg-pink-100 text-pink-700 dark:bg-pink-900/30 dark:text-pink-300' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300'}`}>
+                    Lvl: {getStageTitle(petStage)}
+                </span>
+                <button 
+                    onClick={() => setShowInfo(true)}
+                    className="p-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-blue-500 transition-colors"
+                    title="Guide"
+                >
+                    <Info size={12} />
+                </button>
+            </div>
+
             {/* Combo Counter */}
             {combo > 1 && (
-                <div className="absolute top-4 left-4 z-30 animate-bounce">
+                <div className="absolute top-10 left-4 z-30 animate-bounce">
                     <span className="bg-yellow-400 text-yellow-900 text-xs font-black px-2 py-1 rounded-full shadow-lg border-2 border-white transform -rotate-6 inline-block">
                         {combo}x COMBO!
                     </span>
@@ -570,7 +735,7 @@ const FocusPetWidget = () => {
                     )}
                 </div>
 
-                <PetAvatar type={petType} status={status} onPet={handlePetClick} hasHalo={focusIntegrity > 90} />
+                <PetAvatar type={petType} stage={petStage} status={status} onPet={handlePetClick} hasHalo={focusIntegrity > 90} />
                 
                 <div className="text-center -mt-2 relative z-20 pointer-events-none">
                     <h4 className="text-sm font-black text-slate-800 dark:text-white transition-colors duration-300 tracking-tight bg-white/50 dark:bg-black/50 px-3 py-1 rounded-full backdrop-blur-sm shadow-sm border border-white/20">
@@ -595,6 +760,10 @@ const FocusPetWidget = () => {
                 </div>
             </div>
         </div>
+        
+        {/* Info Modal */}
+        {showInfo && <PetInfoModal onClose={() => setShowInfo(false)} />}
+        </>
     );
 };
 
@@ -732,9 +901,14 @@ const Pomodoro: React.FC = () => {
   const incompleteTasks = tasks.filter(t => !t.completed).slice(0, 50);
 
   const handleInputChange = (field: keyof TimerSettings, value: string) => {
+      // Limit length to 3 digits to prevent overflow
+      if (value.length > 3) return;
+
       const parsed = parseInt(value);
       if (!isNaN(parsed) && parsed >= 0) {
           setCustomForm(prev => ({...prev, [field]: parsed * 60}));
+      } else if (value === '') {
+          setCustomForm(prev => ({...prev, [field]: 0}));
       }
   };
 
@@ -929,13 +1103,16 @@ const Pomodoro: React.FC = () => {
              {/* 4. FOCUS COMPANION PET (Fills space) */}
              <FocusPetWidget />
 
-             {/* 5. Video Anchor */}
+             {/* 5. Video Anchor (Cleaned up, no text) */}
              <div className="w-full aspect-video bg-black rounded-2xl overflow-hidden shadow-lg border border-slate-200 dark:border-slate-800 relative group shrink-0">
+                 {/* Only show label if empty */}
                  <div className="absolute top-2 left-2 z-20 bg-black/60 px-2 py-1 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
                      <div className="flex items-center gap-1 text-[9px] font-bold text-white uppercase"><Music size={10} /> Focus Cam</div>
                  </div>
-                 <div id="video-anchor" className="w-full h-full bg-slate-900 relative flex items-center justify-center text-slate-700">
-                     <span className="text-[9px] font-mono tracking-widest uppercase">Video Feed</span>
+                 
+                 {/* The Anchor itself - now empty of text to prevent overlap */}
+                 <div id="video-anchor" className="w-full h-full bg-slate-900 relative">
+                     {/* Placeholder icon if needed, but portal will cover */}
                  </div>
              </div>
         </div>
@@ -988,16 +1165,16 @@ const Pomodoro: React.FC = () => {
                   <form onSubmit={handleCustomSave} className="space-y-5">
                       <div className="space-y-1">
                           <label className="text-xs font-bold text-slate-500 uppercase">Focus (Minutes)</label>
-                          <input type="number" value={Math.floor(customForm.focus / 60) || ''} onChange={(e) => handleInputChange('focus', e.target.value)} className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white" min="1" max="120" />
+                          <input type="number" value={Math.floor(customForm.focus / 60) || ''} onChange={(e) => handleInputChange('focus', e.target.value)} className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white" min="1" max="180" />
                       </div>
                       <div className="grid grid-cols-2 gap-4">
                           <div className="space-y-1">
                               <label className="text-xs font-bold text-slate-500 uppercase">Short Break</label>
-                              <input type="number" value={Math.floor(customForm.shortBreak / 60) || ''} onChange={(e) => handleInputChange('shortBreak', e.target.value)} className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white" min="1" max="30" />
+                              <input type="number" value={Math.floor(customForm.shortBreak / 60) || ''} onChange={(e) => handleInputChange('shortBreak', e.target.value)} className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white" min="1" max="60" />
                           </div>
                           <div className="space-y-1">
                               <label className="text-xs font-bold text-slate-500 uppercase">Long Break</label>
-                              <input type="number" value={Math.floor(customForm.longBreak / 60) || ''} onChange={(e) => handleInputChange('longBreak', e.target.value)} className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white" min="1" max="60" />
+                              <input type="number" value={Math.floor(customForm.longBreak / 60) || ''} onChange={(e) => handleInputChange('longBreak', e.target.value)} className="w-full bg-slate-100 dark:bg-black/40 border border-slate-200 dark:border-slate-700 rounded-xl p-3 text-lg font-bold text-slate-800 dark:text-white" min="1" max="120" />
                           </div>
                       </div>
                       <button type="submit" className="w-full py-4 bg-pink-600 hover:bg-pink-500 text-white font-bold rounded-xl shadow-lg mt-4"><Save size={18} className="inline mr-2" /> Save & Apply</button>

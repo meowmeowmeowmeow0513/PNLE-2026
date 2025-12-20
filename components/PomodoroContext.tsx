@@ -1,14 +1,15 @@
 
-import React, { createContext, useContext, useState, useEffect, useRef, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useMemo, ReactNode } from 'react';
 import { useGamification } from '../hooks/useGamification';
 import { db } from '../firebase';
 import { useAuth } from '../AuthContext';
-import { collection, addDoc, query, orderBy, onSnapshot, deleteDoc, doc } from 'firebase/firestore';
-import { isSameDay } from 'date-fns';
+import { collection, query, orderBy, onSnapshot, doc, setDoc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { isSameDay, format } from 'date-fns';
 
 export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
 export type PetType = 'cat' | 'dog';
-export type SoundscapeType = 'brown' | 'white'; // Restricted as requested
+export type SoundscapeType = 'brown' | 'white';
+export type PetStage = 'egg' | 'baby' | 'child' | 'teen' | 'legendary';
 
 export interface TimerSettings {
   focus: number;
@@ -41,20 +42,21 @@ interface PomodoroContextType {
   soundscape: SoundscapeType;
   pipWindow: Window | null;
   petType: PetType;
-  petName: string; // Dynamic getter based on type
+  petName: string; 
   catName: string;
   dogName: string;
-  focusIntegrity: number; // 0-100 Score for accountability
+  petStage: PetStage; 
+  totalFocusMinutes: number; 
+  focusIntegrity: number; 
   completionEvent: { type: 'focus_complete' | 'break_complete' | 'goal_complete' | null, timestamp: number };
   clearCompletionEvent: () => void;
   
-  // Stats & History
   sessionHistory: PomodoroSession[];
-  dailyProgress: number; // Minutes
+  dailyProgress: number; 
   
   toggleTimer: () => void;
-  resetTimer: () => void; // Standard reset
-  stopSessionEarly: (save: boolean) => Promise<void>; // New: Handle early stop with option to save
+  resetTimer: () => void;
+  stopSessionEarly: (save: boolean) => Promise<void>;
   setPreset: (name: PresetName) => void;
   setCustomSettings: (settings: TimerSettings) => void;
   setSessionGoal: (goal: number) => void;
@@ -66,7 +68,7 @@ interface PomodoroContextType {
   skipForward: () => void;
   deleteSession: (id: string) => Promise<void>;
   setPetType: (type: PetType) => void;
-  setPetName: (name: string) => void; // Smart setter based on type
+  setPetName: (name: string) => void;
   getPetMessage: (status: 'focus' | 'break' | 'idle' | 'complete') => string;
 }
 
@@ -87,7 +89,6 @@ const DEFAULT_PRESETS: Record<PresetName, TimerSettings> = {
   custom: { focus: 45 * 60, shortBreak: 10 * 60, longBreak: 25 * 60 },
 };
 
-// Lowered to 10 seconds for testing/UX as requested
 const MIN_SAVE_DURATION = 10; 
 
 export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
@@ -103,21 +104,31 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       return saved ? JSON.parse(saved) : DEFAULT_PRESETS.custom;
   });
 
-  // --- PET STATE (Separate Names) ---
-  const [petType, setPetTypeState] = useState<PetType>(() => {
-      const saved = localStorage.getItem('pomodoro_pet_type');
-      return (saved as PetType) || 'cat';
-  });
+  // --- PET STATE (Synced to Firebase) ---
+  const [petType, setPetTypeState] = useState<PetType>('cat');
+  const [catName, setCatNameState] = useState<string>('Mochi');
+  const [dogName, setDogNameState] = useState<string>('Buddy');
 
-  const [catName, setCatName] = useState<string>(() => {
-      return localStorage.getItem('pomodoro_cat_name') || 'Mochi';
-  });
+  // Load Pet Prefs from Firestore
+  useEffect(() => {
+    if (!currentUser) return;
+    const fetchPetPrefs = async () => {
+        try {
+            const userRef = doc(db, 'users', currentUser.uid);
+            const snap = await getDoc(userRef);
+            if (snap.exists()) {
+                const data = snap.data();
+                if (data.petType) setPetTypeState(data.petType);
+                if (data.catName) setCatNameState(data.catName);
+                if (data.dogName) setDogNameState(data.dogName);
+            }
+        } catch (e) {
+            console.error("Error fetching pet prefs", e);
+        }
+    };
+    fetchPetPrefs();
+  }, [currentUser]);
 
-  const [dogName, setDogName] = useState<string>(() => {
-      return localStorage.getItem('pomodoro_dog_name') || 'Buddy';
-  });
-
-  // Derived Name
   const petName = petType === 'cat' ? catName : dogName;
 
   const [timerSettings, setTimerSettings] = useState<TimerSettings>(DEFAULT_PRESETS.classic);
@@ -128,31 +139,28 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [sessionsCompleted, setSessionsCompleted] = useState(0);
   const [focusTask, setFocusTask] = useState('');
   
-  // Audio & Ambience
   const [isBrownNoiseOn, setIsBrownNoiseOn] = useState(false);
   const [soundscape, setSoundscapeState] = useState<SoundscapeType>('brown');
   
   const [pipWindow, setPipWindow] = useState<Window | null>(null);
   
-  // --- ACCOUNTABILITY & EVENTS ---
-  const [focusIntegrity, setFocusIntegrity] = useState(100); // 0-100%
+  const [focusIntegrity, setFocusIntegrity] = useState(100); 
   const [completionEvent, setCompletionEvent] = useState<{ type: 'focus_complete' | 'break_complete' | 'goal_complete' | null, timestamp: number }>({ type: null, timestamp: 0 });
 
-  // --- ANALYTICS STATE ---
   const [sessionHistory, setSessionHistory] = useState<PomodoroSession[]>([]);
   const [dailyProgress, setDailyProgress] = useState(0);
 
   // --- REFS ---
   const endTimeRef = useRef<number | null>(null);
   const timerIdRef = useRef<number | null>(null);
-  const initialDurationRef = useRef<number>(DEFAULT_PRESETS.classic.focus); // Track full duration for elapsed calc
-  const startTimeRef = useRef<string | null>(null); // Track when session actually started
+  const initialDurationRef = useRef<number>(DEFAULT_PRESETS.classic.focus); 
+  const startTimeRef = useRef<string | null>(null); 
 
   const audioCtxRef = useRef<AudioContext | null>(null);
   const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const alarmIntervalRef = useRef<number | null>(null);
 
-  // --- DATABASE SYNC ---
+  // --- DATABASE SYNC (NEW: Daily Bucketing) ---
   useEffect(() => {
     if (!currentUser) {
         setSessionHistory([]);
@@ -160,18 +168,31 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         return;
     }
 
+    // New Collection: pomodoro_logs (Documents named by Date YYYY-MM-DD)
+    // Order by date descending to get recent days first
     const q = query(
-        collection(db, 'users', currentUser.uid, 'pomodoro_sessions'),
-        orderBy('createdAt', 'desc')
+        collection(db, 'users', currentUser.uid, 'pomodoro_logs'),
+        orderBy('date', 'desc')
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
-        const history = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as PomodoroSession));
-        setSessionHistory(history);
+        let allSessions: PomodoroSession[] = [];
+        
+        snapshot.docs.forEach(doc => {
+            const data = doc.data();
+            if (data.sessions && Array.isArray(data.sessions)) {
+                allSessions = [...allSessions, ...data.sessions];
+            }
+        });
 
-        // Calculate Daily Progress
+        // Sort all sessions descending by time (newest first)
+        allSessions.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+        
+        setSessionHistory(allSessions);
+
+        // Calc Daily Progress
         const today = new Date();
-        const todaysMinutes = history
+        const todaysMinutes = allSessions
             .filter(s => s.type === 'focus' && isSameDay(new Date(s.startTime), today))
             .reduce((acc, curr) => acc + curr.duration, 0) / 60;
         
@@ -181,26 +202,51 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     return () => unsubscribe();
   }, [currentUser]);
 
-  // --- HELPERS: SAVE SESSION ---
+  // --- DERIVED PET EVOLUTION ---
+  const totalFocusMinutes = useMemo(() => {
+      // Calculate total cumulative minutes from history
+      return sessionHistory
+          .filter(s => s.type === 'focus')
+          .reduce((acc, curr) => acc + curr.duration, 0) / 60;
+  }, [sessionHistory]);
+
+  const petStage = useMemo<PetStage>(() => {
+      if (totalFocusMinutes < 60) return 'egg';
+      if (totalFocusMinutes < 300) return 'baby';
+      if (totalFocusMinutes < 1000) return 'child';
+      if (totalFocusMinutes < 2500) return 'teen';
+      return 'legendary';
+  }, [totalFocusMinutes]);
+
+  // --- HELPERS: SAVE SESSION (EFFICIENT) ---
   const saveSession = async (duration: number, sessionType: TimerMode) => {
       if (!currentUser) return;
-      if (duration < MIN_SAVE_DURATION) {
-          console.log(`Session too short to save (${duration}s). Min required: ${MIN_SAVE_DURATION}s`);
-          return;
-      }
+      if (duration < MIN_SAVE_DURATION) return;
 
       try {
           const now = new Date();
           const start = startTimeRef.current ? new Date(startTimeRef.current) : new Date(now.getTime() - duration * 1000);
-          
-          await addDoc(collection(db, 'users', currentUser.uid, 'pomodoro_sessions'), {
+          const dateKey = format(start, 'yyyy-MM-dd');
+
+          const newSession: PomodoroSession = {
+              id: crypto.randomUUID(),
               startTime: start.toISOString(),
               endTime: now.toISOString(),
               duration: duration,
               type: sessionType,
               subject: focusTask || 'General Review',
               createdAt: now.toISOString()
-          });
+          };
+          
+          // Use arrayUnion on a daily document
+          // This creates the doc if it doesn't exist, or appends to array if it does
+          const docRef = doc(db, 'users', currentUser.uid, 'pomodoro_logs', dateKey);
+          
+          await setDoc(docRef, {
+              date: dateKey,
+              sessions: arrayUnion(newSession)
+          }, { merge: true });
+
       } catch (error) {
           console.error("Failed to save session:", error);
       }
@@ -209,14 +255,31 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const deleteSession = async (id: string) => {
       if (!currentUser) return;
       try {
-          await deleteDoc(doc(db, 'users', currentUser.uid, 'pomodoro_sessions', id));
+          // 1. Find the session in local state to know its date key
+          const sessionToDelete = sessionHistory.find(s => s.id === id);
+          if (!sessionToDelete) return;
+
+          const dateKey = format(new Date(sessionToDelete.startTime), 'yyyy-MM-dd');
+          const docRef = doc(db, 'users', currentUser.uid, 'pomodoro_logs', dateKey);
+
+          // 2. Read, Filter, Update (Reliable Array Removal)
+          // Note: arrayRemove only works if you have the EXACT object. Since we might miss fields or timestamps might differ slightly in serialization, 
+          // a read-modify-write is safer for deletion by ID.
+          const docSnap = await getDoc(docRef);
+          if (docSnap.exists()) {
+              const currentSessions = docSnap.data().sessions as PomodoroSession[];
+              const updatedSessions = currentSessions.filter(s => s.id !== id);
+              
+              await updateDoc(docRef, {
+                  sessions: updatedSessions
+              });
+          }
       } catch (error) {
           console.error("Failed to delete session", error);
       }
   };
 
   // --- TIMER LOGIC ---
-  
   const initTimer = (duration: number) => {
       initialDurationRef.current = duration;
       setTimeLeft(duration);
@@ -245,15 +308,14 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     setTimeLeft(remaining);
 
     if (remaining <= 0) {
-      handleComplete(false); // Natural completion
+      handleComplete(false); 
     }
   };
 
   const handleComplete = (wasSkipped: boolean) => {
     pauseTimer();
-    const elapsed = initialDurationRef.current; // Full duration completed
+    const elapsed = initialDurationRef.current; 
     
-    // Logic for next state
     let nextMode: TimerMode = 'focus';
     let nextTime = timerSettings.focus;
     let eventType: 'focus_complete' | 'break_complete' | 'goal_complete' = 'break_complete';
@@ -265,7 +327,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
             
             const newCompleted = sessionsCompleted + 1;
             setSessionsCompleted(newCompleted);
-            setFocusIntegrity(prev => Math.min(100, prev + 5)); // Reward integrity
+            setFocusIntegrity(prev => Math.min(100, prev + 5)); 
             
             if (newCompleted % sessionGoal === 0 && newCompleted > 0) {
                 eventType = 'goal_complete';
@@ -273,7 +335,6 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
                 eventType = 'focus_complete';
             }
             
-            // Trigger Animation Event
             setCompletionEvent({ type: eventType, timestamp: Date.now() });
         }
         
@@ -285,7 +346,6 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
             nextTime = timerSettings.shortBreak;
         }
     } else {
-        // Break ending
         if (!wasSkipped) {
             saveSession(elapsed, mode);
             setCompletionEvent({ type: 'break_complete', timestamp: Date.now() });
@@ -296,7 +356,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
 
     setMode(nextMode);
     initTimer(nextTime);
-    startTimeRef.current = null; // Reset start time for next session
+    startTimeRef.current = null;
 
     if (!wasSkipped) {
        startAlarmLoop();
@@ -308,14 +368,12 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   };
 
   // --- PUBLIC ACTIONS ---
-
   const toggleTimer = () => {
     if (isActive) pauseTimer();
     else startTimer();
   };
 
   const resetTimer = () => {
-    // Just reset to initial state of CURRENT mode
     pauseTimer();
     stopAlarm();
     initTimer(mode === 'focus' ? timerSettings.focus : mode === 'shortBreak' ? timerSettings.shortBreak : timerSettings.longBreak);
@@ -325,24 +383,19 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const stopSessionEarly = async (save: boolean) => {
       pauseTimer();
       stopAlarm();
-      
       const elapsed = initialDurationRef.current - timeLeft;
-      
       if (save) {
           await saveSession(elapsed, mode);
       } else {
-          // Penalize integrity for discarding valuable time
           setFocusIntegrity(prev => Math.max(0, prev - 10));
       }
-
-      // Reset to Focus Mode fresh start
       setMode('focus');
       initTimer(timerSettings.focus);
       startTimeRef.current = null;
   };
 
   const skipForward = () => {
-      handleComplete(true); // Treat as skip
+      handleComplete(true); 
       stopAlarm();
   };
 
@@ -371,20 +424,21 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setPetType = (type: PetType) => {
       setPetTypeState(type);
-      localStorage.setItem('pomodoro_pet_type', type);
+      if (currentUser) {
+          updateDoc(doc(db, 'users', currentUser.uid), { petType: type }).catch(console.error);
+      }
   }
 
   const setPetName = (name: string) => {
       if (petType === 'cat') {
-          setCatName(name);
-          localStorage.setItem('pomodoro_cat_name', name);
+          setCatNameState(name);
+          if (currentUser) updateDoc(doc(db, 'users', currentUser.uid), { catName: name }).catch(console.error);
       } else {
-          setDogName(name);
-          localStorage.setItem('pomodoro_dog_name', name);
+          setDogNameState(name);
+          if (currentUser) updateDoc(doc(db, 'users', currentUser.uid), { dogName: name }).catch(console.error);
       }
   }
 
-  // --- PET MESSAGING ---
   const getPetMessage = (status: 'focus' | 'break' | 'idle' | 'complete') => {
       if (petType === 'cat') {
           switch(status) {
@@ -423,18 +477,16 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         const data = buffer.getChannelData(0);
         
         if (soundscape === 'white') {
-            // White Noise Generation
             for (let i = 0; i < bufferSize; i++) {
                 data[i] = Math.random() * 2 - 1;
             }
         } else {
-            // Brown Noise Generation
             let lastOut = 0;
             for (let i = 0; i < bufferSize; i++) {
                 const white = Math.random() * 2 - 1;
                 data[i] = (lastOut + (0.02 * white)) / 1.02;
                 lastOut = data[i];
-                data[i] *= 3.5; // Gain compensation
+                data[i] *= 3.5; 
             }
         }
 
@@ -442,13 +494,12 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         source.buffer = buffer;
         source.loop = true;
         
-        // Filter mainly for brown noise to smooth it out further
         const filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
         filter.frequency.value = soundscape === 'white' ? 1000 : 400;
         
         const gain = ctx.createGain();
-        gain.gain.value = soundscape === 'white' ? 0.05 : 0.15; // White noise is harsher, needs lower gain
+        gain.gain.value = soundscape === 'white' ? 0.05 : 0.15; 
         
         source.connect(filter);
         filter.connect(gain);
@@ -477,10 +528,8 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
 
   const setSoundscape = (type: SoundscapeType) => {
       setSoundscapeState(type);
-      // Restart noise if currently playing to switch type
       if (isBrownNoiseOn) {
           stopNoise();
-          // Small timeout to allow stop to process
           setTimeout(() => {
               playNoise();
           }, 50);
@@ -513,7 +562,6 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
   };
 
-  // --- PIP ---
   const togglePiP = async () => {
       if (pipWindow) {
           pipWindow.close();
@@ -523,9 +571,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       if ('documentPictureInPicture' in window) {
           try {
               // @ts-ignore
-              // Smaller default size for cleaner Mini Mode (220px)
               const win = await window.documentPictureInPicture.requestWindow({ width: 220, height: 220 });
-              // Copy styles
               Array.from(document.styleSheets).forEach((styleSheet) => {
                 try {
                   if (styleSheet.cssRules) {
@@ -573,6 +619,8 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     petName,
     catName,
     dogName,
+    petStage,
+    totalFocusMinutes,
     focusIntegrity,
     completionEvent,
     clearCompletionEvent,

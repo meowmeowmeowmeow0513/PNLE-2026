@@ -58,59 +58,25 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
     toggleTimer, togglePiP, timerSettings, petType
   } = usePomodoro();
 
-  const [playerStyle, setPlayerStyle] = useState<React.CSSProperties>({
-      position: 'fixed',
-      bottom: 0,
-      right: 0,
-      width: '1px',
-      height: '1px',
-      opacity: 0,
-      pointerEvents: 'none',
-      zIndex: -1
-  });
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
+  // Poll for the anchor element when activeItem is 'Pomodoro Timer'
   useEffect(() => {
-    let animationFrameId: number;
-
-    const syncPosition = () => {
-        const anchor = document.getElementById('video-anchor');
-        
-        if (activeItem === 'Pomodoro Timer' && anchor) {
-            const rect = anchor.getBoundingClientRect();
-            if (rect.width > 0 && rect.height > 0) {
-                setPlayerStyle({
-                    position: 'fixed',
-                    top: `${rect.top}px`,
-                    left: `${rect.left}px`,
-                    width: `${rect.width}px`,
-                    height: `${rect.height}px`,
-                    opacity: 1,
-                    zIndex: 40,
-                    borderRadius: '0.75rem',
-                    overflow: 'hidden',
-                    boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
-                    pointerEvents: 'auto',
-                    transition: 'none'
-                });
-            }
-        } 
-        else {
-            setPlayerStyle({
-                position: 'fixed',
-                bottom: '10px',
-                right: '10px',
-                width: '1px',
-                height: '1px',
-                opacity: 0,
-                zIndex: -1,
-                pointerEvents: 'none'
-            });
-        }
-        animationFrameId = requestAnimationFrame(syncPosition);
-    };
-
-    syncPosition();
-    return () => cancelAnimationFrame(animationFrameId);
+      let interval: number;
+      if (activeItem === 'Pomodoro Timer') {
+          const checkAnchor = () => {
+              const el = document.getElementById('video-anchor');
+              if (el && el !== anchorEl) {
+                  setAnchorEl(el);
+              }
+          };
+          // Check immediately and then poll briefly to catch layout shifts
+          checkAnchor();
+          interval = window.setInterval(checkAnchor, 500);
+      } else {
+          setAnchorEl(null);
+      }
+      return () => clearInterval(interval);
   }, [activeItem]);
 
   const formatTime = (seconds: number) => {
@@ -126,7 +92,7 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progress * circumference);
 
-  // --- CONTENT FOR PIP WINDOW (Styled to match Main App) ---
+  // --- CONTENT FOR PIP WINDOW ---
   const PiPContent = pipWindow ? createPortal(
     <div className={`flex flex-col items-center justify-center h-full w-full relative p-2 font-sans overflow-hidden ${mode === 'focus' ? 'bg-[#020617]' : 'bg-[#0f172a]'}`}>
         
@@ -193,29 +159,50 @@ const GlobalYoutubePlayer: React.FC<GlobalYoutubePlayerProps> = ({ activeItem })
     pipWindow.document.body
   ) : null;
 
+  // The actual video element with Glassmorphism
+  const PlayerElement = (
+      <div className="w-full h-full relative group rounded-2xl overflow-hidden shadow-2xl border border-white/10 bg-black/40 backdrop-blur-xl">
+          <iframe 
+              width="100%" 
+              height="100%" 
+              src="https://www.youtube.com/embed/rFRpnSxTWR0?list=PLxoZGx3mVZsxJgQlgxSOBn6zCONGfl6Tm&enablejsapi=1&controls=1&autoplay=0&loop=1" 
+              title="Focus Station" 
+              frameBorder="0"
+              allow="autoplay; encrypted-media; picture-in-picture"
+              className="w-full h-full object-cover"
+          />
+          
+          {/* Glass Overlay (Pointer events none so you can click video) */}
+          <div className="absolute inset-0 ring-1 ring-white/10 rounded-2xl pointer-events-none"></div>
+
+          {activeItem === 'Pomodoro Timer' && (
+              <button 
+                  onClick={togglePiP}
+                  className="absolute top-3 right-3 p-2 bg-black/60 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-pink-500 backdrop-blur-md z-50 border border-white/20 shadow-lg"
+                  title="Pop Out Widget"
+              >
+                  <MonitorPlay size={16} />
+              </button>
+          )}
+      </div>
+  );
+
   return (
     <>
-        <div style={playerStyle} className="group bg-black">
-            <iframe 
-                width="100%" 
-                height="100%" 
-                src="https://www.youtube.com/embed/rFRpnSxTWR0?list=PLxoZGx3mVZsxJgQlgxSOBn6zCONGfl6Tm&enablejsapi=1&controls=1&autoplay=0&loop=1" 
-                title="Focus Station" 
-                frameBorder="0"
-                allow="autoplay; encrypted-media; picture-in-picture"
-                className="w-full h-full object-cover"
-            />
-            {activeItem === 'Pomodoro Timer' && (
-                <button 
-                    onClick={togglePiP}
-                    className="absolute top-3 right-3 p-2 bg-black/60 text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity hover:bg-pink-50 backdrop-blur-md z-50"
-                    title="Pop Out Widget"
-                >
-                    <MonitorPlay size={16} />
-                </button>
-            )}
-        </div>
+        {/* 
+            Strategy:
+            1. If Pomodoro is active AND anchor is found, PORTAL the video into the anchor.
+            2. If Pomodoro is NOT active OR anchor missing, render hidden fixed div to keep audio playing.
+        */}
+        {activeItem === 'Pomodoro Timer' && anchorEl ? (
+            createPortal(PlayerElement, anchorEl)
+        ) : (
+            <div style={{ position: 'fixed', bottom: 0, right: 0, width: 1, height: 1, opacity: 0, pointerEvents: 'none', zIndex: -1 }}>
+                {PlayerElement}
+            </div>
+        )}
 
+        {/* Global Floating Controls (Only if NOT in Pomodoro tab and NOT PiP) */}
         {activeItem !== 'Pomodoro Timer' && isActive && !pipWindow && (
             <div className="fixed bottom-6 right-6 z-[999] animate-in slide-in-from-bottom-10 fade-in duration-500">
                 <div className="bg-white/10 dark:bg-slate-900/90 backdrop-blur-xl border border-slate-200/20 dark:border-white/10 p-2 pr-4 rounded-full shadow-2xl flex items-center gap-4 group hover:scale-105 transition-transform cursor-move">
