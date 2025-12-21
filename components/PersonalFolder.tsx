@@ -199,7 +199,7 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                         <h1 className={`
                             font-black tracking-tighter mb-6 ${t.textGradient} pb-4 inline-block
                             text-5xl leading-tight
-                            landscape:text-4xl landscape:leading-tight
+                            landscape:text-3xl landscape:leading-tight
                             md:text-7xl md:leading-tight
                             md:landscape:text-[6rem] md:landscape:leading-[1.3]
                             lg:text-[9rem] lg:leading-[1.4]
@@ -211,7 +211,7 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                         <p className={`
                             font-medium ${t.textSub} italic mt-4
                             text-xl
-                            landscape:text-lg
+                            landscape:text-sm
                             md:text-3xl
                             lg:text-4xl
                         `}>
@@ -230,13 +230,13 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                         <div className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 md:w-96 md:h-96 ${themeClass === 'crescere' ? 'bg-rose-400' : 'bg-pink-400'} opacity-20 blur-[120px] rounded-full`}></div>
                         
                         <h1 className={`
-                            relative font-black tracking-tighter leading-tight mb-6 ${t.textMain} text-balance pb-4
-                            text-6xl
-                            landscape:text-5xl
-                            md:text-8xl
+                            relative font-black tracking-tighter mb-6 ${t.textMain} text-balance pb-4
+                            text-6xl leading-tight
+                            landscape:text-4xl landscape:leading-tight
+                            md:text-8xl md:leading-tight
                             md:landscape:text-[7rem]
-                            lg:text-[12rem]
-                            xl:text-[15rem]
+                            lg:text-[12rem] lg:leading-[1.1]
+                            xl:text-[15rem] xl:leading-[1.1]
                         `}>
                             Kahit mahirap,<br/>
                             <span className={t.accent}>lumaban ka.</span>
@@ -244,7 +244,7 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                         <p className={`
                             font-bold uppercase tracking-[0.4em] ${t.textSub} mt-4
                             text-sm
-                            landscape:text-xs
+                            landscape:text-[10px]
                             md:text-xl
                             lg:text-2xl
                         `}>
@@ -265,7 +265,8 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                     
                     {/* MASSIVE TEXT with inline-block to prevent clipping */}
                     <h1 className={`
-                        font-black tracking-tighter leading-[0.8] ${t.textMain} opacity-90 drop-shadow-sm pb-4
+                        font-black tracking-tighter ${t.textMain} opacity-90 drop-shadow-sm pb-4
+                        leading-[0.9] lg:leading-none
                         text-[20vw]
                         landscape:text-[20vh] 
                         md:text-[12rem]
@@ -293,27 +294,28 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                 >
                     {/* 
                        LAYOUT FIX:
-                       - Flex Row for Landscape (Mobile/Tablet/PC)
-                       - Flex Col for Portrait
-                       - Gaps optimized so they are not "mad at each other"
-                       - Text aligns towards button
+                       - Mobile Landscape: Flex Row (Compact height optimization)
+                       - Desktop/Tablet: Reverted to Flex Col (Standard Cinematic view)
                     */}
-                    <div className="flex flex-col landscape:flex-row items-center justify-center gap-8 landscape:gap-4 lg:gap-12 w-full max-w-[95vw]">
+                    <div className="flex flex-col landscape:flex-row lg:flex-col items-center justify-center gap-8 landscape:gap-4 lg:gap-12 w-full max-w-[95vw]">
                         
-                        {/* Text Block - Right aligned in landscape to hug button */}
-                        <div className="text-center landscape:text-right flex flex-col items-center landscape:items-end min-w-0">
-                            <div className={`inline-flex items-center gap-2 mb-6 px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest border backdrop-blur-md ${themeClass === 'crescere' ? 'bg-white/50 border-rose-200 text-rose-600' : themeClass === 'dark' ? 'bg-pink-500/10 border-pink-500/20 text-pink-300' : 'bg-pink-50 border-pink-200 text-pink-600'}`}>
+                        {/* Text Block 
+                           - Mobile Landscape: Right Align (To sit next to button)
+                           - Desktop: Center Align (Resetting the landscape override)
+                        */}
+                        <div className="text-center landscape:text-right lg:text-center flex flex-col items-center landscape:items-end lg:items-center min-w-0">
+                            <div className={`inline-flex items-center gap-2 mb-6 landscape:mb-2 lg:mb-6 px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-widest border backdrop-blur-md ${themeClass === 'crescere' ? 'bg-white/50 border-rose-200 text-rose-600' : themeClass === 'dark' ? 'bg-pink-500/10 border-pink-500/20 text-pink-300' : 'bg-pink-50 border-pink-200 text-pink-600'}`}>
                                 <Fingerprint size={14} /> Identity Verified
                             </div>
                             
                             <h1 className={`
-                                font-black tracking-tighter leading-[0.9] mb-4 ${t.textMain} text-balance pb-4
-                                text-5xl
-                                landscape:text-5xl
+                                font-black tracking-tighter mb-4 landscape:mb-1 lg:mb-4 ${t.textMain} text-balance pb-4
+                                text-5xl leading-[0.9]
+                                landscape:text-3xl landscape:leading-[0.9]
                                 md:text-8xl
                                 md:landscape:text-[7rem]
-                                lg:text-[11rem]
-                                xl:text-[14rem]
+                                lg:text-[11rem] lg:leading-[1.1]
+                                xl:text-[14rem] xl:leading-[1.1]
                             `}>
                                 MANIFESTING:<br/>
                                 <span className={`${t.textGradient} inline-block`}>
@@ -324,7 +326,7 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                             <p className={`
                                 font-medium opacity-80 max-w-lg ${t.textSub} text-balance
                                 text-sm
-                                landscape:text-xs
+                                landscape:text-[10px]
                                 md:text-xl
                                 lg:text-2xl
                             `}>
@@ -332,10 +334,13 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                             </p>
                         </div>
 
-                        {/* Button Block - Left aligned in landscape to hug text */}
-                        <div className="shrink-0 flex justify-center relative">
-                            {/* Adjusted position for portrait to avoid text overlap */}
-                            <div className="absolute -left-14 top-2 landscape:-top-8 landscape:-left-8 text-4xl animate-bounce select-none filter drop-shadow-sm opacity-90">🌸</div>
+                        {/* Button Block 
+                           - Mobile Landscape: Left padding to separate from text
+                           - Desktop: No padding (Centered stack)
+                        */}
+                        <div className="shrink-0 flex justify-center relative landscape:pl-4 lg:pl-0">
+                            {/* Adjusted position for portrait vs landscape vs desktop */}
+                            <div className={`absolute -left-14 top-2 landscape:-top-4 landscape:-left-4 lg:top-2 lg:-left-16 text-4xl animate-bounce select-none filter drop-shadow-sm opacity-90`}>🌸</div>
                             
                             <button 
                                 onClick={onComplete}
@@ -346,7 +351,7 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                                     hover:scale-110 active:scale-95
                                     ${t.button}
                                     w-24 h-24
-                                    landscape:w-24 landscape:h-24
+                                    landscape:w-20 landscape:h-20
                                     md:w-40 md:h-40
                                     ${isLongName 
                                         ? 'md:landscape:w-36 md:landscape:h-36 lg:w-44 lg:h-44 xl:w-52 xl:h-52' 
@@ -358,7 +363,7 @@ const AscensionIntro: React.FC<{ onComplete: () => void; name: string }> = ({ on
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 -translate-x-full group-hover:animate-[shine_1s_ease-in-out_infinite]"></div>
                                 )}
 
-                                <Play size={40} className="fill-current ml-1 md:w-20 md:h-20 lg:w-24 lg:h-24 relative z-10 transition-transform group-hover:scale-110" />
+                                <Play size={40} className="fill-current ml-1 md:w-20 md:h-20 lg:w-24 lg:h-24 landscape:w-8 landscape:h-8 md:landscape:w-20 md:landscape:h-20 relative z-10 transition-transform group-hover:scale-110" />
                                 <span className="text-[10px] md:text-sm lg:text-base font-black uppercase tracking-widest mt-1 relative z-10">Enter</span>
                                 
                                 <span className="absolute inset-0 rounded-full border border-white/50 animate-ping opacity-50"></span>

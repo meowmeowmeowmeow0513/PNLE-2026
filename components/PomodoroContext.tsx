@@ -45,6 +45,7 @@ interface PomodoroContextType {
   petName: string; 
   catName: string;
   dogName: string;
+  petColor: string; // NEW
   petStage: PetStage; 
   totalFocusMinutes: number; 
   focusIntegrity: number; 
@@ -69,6 +70,7 @@ interface PomodoroContextType {
   deleteSession: (id: string) => Promise<void>;
   setPetType: (type: PetType) => void;
   setPetName: (name: string) => void;
+  setPetColor: (color: string) => void; // NEW
   getPetMessage: (status: 'focus' | 'break' | 'idle' | 'complete') => string;
 }
 
@@ -108,6 +110,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [petType, setPetTypeState] = useState<PetType>('cat');
   const [catName, setCatNameState] = useState<string>('Mochi');
   const [dogName, setDogNameState] = useState<string>('Buddy');
+  const [petColor, setPetColorState] = useState<string>('auto'); // Default to 'auto' to match theme
 
   // Load Pet Prefs from Firestore
   useEffect(() => {
@@ -121,6 +124,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
                 if (data.petType) setPetTypeState(data.petType);
                 if (data.catName) setCatNameState(data.catName);
                 if (data.dogName) setDogNameState(data.dogName);
+                if (data.petColor) setPetColorState(data.petColor);
             }
         } catch (e) {
             console.error("Error fetching pet prefs", e);
@@ -439,6 +443,13 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
   }
 
+  const setPetColor = (color: string) => {
+      setPetColorState(color);
+      if (currentUser) {
+          updateDoc(doc(db, 'users', currentUser.uid), { petColor: color }).catch(console.error);
+      }
+  }
+
   const getPetMessage = (status: 'focus' | 'break' | 'idle' | 'complete') => {
       if (petType === 'cat') {
           switch(status) {
@@ -619,6 +630,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     petName,
     catName,
     dogName,
+    petColor, // NEW
     petStage,
     totalFocusMinutes,
     focusIntegrity,
@@ -641,6 +653,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     deleteSession,
     setPetType,
     setPetName,
+    setPetColor, // NEW
     getPetMessage
   };
 

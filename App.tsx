@@ -84,7 +84,7 @@ const AppContent: React.FC = () => {
       case 'Clinical Tools':
         return <ClinicalTools />;
       case 'Resource Hub':
-        return <Resources />;
+        return <Resources isSidebarExpanded={!sidebarMinimized} />;
       case 'Exam TOS':
         return <ExamTOS />;
       case 'Personal Folder':

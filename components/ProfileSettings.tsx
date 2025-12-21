@@ -394,20 +394,52 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                                                         </button>
                                                     ))}
                                                 </div>
+                                                
+                                                {/* Custom Hex Input Area */}
                                                 <div className="relative group">
                                                     <div className="flex items-center gap-4 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 transition-colors">
-                                                        <div className="relative w-12 h-12 md:w-14 md:h-14 rounded-full overflow-hidden border-4 border-white dark:border-slate-700 shadow-lg flex-shrink-0 ring-2 ring-slate-100 dark:ring-slate-800">
+                                                        
+                                                        {/* Visual Preview / Color Picker */}
+                                                        <div className="relative w-14 h-14 rounded-2xl overflow-hidden border-2 border-slate-200 dark:border-slate-700 shadow-inner flex-shrink-0 cursor-pointer group-hover:scale-105 transition-transform">
                                                             <div className="absolute inset-0" style={{ backgroundColor: accentColor }} />
-                                                            <input type="color" value={accentColor} onChange={(e) => setAccentColor(e.target.value)} className="absolute inset-0 w-[200%] h-[200%] p-0 -top-1/2 -left-1/2 cursor-pointer opacity-0" />
+                                                            <input 
+                                                                type="color" 
+                                                                value={accentColor} 
+                                                                onChange={(e) => setAccentColor(e.target.value)} 
+                                                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" 
+                                                            />
                                                         </div>
+
+                                                        {/* Text Input */}
                                                         <div className="flex-1 min-w-0">
-                                                            <label className="text-sm font-bold text-slate-900 dark:text-white block mb-1">Custom Hex</label>
-                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                <span className="font-mono text-xs bg-white dark:bg-slate-900 px-2 py-1 rounded border border-slate-200 dark:border-slate-700 text-slate-500 uppercase">{accentColor}</span>
-                                                                <span className="text-[10px] text-slate-400">Tap circle to edit</span>
+                                                            <label className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1.5 block">Custom Hex Code</label>
+                                                            <div className="flex items-center bg-white dark:bg-slate-900 rounded-xl px-3 py-2 border border-slate-200 dark:border-slate-700 focus-within:border-pink-500 focus-within:ring-2 focus-within:ring-pink-500/20 transition-all">
+                                                                <span className="text-slate-400 font-mono text-base mr-1 select-none">#</span>
+                                                                <input 
+                                                                    type="text" 
+                                                                    value={accentColor.replace('#', '')} 
+                                                                    onChange={(e) => {
+                                                                        const val = e.target.value;
+                                                                        // Allow hex chars only, max 6 chars
+                                                                        if (/^[0-9A-Fa-f]*$/.test(val) && val.length <= 6) {
+                                                                            // Only update if empty (allow typing) or valid length if you want realtime, 
+                                                                            // but css vars usually need full hex. 
+                                                                            // We update state immediately to allow typing. 
+                                                                            // ThemeContext should handle invalid hex gracefully or we append #
+                                                                            setAccentColor(`#${val}`);
+                                                                        }
+                                                                    }}
+                                                                    maxLength={6}
+                                                                    className="bg-transparent border-none p-0 text-base font-mono font-bold text-slate-800 dark:text-white focus:ring-0 w-full uppercase placeholder-slate-300 dark:placeholder-slate-600"
+                                                                    placeholder="FFFFFF"
+                                                                />
                                                             </div>
                                                         </div>
-                                                        <Palette size={20} className="text-slate-300 shrink-0" />
+                                                        
+                                                        {/* Icon */}
+                                                        <div className="hidden sm:flex p-3 bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-100 dark:border-slate-700 text-slate-400">
+                                                             <Palette size={20} />
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>

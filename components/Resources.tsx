@@ -1,6 +1,7 @@
 
 import React, { useState } from 'react';
-import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Globe, X, Link as LinkIcon, Send, Check, Loader2, AlertCircle, Library, PlayCircle, GraduationCap, LayoutGrid } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ExternalLink, Video, FileText, Layers, Folder, Plus, Search, Star, Book, Sparkles, ArrowRight, Globe, X, Link as LinkIcon, Send, Check, Loader2, AlertCircle, Library, PlayCircle, GraduationCap, LayoutGrid, Lock, KeyRound } from 'lucide-react';
 import { ResourceLink } from '../types';
 import { db } from '../firebase';
 import { collection, addDoc } from 'firebase/firestore';
@@ -14,7 +15,11 @@ interface EnhancedResource extends ResourceLink {
   color: string;
 }
 
-const Resources: React.FC = () => {
+interface ResourcesProps {
+    isSidebarExpanded?: boolean;
+}
+
+const Resources: React.FC<ResourcesProps> = ({ isSidebarExpanded = true }) => {
   const { currentUser } = useAuth();
   const { themeMode } = useTheme();
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,20 +27,29 @@ const Resources: React.FC = () => {
   // Modal States
   const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
   const [isWebsitesModalOpen, setIsWebsitesModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
   // Request Form State
   const [requestForm, setRequestForm] = useState({ title: '', url: '', type: 'Website' });
   const [requestStatus, setRequestStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [errorMessage, setErrorMessage] = useState('');
 
+  // Password State
+  const [passwordInput, setPasswordInput] = useState('');
+  const [passwordError, setPasswordError] = useState(false);
+
   const isCrescere = themeMode === 'crescere';
+  
+  // Protected Link Data
+  const DRIVE_URL = 'https://drive.google.com/drive/folders/1pRgtdnEXRKk5eA8YLTp8wohQRIRVUxZ9?usp=sharing';
+  const ACCESS_PASSWORD = 'TATAKUERMCRESCERE';
 
   const resources: EnhancedResource[] = [
     {
       id: '1',
       title: 'Google Drive Repository',
       description: 'The master vault. Access previous batch reviewers, PDFs, transes, and shared class folders.',
-      url: 'https://drive.google.com/drive/folders/1pRgtdnEXRKk5eA8YLTp8wohQRIRVUxZ9?usp=sharing',
+      url: '#protected-drive', // Changed to trigger modal
       iconName: 'drive',
       tags: ['ESSENTIAL', 'ARCHIVE'],
       featured: true,
@@ -269,6 +283,18 @@ const Resources: React.FC = () => {
     }
   };
 
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (passwordInput === ACCESS_PASSWORD) {
+        window.open(DRIVE_URL, '_blank');
+        setIsPasswordModalOpen(false);
+        setPasswordInput('');
+        setPasswordError(false);
+    } else {
+        setPasswordError(true);
+    }
+  };
+
   const filteredResources = resources.filter(r => 
     r.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
     r.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -330,8 +356,14 @@ const Resources: React.FC = () => {
       {featuredResource && !searchQuery && (
         <a 
           href={featuredResource.url}
-          target="_blank"
+          target={featuredResource.url.startsWith('#') ? undefined : "_blank"}
           rel="noopener noreferrer"
+          onClick={(e) => {
+             if (featuredResource.url === '#protected-drive') {
+                 e.preventDefault();
+                 setIsPasswordModalOpen(true);
+             }
+          }}
           className="relative group block w-full rounded-[2.5rem] overflow-hidden shadow-2xl transition-all hover:shadow-[0_20px_60px_-15px_rgba(59,130,246,0.3)] hover:-translate-y-1 duration-500 transform-gpu will-change-transform"
         >
           {/* Dynamic Background */}
@@ -339,31 +371,34 @@ const Resources: React.FC = () => {
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 mix-blend-overlay"></div>
           <div className="absolute -right-20 -top-20 w-[600px] h-[600px] bg-white/10 rounded-full blur-[100px] group-hover:bg-white/20 transition-colors duration-700 pointer-events-none"></div>
           
-          <div className="relative z-10 p-8 md:p-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
-            <div className="flex flex-col md:flex-row items-start gap-8">
-              <div className="w-24 h-24 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-inner border border-white/20 text-white shrink-0 group-hover:scale-110 transition-transform duration-500">
-                {getIcon(featuredResource.iconName, "w-12 h-12")}
+          <div className="relative z-10 p-6 sm:p-8 md:p-12 flex flex-col md:flex-row items-start md:items-center justify-between gap-6 md:gap-8">
+            <div className="flex flex-col sm:flex-row items-start gap-6 md:gap-8 w-full">
+              <div className="w-20 h-20 sm:w-24 sm:h-24 bg-white/20 backdrop-blur-md rounded-3xl flex items-center justify-center shadow-inner border border-white/20 text-white shrink-0 group-hover:scale-110 transition-transform duration-500">
+                {getIcon(featuredResource.iconName, "w-10 h-10 sm:w-12 sm:h-12")}
               </div>
-              <div>
-                <div className="flex items-center gap-2 mb-3">
-                  <span className="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-sm">
+              <div className="w-full min-w-0">
+                <div className="flex flex-wrap items-center gap-2 mb-3">
+                  <span className="bg-yellow-400 text-yellow-900 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-widest flex items-center gap-1 shadow-sm whitespace-nowrap">
                     <Star size={10} fill="currentColor" /> Featured
                   </span>
                   {featuredResource.tags.map(tag => (
-                    <span key={tag} className="bg-white/10 text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/10 uppercase tracking-widest">
+                    <span key={tag} className="bg-white/10 text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/10 uppercase tracking-widest whitespace-nowrap">
                       {tag}
                     </span>
                   ))}
+                  <span className="bg-white/20 text-white text-[10px] font-bold px-2.5 py-1 rounded-full border border-white/10 uppercase tracking-widest flex items-center gap-1 whitespace-nowrap">
+                      <Lock size={10} /> Protected
+                  </span>
                 </div>
-                <h3 className="text-3xl md:text-4xl font-black text-white mb-3 tracking-tight break-words">{featuredResource.title}</h3>
-                <p className="text-blue-100 text-base md:text-lg max-w-2xl font-medium leading-relaxed break-words">
+                <h3 className="text-2xl sm:text-3xl md:text-4xl font-black text-white mb-3 tracking-tight break-words leading-tight">{featuredResource.title}</h3>
+                <p className="text-blue-100 text-sm sm:text-base md:text-lg max-w-2xl font-medium leading-relaxed break-words">
                   {featuredResource.description}
                 </p>
               </div>
             </div>
 
-            <div className="w-full md:w-auto">
-              <span className="w-full md:w-auto px-8 py-4 bg-white text-blue-600 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl transition-all group-hover:scale-105 active:scale-95">
+            <div className="w-full md:w-auto shrink-0 mt-2 md:mt-0">
+              <span className="w-full md:w-auto px-6 sm:px-8 py-3.5 sm:py-4 bg-white text-blue-600 rounded-2xl font-bold flex items-center justify-center gap-2 shadow-xl transition-all group-hover:scale-105 active:scale-95 text-sm sm:text-base whitespace-nowrap">
                 Access Vault <ArrowRight size={20} />
               </span>
             </div>
@@ -382,10 +417,13 @@ const Resources: React.FC = () => {
                     target={resource.url.startsWith('#') ? undefined : "_blank"}
                     rel={resource.url.startsWith('#') ? undefined : "noopener noreferrer"}
                     onClick={(e) => {
-                    if (resource.url === '#websites') {
-                        e.preventDefault();
-                        setIsWebsitesModalOpen(true);
-                    }
+                        if (resource.url === '#websites') {
+                            e.preventDefault();
+                            setIsWebsitesModalOpen(true);
+                        } else if (resource.url === '#protected-drive') {
+                            e.preventDefault();
+                            setIsPasswordModalOpen(true);
+                        }
                     }}
                     className={`group relative flex flex-col justify-between p-6 sm:p-8 rounded-[2.5rem] border shadow-sm hover:shadow-2xl hover:-translate-y-1 transition-all duration-300 overflow-hidden transform-gpu will-change-transform min-h-[320px] h-auto ${visuals.bg} ${visuals.hoverBorder}`}
                 >
@@ -570,6 +608,72 @@ const Resources: React.FC = () => {
             )}
           </div>
         </div>
+      )}
+
+      {/* --- PASSWORD MODAL --- */}
+      {isPasswordModalOpen && createPortal(
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4">
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/80 backdrop-blur-md animate-fade-in" onClick={() => setIsPasswordModalOpen(false)} />
+            
+            {/* Modal Container with Dynamic Centering Logic */}
+            <div className="relative z-10 w-full max-w-sm flex items-center justify-center animate-zoom-in p-4 landscape:p-2">
+                <div className="bg-white dark:bg-[#0f172a] rounded-[2.5rem] w-full p-8 landscape:p-6 shadow-2xl border border-slate-200 dark:border-white/10 relative overflow-hidden max-h-[85vh] overflow-y-auto custom-scrollbar">
+                    {/* Background FX */}
+                    <div className="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-blue-500 to-purple-500"></div>
+                    <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl"></div>
+
+                    <div className="flex flex-col items-center text-center mb-6 relative z-10">
+                        <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mb-4 text-blue-500 dark:text-blue-400 shadow-sm border border-blue-100 dark:border-blue-500/30">
+                            <Lock size={32} />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 dark:text-white uppercase tracking-tight">Restricted Access</h3>
+                        <p className="text-sm text-slate-500 dark:text-slate-400 mt-2 font-medium">This repository is locked for Batch Crescere only.</p>
+                    </div>
+
+                    <form onSubmit={handlePasswordSubmit} className="space-y-4 relative z-10">
+                        <div className="relative group">
+                            <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+                            <input 
+                                type="password" 
+                                placeholder="Enter batch password..."
+                                value={passwordInput}
+                                onChange={(e) => { setPasswordInput(e.target.value); setPasswordError(false); }}
+                                className={`w-full pl-11 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border rounded-xl text-slate-900 dark:text-white font-bold outline-none transition-all placeholder:font-normal focus:ring-4 ${
+                                    passwordError 
+                                    ? 'border-red-500 focus:border-red-500 focus:ring-red-500/10' 
+                                    : 'border-slate-200 dark:border-slate-700 focus:border-blue-500 focus:ring-blue-500/10'
+                                }`}
+                                autoFocus
+                            />
+                        </div>
+                        
+                        {passwordError && (
+                            <p className="text-xs font-bold text-red-500 text-center animate-shake">
+                                Incorrect password. Try again.
+                            </p>
+                        )}
+
+                        <div className="flex gap-3 pt-2">
+                            <button 
+                                type="button" 
+                                onClick={() => setIsPasswordModalOpen(false)}
+                                className="flex-1 py-3.5 font-bold text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-sm"
+                            >
+                                Cancel
+                            </button>
+                            <button 
+                                type="submit"
+                                className="flex-[2] py-3.5 bg-blue-600 hover:bg-blue-500 text-white rounded-xl font-bold shadow-lg shadow-blue-500/20 transition-all active:scale-95 text-sm uppercase tracking-wider"
+                            >
+                                Unlock
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>,
+        document.body
       )}
 
     </div>
