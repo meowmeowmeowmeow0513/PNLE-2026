@@ -67,12 +67,21 @@ const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
   // compared to Sidebar to maintain visual consistency.
   const getGlobalTextSize = () => {
       switch(fontSize) {
-          case 'small': return 'text-[10px]'; // Visually matches Sidebar 'text-xs'
-          case 'large': return 'text-[13px]'; // Visually matches Sidebar 'text-sm'
-          case 'extra-large': return 'text-sm'; // Visually matches Sidebar 'text-base'
-          default: return 'text-xs'; // Normal (12px) matches Sidebar 'text-[13px]' weight
+          case 'small': return 'text-[9px]'; 
+          case 'large': return 'text-xs'; 
+          case 'extra-large': return 'text-[13px]'; 
+          default: return 'text-[11px]'; // Normal (11px) matches Sidebar 'text-[13px]' weight better
       }
   };
+
+  const getSlashSize = () => {
+      switch(fontSize) {
+          case 'small': return 'text-xs';
+          case 'large': return 'text-base';
+          case 'extra-large': return 'text-lg';
+          default: return 'text-sm';
+      }
+  }
 
   // Dropdown internal scaling
   const getDropdownTextSize = (type: 'name' | 'meta' | 'item') => {
@@ -122,7 +131,7 @@ const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
              <div className="flex items-center gap-3 font-black uppercase tracking-[0.2em]">
                 <span className={`${textSecondary} opacity-70 ${getGlobalTextSize()}`}>Future RN</span>
                 {/* Slash scales relatively */}
-                <span className={`opacity-20 text-slate-500 font-light ${fontSize === 'extra-large' ? 'text-lg' : 'text-base'}`}>/</span>
+                <span className={`opacity-20 text-slate-500 font-light ${getSlashSize()}`}>/</span>
                 <span className={`tracking-widest flex items-center gap-2 ${textPrimary} ${getGlobalTextSize()}`}>
                     {title} 
                     {isCrescere && <Sparkles size={12} className="text-amber-400 animate-pulse" />}
