@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowRight, Sparkles, Activity, Timer, Brain, 
@@ -13,17 +14,16 @@ interface LandingPageProps {
 const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   const [scrolled, setScrolled] = useState(false);
 
-  useEffect(() => {
-    const handleScroll = () => {
-      setScrolled(window.scrollY > 20);
-    };
-    window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+  // Since we are using a custom scroll container, we need to attach the listener to it
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    setScrolled(e.currentTarget.scrollTop > 20);
+  };
 
   return (
-    <div className="min-h-screen bg-[#020617] text-white font-sans selection:bg-pink-500/30 overflow-x-hidden">
-      
+    <div 
+      onScroll={handleScroll}
+      className="fixed inset-0 h-[100dvh] w-screen overflow-y-auto overflow-x-hidden bg-[#020617] text-white font-sans selection:bg-pink-500/30 scroll-smooth custom-scrollbar z-[100]"
+    >
       {/* --- FIXED BACKGROUNDS --- */}
       <div className="fixed inset-0 z-0 pointer-events-none">
           <div className="absolute top-[-10%] left-[-10%] w-[60vw] h-[60vw] bg-pink-600/10 rounded-full blur-[120px] animate-pulse"></div>
@@ -80,7 +80,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
                 <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </button>
             <button 
-                onClick={() => document.getElementById('features')?.scrollIntoView({ behavior: 'smooth' })}
+                onClick={(e) => {
+                  const target = document.getElementById('features');
+                  if (target) target.scrollIntoView({ behavior: 'smooth' });
+                }}
                 className="px-8 py-4 md:px-10 md:py-5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-full font-bold text-lg transition-all flex items-center justify-center gap-3 w-full sm:w-auto backdrop-blur-sm"
             >
                 Explore Features <ChevronDown size={20} className="animate-bounce" />
