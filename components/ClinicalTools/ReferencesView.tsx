@@ -1,29 +1,40 @@
+
 import React, { useState, useMemo } from 'react';
-import { Search, Info, FlaskConical, HeartPulse, Filter, X, ChevronRight, Star } from 'lucide-react';
+import { Search, Info, FlaskConical, HeartPulse, Filter, X, ChevronRight, Star, ScanEye } from 'lucide-react';
 import { useTheme } from '../../ThemeContext';
 import { MEDICAL_REFERENCES, VITAL_SIGNS_PEDIATRIC, ReferenceValue } from '../../data/referenceData';
+import LabDetailModal from './LabDetailModal';
 
-const ReferenceRow: React.FC<{ item: ReferenceValue }> = ({ item }) => {
+const ReferenceRow: React.FC<{ item: ReferenceValue, onClick: (item: ReferenceValue) => void }> = ({ item, onClick }) => {
     const { themeMode } = useTheme();
     const isCrescere = themeMode === 'crescere';
+    
+    // Check if item has abnormalities data to show
+    const hasDetails = item.abnormalities && (item.abnormalities.low || item.abnormalities.high);
 
     const getCategoryColor = (cat: string) => {
         switch (cat) {
             case 'ABG': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
             case 'Electrolytes': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
             case 'Hematology': return 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400';
+            case 'Renal': return 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400';
+            case 'Coagulation': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400';
             default: return 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400';
         }
     };
 
     return (
-        <div className={`
-            group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all duration-200 gap-3
-            ${isCrescere 
-                ? 'bg-white border-slate-100 hover:border-pink-200 hover:shadow-md' 
-                : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm'
-            }
-        `}>
+        <div 
+            onClick={() => hasDetails && onClick(item)}
+            className={`
+                group flex flex-col sm:flex-row sm:items-center justify-between p-4 rounded-2xl border transition-all duration-200 gap-3
+                ${isCrescere 
+                    ? 'bg-white border-slate-100 hover:border-pink-200 hover:shadow-md' 
+                    : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-sm'
+                }
+                ${hasDetails ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default'}
+            `}
+        >
             <div className="flex-1 min-w-0 pr-0 sm:pr-4">
                 <div className="flex flex-wrap items-center gap-2 mb-1.5">
                     <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md ${getCategoryColor(item.category)}`}>
@@ -35,9 +46,16 @@ const ReferenceRow: React.FC<{ item: ReferenceValue }> = ({ item }) => {
                         </span>
                     )}
                 </div>
-                <h4 className="text-sm md:text-base font-black text-slate-800 dark:text-white leading-snug break-words">
-                    {item.name}
-                </h4>
+                <div className="flex items-center gap-2">
+                    <h4 className="text-sm md:text-base font-black text-slate-800 dark:text-white leading-snug break-words group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                        {item.name}
+                    </h4>
+                    {hasDetails && (
+                        <div className="p-1 rounded-full bg-slate-100 dark:bg-slate-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/30 transition-colors">
+                            <ScanEye size={14} className="text-slate-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors" />
+                        </div>
+                    )}
+                </div>
                 {item.significance && (
                     <p className="text-[10px] md:text-xs text-slate-500 dark:text-slate-400 mt-1.5 line-clamp-2 italic leading-relaxed">
                         {item.significance}
@@ -54,7 +72,13 @@ const ReferenceRow: React.FC<{ item: ReferenceValue }> = ({ item }) => {
                         {item.unit}
                     </div>
                 </div>
-                <ChevronRight className="text-slate-300 group-hover:text-pink-500 transition-colors shrink-0" size={18} />
+                {hasDetails ? (
+                    <div className="w-8 h-8 rounded-full bg-slate-50 dark:bg-slate-800 flex items-center justify-center group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-colors">
+                        <ChevronRight className="text-slate-300 group-hover:text-blue-500 transition-colors" size={18} />
+                    </div>
+                ) : (
+                    <div className="w-8" /> 
+                )}
             </div>
         </div>
     );
@@ -67,6 +91,9 @@ const ReferencesView: React.FC = () => {
     const [search, setSearch] = useState('');
     const [activeTab, setActiveTab] = useState<'labs' | 'vitals'>('labs');
     const [catFilter, setCatFilter] = useState<string>('All');
+    
+    // Modal State
+    const [selectedItem, setSelectedItem] = useState<ReferenceValue | null>(null);
 
     const labCategories = ['All', ...Array.from(new Set(MEDICAL_REFERENCES.filter(r => r.category !== 'Vital Signs').map(r => r.category)))];
 
@@ -139,10 +166,10 @@ const ReferencesView: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Labs Grid - Adjusted for Tablet & Sidebar Changes */}
+                    {/* Labs Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
                         {filteredLabs.length > 0 ? (
-                            filteredLabs.map(item => <ReferenceRow key={item.id} item={item} />)
+                            filteredLabs.map(item => <ReferenceRow key={item.id} item={item} onClick={setSelectedItem} />)
                         ) : (
                             <div className="col-span-full py-20 text-center opacity-40">
                                 <Search size={48} className="mx-auto mb-4" />
@@ -188,19 +215,31 @@ const ReferencesView: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* Adult Vitals Card Grid */}
+                    {/* Adult Vitals Card Grid - Making clickable for expansion */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                         {MEDICAL_REFERENCES.filter(r => r.category === 'Vital Signs').map(item => (
-                            <div key={item.id} className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center text-center">
+                            <div 
+                                key={item.id} 
+                                onClick={() => setSelectedItem(item)}
+                                className="bg-white dark:bg-slate-900 rounded-[2rem] p-6 border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col items-center text-center cursor-pointer hover:border-pink-300 dark:hover:border-pink-500/50 hover:shadow-lg transition-all"
+                            >
                                 <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-4">{item.name.replace(' (Adult)', '')}</span>
                                 <div className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter mb-1">
                                     {item.range}
                                 </div>
                                 <span className="text-xs font-bold text-pink-500 uppercase tracking-widest">{item.unit}</span>
+                                <div className="mt-3 text-[9px] font-bold text-slate-400 flex items-center gap-1 opacity-60">
+                                    <ScanEye size={10} /> Tap for details
+                                </div>
                             </div>
                         ))}
                     </div>
                 </div>
+            )}
+
+            {/* DETAIL MODAL */}
+            {selectedItem && (
+                <LabDetailModal item={selectedItem} onClose={() => setSelectedItem(null)} />
             )}
         </div>
     );

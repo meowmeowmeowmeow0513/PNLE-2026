@@ -1,8 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, Trash2, Save, Check, Type, Tag, Flag, AlertTriangle, Circle, CheckCircle2, RotateCw, FileText } from 'lucide-react';
 import { Task, TaskCategory, TaskPriority } from '../types';
-import { format, isPast, addHours } from 'date-fns';
+import { format, isPast } from 'date-fns';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -22,7 +23,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
   const [end, setEnd] = useState('');
   const [allDay, setAllDay] = useState(false);
   const [completed, setCompleted] = useState(false);
-  const [details, setDetails] = useState(''); // New state for details
+  const [details, setDetails] = useState(''); 
   
   const [loading, setLoading] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -35,6 +36,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
 
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = 'hidden';
       setShowDeleteConfirm(false);
       if (initialData) {
         // Edit Mode
@@ -78,7 +80,10 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
         setStart(toLocalISOString(now));
         setEnd(toLocalISOString(nextHour));
       }
+    } else {
+      document.body.style.overflow = 'unset';
     }
+    return () => { document.body.style.overflow = 'unset'; };
   }, [isOpen, initialData, selectedDate]);
 
   if (!isOpen) return null;
@@ -101,7 +106,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
         end: endDate.toISOString(),
         allDay,
         completed,
-        details // Save details
+        details 
       });
       onClose();
     } catch (error) {
@@ -127,7 +132,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
   const handleToggle = async () => {
     if (initialData?.id && onToggleStatus) {
         setCompleted(!completed);
-        await onToggleStatus(initialData.id, completed);
+        await onToggleStatus(initialData.id, !completed);
     } else {
         setCompleted(!completed);
     }
@@ -135,7 +140,6 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
 
   const handleRescheduleNow = async () => {
       const now = new Date();
-      // Round to next 15 mins
       const rem = 15 - (now.getMinutes() % 15);
       now.setMinutes(now.getMinutes() + rem);
       
@@ -183,18 +187,35 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
     </button>
   );
 
-  return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-      {/* Backdrop - LIGHTER and LESS BLURRY */}
-      <div className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onClick={onClose}></div>
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-end sm:items-center justify-center sm:p-4">
+      
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm transition-opacity animate-fade-in" 
+        onClick={onClose}
+      />
 
-      {/* Modal Content */}
-      <div className="relative w-full max-w-lg bg-white dark:bg-[#0f172a] rounded-[2rem] shadow-2xl border border-white/20 dark:border-slate-700/50 p-0 overflow-hidden animate-zoom-in flex flex-col max-h-[90vh]">
+      {/* Modal Container */}
+      <div className="
+        relative w-full sm:max-w-lg 
+        bg-white dark:bg-[#0f172a] 
+        rounded-t-[2.5rem] sm:rounded-[2.5rem] 
+        shadow-2xl border-t sm:border border-white/20 dark:border-slate-700/50 
+        overflow-hidden flex flex-col 
+        h-[92dvh] sm:h-auto sm:max-h-[90vh]
+        animate-slide-up-mobile sm:animate-zoom-in
+      ">
         
         {/* Header decoration */}
-        <div className={`absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r ${completed ? 'from-emerald-500 to-teal-500' : isOverdue ? 'from-red-500 to-orange-500' : 'from-rose-500 via-purple-500 to-sky-500'}`}></div>
+        <div className={`absolute top-0 left-0 w-full h-1.5 z-20 bg-gradient-to-r ${completed ? 'from-emerald-500 to-teal-500' : isOverdue ? 'from-red-500 to-orange-500' : 'from-rose-500 via-purple-500 to-sky-500'}`}></div>
 
-        <div className="p-6 md:p-8 overflow-y-auto custom-scrollbar flex-1">
+        {/* Scrollable Body */}
+        <div className="flex-1 overflow-y-auto custom-scrollbar p-6 md:p-8 pb-32 sm:pb-8">
+            
+            {/* Mobile Handle */}
+            <div className="w-12 h-1.5 bg-slate-200 dark:bg-slate-700 rounded-full mx-auto mb-6 sm:hidden opacity-50"></div>
+
             {/* Top Bar */}
             <div className="flex justify-between items-start mb-6">
                 <div>
@@ -277,143 +298,156 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onSave, onDelete
                 </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form id="task-form" onSubmit={handleSubmit} className="space-y-6">
             
-            {/* Title Input */}
-            <div className="relative group">
-                <div className="absolute top-3.5 left-4 text-slate-400 group-focus-within:text-rose-500 transition-colors">
-                    <Type size={20} />
-                </div>
-                <input 
-                    type="text" 
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="Task Title (e.g. Maternal Chapter 1)"
-                    className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all font-bold text-lg"
-                    autoFocus
-                />
-            </div>
-
-            {/* Category Selector (Updated Colors) */}
-            <div>
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                    <Tag size={12} /> Category
-                </label>
-                <div className="flex gap-2.5">
-                    <CategoryPill cat="Review" colorClass="bg-rose-500" icon={Calendar} />
-                    <CategoryPill cat="School" colorClass="bg-violet-500" icon={Save} />
-                    <CategoryPill cat="Duty" colorClass="bg-sky-500" icon={Clock} />
-                    <CategoryPill cat="Personal" colorClass="bg-emerald-500" icon={Check} />
-                </div>
-            </div>
-
-            {/* Time Inputs */}
-            <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                        <Clock size={12} /> Start Time
-                    </label>
+                {/* Title Input */}
+                <div className="relative group">
+                    <div className="absolute top-3.5 left-4 text-slate-400 group-focus-within:text-rose-500 transition-colors">
+                        <Type size={20} />
+                    </div>
                     <input 
-                        type="datetime-local" 
-                        value={start}
-                        onChange={(e) => setStart(e.target.value)}
-                        className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all cursor-pointer"
+                        type="text" 
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        placeholder="Task Title (e.g. Maternal Chapter 1)"
+                        className="w-full pl-12 pr-4 py-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all font-bold text-lg"
+                        autoFocus
                     />
                 </div>
-                <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                        <Clock size={12} /> End Time
+
+                {/* Category Selector */}
+                <div>
+                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <Tag size={12} /> Category
                     </label>
-                    <input 
-                        type="datetime-local" 
-                        value={end}
-                        onChange={(e) => setEnd(e.target.value)}
-                        min={start}
-                        className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all cursor-pointer"
+                    <div className="flex gap-2.5 overflow-x-auto no-scrollbar pb-1">
+                        <CategoryPill cat="Review" colorClass="bg-rose-500" icon={Calendar} />
+                        <CategoryPill cat="School" colorClass="bg-violet-500" icon={Save} />
+                        <CategoryPill cat="Duty" colorClass="bg-sky-500" icon={Clock} />
+                        <CategoryPill cat="Personal" colorClass="bg-emerald-500" icon={Check} />
+                    </div>
+                </div>
+
+                {/* Time Inputs */}
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                            <Clock size={12} /> Start Time
+                        </label>
+                        <input 
+                            type="datetime-local" 
+                            value={start}
+                            onChange={(e) => setStart(e.target.value)}
+                            className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all cursor-pointer"
+                        />
+                    </div>
+                    <div className="space-y-1.5">
+                        <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-1 flex items-center gap-1.5">
+                            <Clock size={12} /> End Time
+                        </label>
+                        <input 
+                            type="datetime-local" 
+                            value={end}
+                            onChange={(e) => setEnd(e.target.value)}
+                            min={start}
+                            className="w-full p-3 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-sm font-bold text-slate-700 dark:text-slate-200 outline-none focus:border-rose-500 focus:ring-2 focus:ring-rose-500/20 transition-all cursor-pointer"
+                        />
+                    </div>
+                </div>
+
+                {/* Details Area */}
+                <div>
+                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <FileText size={12} /> Details / Notes
+                    </label>
+                    <textarea
+                        value={details}
+                        onChange={(e) => setDetails(e.target.value)}
+                        placeholder="Add notes, patient details, or clinical orders..."
+                        className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-slate-200 text-sm font-mono leading-relaxed focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all min-h-[120px] resize-none"
                     />
                 </div>
-            </div>
 
-            {/* Details / Patient Chart Area (New) */}
-            <div>
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                    <FileText size={12} /> Patient Chart / Details
-                </label>
-                <textarea
-                    value={details}
-                    onChange={(e) => setDetails(e.target.value)}
-                    placeholder="Add notes, patient details, or clinical orders..."
-                    className="w-full p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-slate-800 dark:text-slate-200 text-sm font-mono leading-relaxed focus:outline-none focus:ring-4 focus:ring-rose-500/10 focus:border-rose-500 transition-all min-h-[120px] resize-none"
-                />
-            </div>
-
-            {/* Priority Selector */}
-            <div>
-                <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                    <Flag size={12} /> Priority Level
-                </label>
-                <div className="flex gap-2">
-                    <PriorityPill level="High" colorClass="bg-red-500" />
-                    <PriorityPill level="Medium" colorClass="bg-orange-500" />
-                    <PriorityPill level="Low" colorClass="bg-blue-500" />
+                {/* Priority Selector */}
+                <div>
+                    <label className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5">
+                        <Flag size={12} /> Priority Level
+                    </label>
+                    <div className="flex gap-2">
+                        <PriorityPill level="High" colorClass="bg-red-500" />
+                        <PriorityPill level="Medium" colorClass="bg-orange-500" />
+                        <PriorityPill level="Low" colorClass="bg-blue-500" />
+                    </div>
                 </div>
-            </div>
-
-            {/* Footer Actions */}
-            <div className="pt-6 mt-2 flex items-center gap-3 border-t border-slate-100 dark:border-slate-700/50 sticky bottom-0 bg-white dark:bg-[#0f172a] z-10 pb-2">
-                {initialData?.id && onDelete && (
-                    <>
-                        {!showDeleteConfirm ? (
-                            <button
-                                type="button"
-                                onClick={() => setShowDeleteConfirm(true)}
-                                disabled={loading}
-                                className="px-4 py-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 font-bold transition-all"
-                            >
-                                <Trash2 size={20} />
-                            </button>
-                        ) : (
-                            <button
-                                type="button"
-                                onClick={handleConfirmDelete}
-                                disabled={loading}
-                                className="px-4 py-3.5 rounded-xl bg-red-600 text-white font-bold animate-pulse hover:bg-red-700 transition-colors whitespace-nowrap"
-                            >
-                                Confirm Delete?
-                            </button>
-                        )}
-                    </>
-                )}
-
-                <div className="flex-1 flex gap-3">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="flex-1 py-3.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="submit"
-                        disabled={loading}
-                        className="flex-[2] py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
-                    >
-                        {loading ? (
-                            <span className="opacity-80">Saving...</span>
-                        ) : (
-                            <>
-                                <Save size={18} />
-                                {initialData?.id ? 'Save Changes' : 'Create Task'}
-                            </>
-                        )}
-                    </button>
-                </div>
-            </div>
 
             </form>
         </div>
+
+        {/* Footer Actions (Pinned) */}
+        <div className="p-4 sm:p-6 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-[#0f172a] shrink-0 w-full flex items-center gap-3 safe-area-bottom">
+            {initialData?.id && onDelete && (
+                <>
+                    {!showDeleteConfirm ? (
+                        <button
+                            type="button"
+                            onClick={() => setShowDeleteConfirm(true)}
+                            disabled={loading}
+                            className="px-4 py-3.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/10 font-bold transition-all"
+                        >
+                            <Trash2 size={20} />
+                        </button>
+                    ) : (
+                        <button
+                            type="button"
+                            onClick={handleConfirmDelete}
+                            disabled={loading}
+                            className="px-4 py-3.5 rounded-xl bg-red-600 text-white font-bold animate-pulse hover:bg-red-700 transition-colors whitespace-nowrap"
+                        >
+                            Confirm?
+                        </button>
+                    )}
+                </>
+            )}
+
+            <div className="flex-1 flex gap-3">
+                <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex-1 py-3.5 rounded-xl font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    form="task-form"
+                    disabled={loading}
+                    className="flex-[2] py-3.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-xl shadow-rose-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98]"
+                >
+                    {loading ? (
+                        <span className="opacity-80">Saving...</span>
+                    ) : (
+                        <>
+                            <Save size={18} />
+                            {initialData?.id ? 'Save Changes' : 'Create Task'}
+                        </>
+                    )}
+                </button>
+            </div>
+        </div>
+
       </div>
-    </div>
+
+      <style>{`
+        @keyframes slide-up-mobile {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .animate-slide-up-mobile {
+            animation: slide-up-mobile 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+      `}</style>
+    </div>,
+    document.body
   );
 };
 

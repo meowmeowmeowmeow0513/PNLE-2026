@@ -8,7 +8,6 @@ import confetti from 'canvas-confetti';
 import { sendDiscordNotification } from '../utils/discordWebhook';
 
 // --- CONFIGURATION: BENNER'S CAREER LADDER ---
-// Added hex colors for Discord embedding
 export const CAREER_LADDER = [
   { 
     id: 0, 
@@ -107,14 +106,12 @@ export const useGamification = () => {
       return 0xf97316; // Orange (Spark)
   };
 
-  // Helper: Sync to Global Leaderboard
-  // Now includes robust fallbacks for display names
+  // Helper: Sync to Global Leaderboard (Explicitly called)
   const syncToLeaderboard = async (currentStats: UserGamificationStats) => {
       if (!currentUser) return;
       try {
           const rankInfo = CAREER_LADDER.find(r => currentStats.totalXP >= r.minXP && currentStats.totalXP <= r.maxXP) || CAREER_LADDER[CAREER_LADDER.length - 1];
           
-          // Use user's name, or part of email, or "Student Nurse"
           const displayName = currentUser.displayName 
             ? currentUser.displayName 
             : currentUser.email 
@@ -132,17 +129,17 @@ export const useGamification = () => {
               updatedAt: new Date().toISOString()
           }, { merge: true });
           
-          console.log("Leaderboard synced successfully");
       } catch (e: any) {
           if (e.code === 'permission-denied') {
-              console.error("Leaderboard Sync Failed: PERMISSION DENIED. Update Firestore Rules for /leaderboard collection.");
+              console.error("Leaderboard Sync Failed: PERMISSION DENIED.");
           } else {
               console.error("Leaderboard sync failed", e);
           }
       }
   };
 
-  // --- 1. REAL-TIME LISTENER & INTEGRITY CHECKS ---
+  // --- 1. REAL-TIME LISTENER ---
+  // Optimized: No longer calls syncToLeaderboard inside the effect
   useEffect(() => {
     if (!currentUser) return;
 
@@ -259,12 +256,10 @@ export const useGamification = () => {
           } else {
               await updateDoc(userStatsRef, updates);
           }
-          // Sync to Global Leaderboard on update
+          // Only sync to global on structural updates (resets/streak fix)
           syncToLeaderboard(merged);
       } else {
           setStats(currentData);
-          // Always try to sync on load to ensure name/photo updates
-          syncToLeaderboard(currentData);
       }
       
       setLoading(false);
@@ -345,7 +340,7 @@ export const useGamification = () => {
             }
         });
 
-        // 4. SYNC TO LEADERBOARD
+        // 4. SYNC TO LEADERBOARD (Explicitly called here)
         if (newStats) {
             syncToLeaderboard(newStats);
         }
@@ -401,7 +396,7 @@ export const useGamification = () => {
 
               await updateDoc(doc(db, 'users', currentUser.uid, 'stats', 'gamification'), updates);
               
-              // Sync Leaderboard
+              // Sync Leaderboard (Explicitly called here)
               syncToLeaderboard({ ...stats, ...updates });
 
               // 5. DISCORD NOTIFICATION (Rank Up - Global Career only)

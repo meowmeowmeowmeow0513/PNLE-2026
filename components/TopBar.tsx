@@ -106,8 +106,9 @@ const TopBar: React.FC<TopBarProps> = ({ title, onMenuClick }) => {
   };
 
   // --- GLASSMORPHISM HEADER ---
+  // Standardized opacity between light and crescere to prevent flash
   const topBarClass = isCrescere
-    ? 'bg-white/40 border-b border-white/50 shadow-[0_4px_30px_rgba(244,63,94,0.05)]'
+    ? 'bg-white/60 border-b border-white/50 shadow-[0_4px_30px_rgba(244,63,94,0.05)]'
     : isDark
       ? 'bg-[#0B1121]/60 border-b border-white/5 shadow-xl shadow-black/5' 
       : 'bg-white/60 border-b border-slate-200/60 shadow-sm'; 

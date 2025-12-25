@@ -635,13 +635,22 @@ const PersonalFolder: React.FC<PersonalFolderProps> = ({ isSidebarExpanded = tru
       {activeTab === 'desk' ? (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
               <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-3 flex flex-col gap-3 shadow-sm">
-                <div className="flex md:hidden gap-2">
+                {/* Mobile Toolbar - Consolidated */}
+                <div className="flex md:hidden gap-2 items-center">
                      <div className="relative group flex-1">
                          <Search size={16} className="absolute left-3 top-1/2 -translate-x-1/2 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
                          <input type="text" placeholder="Find..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-pink-500/50 transition-all placeholder:text-slate-400" />
                      </div>
-                     <button onClick={() => { setResourceToEdit(null); setIsResourceModalOpen(true); }} className="p-2.5 bg-pink-600 text-white rounded-xl shadow-md"><Plus size={20} /></button>
+                     <button onClick={() => { setFolderToEdit(null); setIsFolderModalOpen(true); }} className="p-2.5 sm:px-4 sm:py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl flex items-center gap-2 transition-all" title="New Folder">
+                        <FolderPlus size={20} />
+                        <span className="hidden sm:inline text-xs font-bold">Folder</span>
+                     </button>
+                     <button onClick={() => { setResourceToEdit(null); setIsResourceModalOpen(true); }} className="p-2.5 sm:px-4 sm:py-2.5 bg-pink-600 text-white rounded-xl shadow-md flex items-center gap-2 transition-all" title="Add Resource">
+                        <Plus size={20} />
+                        <span className="hidden sm:inline text-xs font-bold">Add</span>
+                     </button>
                 </div>
+
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
                     <div className="flex items-center overflow-x-auto px-2 py-1 scrollbar-hide flex-1 gap-1 w-full">
                          <button onClick={() => navigateUp(null)} onDragOver={(e) => handleDragOver(e, null)} onDrop={(e) => handleDrop(e, null)} className={`flex items-center gap-2 px-3 md:px-4 py-2 rounded-xl transition-all whitespace-nowrap font-bold text-xs md:text-sm ${!currentFolderId ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white ring-2 ring-slate-200 dark:ring-slate-700' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800/50'}`}>
@@ -656,6 +665,7 @@ const PersonalFolder: React.FC<PersonalFolderProps> = ({ isSidebarExpanded = tru
                             </React.Fragment>
                          ))}
                     </div>
+                    {/* Desktop Toolbar */}
                     <div className="hidden md:flex items-center gap-2 px-2 w-auto">
                          <div className="relative group">
                              <Search size={16} className="absolute left-3 top-1/2 -translate-x-1/2 text-slate-400 group-focus-within:text-pink-500 transition-colors" />
@@ -664,9 +674,6 @@ const PersonalFolder: React.FC<PersonalFolderProps> = ({ isSidebarExpanded = tru
                          <div className="w-px h-8 bg-slate-200 dark:bg-slate-800"></div>
                          <button onClick={() => { setFolderToEdit(null); setIsFolderModalOpen(true); }} className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl text-slate-600 dark:text-slate-400 hover:text-purple-500 dark:hover:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors" title="New Folder"><FolderPlus size={20} /></button>
                          <button onClick={() => { setResourceToEdit(null); setIsResourceModalOpen(true); }} className="flex items-center gap-2 px-4 py-2.5 bg-pink-600 hover:bg-pink-500 text-white rounded-xl shadow-lg shadow-pink-500/20 transition-all hover:scale-105 active:scale-95 font-bold text-sm" title="Add Item"><Plus size={18} /> Add Item</button>
-                    </div>
-                    <div className="md:hidden flex justify-end px-2">
-                         <button onClick={() => { setFolderToEdit(null); setIsFolderModalOpen(true); }} className="text-xs font-bold text-purple-500 flex items-center gap-1 bg-purple-50 dark:bg-purple-900/20 px-3 py-1.5 rounded-lg"><FolderPlus size={14} /> New Folder</button>
                     </div>
                 </div>
               </div>

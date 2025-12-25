@@ -85,9 +85,12 @@ const Sidebar: React.FC<SidebarProps> = ({
   const footerTextClass = getFooterTextSize();
 
   // --- PREMIUM GLASS CONTAINER ---
+  // Explicitly handle all 3 modes to prevent layout jumping
   const sidebarContainerClass = isDark
     ? 'bg-[#0B1121]/80 backdrop-blur-[40px] border-r border-white/5 shadow-2xl'
-    : 'bg-white/60 backdrop-blur-[40px] border-r border-white/40 shadow-[20px_0_40px_-10px_rgba(0,0,0,0.05)]';
+    : isCrescere 
+        ? 'bg-white/60 backdrop-blur-[40px] border-r border-white/40 shadow-[20px_0_40px_-10px_rgba(244,63,94,0.05)]'
+        : 'bg-white/60 backdrop-blur-[40px] border-r border-slate-200/60 shadow-[20px_0_40px_-10px_rgba(0,0,0,0.05)]';
 
   const dur = reduceMotion ? 0 : 300;
 

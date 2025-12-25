@@ -184,17 +184,17 @@ const AppContent: React.FC = () => {
             onToggleMinimize={toggleSidebarMinimize}
           />
 
-          {/* CONTENT ISLAND */}
+          {/* CONTENT ISLAND - Fixed Backdrop Blur Jumps */}
           <div className={`
             flex-1 flex flex-col h-full min-w-0 relative z-10 
             transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] 
             overflow-hidden md:rounded-[2.5rem] 
-            border transition-colors
+            border transition-colors backdrop-blur-3xl
             ${themeMode === 'crescere' 
                 ? 'bg-white/40 border-white/60 shadow-[0_20px_50px_-15px_rgba(244,63,94,0.1)]' 
                 : themeMode === 'dark'
-                    ? 'bg-slate-900/40 border-white/10 shadow-2xl backdrop-blur-3xl'
-                    : 'bg-white/60 border-slate-200/50 shadow-xl backdrop-blur-2xl'
+                    ? 'bg-slate-900/40 border-white/10 shadow-2xl'
+                    : 'bg-white/50 border-slate-200/50 shadow-xl'
             }
           `}>
             <TopBar

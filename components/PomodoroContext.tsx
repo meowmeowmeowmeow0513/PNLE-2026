@@ -3,7 +3,7 @@ import React, { createContext, useContext, useState, useEffect, useRef, useMemo,
 import { useGamification } from '../hooks/useGamification';
 import { db } from '../firebase';
 import { useAuth } from '../AuthContext';
-import { collection, query, orderBy, onSnapshot, doc, setDoc, getDoc, updateDoc, arrayUnion } from 'firebase/firestore';
+import { collection, query, orderBy, onSnapshot, doc, setDoc, getDoc, updateDoc, arrayUnion, limit } from 'firebase/firestore';
 import { isSameDay, format } from 'date-fns';
 
 export type TimerMode = 'focus' | 'shortBreak' | 'longBreak';
@@ -45,7 +45,7 @@ interface PomodoroContextType {
   petName: string; 
   catName: string;
   dogName: string;
-  petColor: string; // NEW
+  petColor: string;
   petStage: PetStage; 
   totalFocusMinutes: number; 
   focusIntegrity: number; 
@@ -70,7 +70,7 @@ interface PomodoroContextType {
   deleteSession: (id: string) => Promise<void>;
   setPetType: (type: PetType) => void;
   setPetName: (name: string) => void;
-  setPetColor: (color: string) => void; // NEW
+  setPetColor: (color: string) => void;
   getPetMessage: (status: 'focus' | 'break' | 'idle' | 'complete') => string;
 }
 
@@ -110,7 +110,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const [petType, setPetTypeState] = useState<PetType>('cat');
   const [catName, setCatNameState] = useState<string>('Mochi');
   const [dogName, setDogNameState] = useState<string>('Buddy');
-  const [petColor, setPetColorState] = useState<string>('auto'); // Default to 'auto' to match theme
+  const [petColor, setPetColorState] = useState<string>('auto');
 
   // Load Pet Prefs from Firestore
   useEffect(() => {
@@ -164,7 +164,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
   const noiseNodeRef = useRef<AudioBufferSourceNode | null>(null);
   const alarmIntervalRef = useRef<number | null>(null);
 
-  // --- DATABASE SYNC (NEW: Daily Bucketing) ---
+  // --- DATABASE SYNC (OPTIMIZED) ---
   useEffect(() => {
     if (!currentUser) {
         setSessionHistory([]);
@@ -172,11 +172,12 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
         return;
     }
 
-    // New Collection: pomodoro_logs (Documents named by Date YYYY-MM-DD)
-    // Order by date descending to get recent days first
+    // Optimization: Limit to the last 60 days of logs.
+    // This prevents loading year-old data that isn't needed for the UI.
     const q = query(
         collection(db, 'users', currentUser.uid, 'pomodoro_logs'),
-        orderBy('date', 'desc')
+        orderBy('date', 'desc'),
+        limit(60)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -222,7 +223,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
       return 'legendary';
   }, [totalFocusMinutes]);
 
-  // --- HELPERS: SAVE SESSION (EFFICIENT) ---
+  // --- HELPERS: SAVE SESSION ---
   const saveSession = async (duration: number, sessionType: TimerMode) => {
       if (!currentUser) return;
       if (duration < MIN_SAVE_DURATION) return;
@@ -243,7 +244,6 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
           };
           
           // Use arrayUnion on a daily document
-          // This creates the doc if it doesn't exist, or appends to array if it does
           const docRef = doc(db, 'users', currentUser.uid, 'pomodoro_logs', dateKey);
           
           await setDoc(docRef, {
@@ -267,8 +267,6 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
           const docRef = doc(db, 'users', currentUser.uid, 'pomodoro_logs', dateKey);
 
           // 2. Read, Filter, Update (Reliable Array Removal)
-          // Note: arrayRemove only works if you have the EXACT object. Since we might miss fields or timestamps might differ slightly in serialization, 
-          // a read-modify-write is safer for deletion by ID.
           const docSnap = await getDoc(docRef);
           if (docSnap.exists()) {
               const currentSessions = docSnap.data().sessions as PomodoroSession[];
@@ -630,7 +628,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     petName,
     catName,
     dogName,
-    petColor, // NEW
+    petColor,
     petStage,
     totalFocusMinutes,
     focusIntegrity,
@@ -653,7 +651,7 @@ export const PomodoroProvider: React.FC<{ children: ReactNode }> = ({ children }
     deleteSession,
     setPetType,
     setPetName,
-    setPetColor, // NEW
+    setPetColor,
     getPetMessage
   };
 

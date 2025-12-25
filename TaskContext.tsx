@@ -1,10 +1,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { db } from './firebase';
-import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, onSnapshot, query, orderBy, where } from 'firebase/firestore';
 import { useAuth } from './AuthContext';
 import { useGamification } from './hooks/useGamification';
-import { Task, TaskCategory, TaskPriority } from './types';
+import { Task } from './types';
 
 interface TaskContextType {
   tasks: Task[];
@@ -31,7 +31,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch Tasks Real-time
+  // Fetch Tasks Real-time (OPTIMIZED)
   useEffect(() => {
     if (!currentUser) {
       setTasks([]);
@@ -39,8 +39,15 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       return;
     }
 
+    // Optimization: Only fetch tasks from the last 6 months.
+    // Older tasks are archived (implicitly) to keep the app fast.
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+    const cutoffTimestamp = sixMonthsAgo.getTime();
+
     const q = query(
       collection(db, 'users', currentUser.uid, 'tasks'),
+      where('createdAt', '>=', cutoffTimestamp),
       orderBy('createdAt', 'desc')
     );
 
@@ -63,6 +70,9 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       }) as Task[];
       setTasks(fetchedTasks);
       setLoading(false);
+    }, (error) => {
+        console.error("Task subscription error:", error);
+        setLoading(false);
     });
 
     return () => unsubscribe();
