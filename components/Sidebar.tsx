@@ -40,7 +40,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   const navItems: { label: NavigationItem; icon: React.ReactNode; special?: boolean }[] = [
     { label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
-    { label: 'December Quest', icon: <Siren size={20} />, special: true },
+    { label: 'SLE Quest', icon: <Siren size={20} />, special: true },
     { label: 'Planner', icon: <Calendar size={20} /> },
     { label: 'Pomodoro Timer', icon: <Timer size={20} /> },
     { label: 'Clinical Tools', icon: <Stethoscope size={20} /> },

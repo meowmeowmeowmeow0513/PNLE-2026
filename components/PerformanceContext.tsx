@@ -1,5 +1,6 @@
 
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
+import { useTheme } from '../ThemeContext';
 
 // Simplified levels. The system decides based on runtime metrics.
 export type EffectiveLevel = 'performance' | 'balanced' | 'quality';
@@ -24,14 +25,16 @@ export const usePerformance = () => {
 const LEVEL_ORDER: EffectiveLevel[] = ['performance', 'balanced', 'quality'];
 
 export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Default to balanced to ensure stability on load, then adapt up or down
+  const { themeMode } = useTheme();
+  
+  // Default to balanced to ensure stability on load
   const [effectiveLevel, setEffectiveLevel] = useState<EffectiveLevel>('balanced');
-  const [fps, setFps] = useState(60);
+  const [fps, setFps] = useState(0); // Initialize at 0 to indicate calculating
 
   // Measurement Refs
   const frameCountRef = useRef(0);
   const lastTimeRef = useRef(performance.now());
-  const stabilityCounterRef = useRef(0); // Tracks consecutive stable/unstable intervals
+  const stabilityCounterRef = useRef(0); 
   const lastChangeTimeRef = useRef(performance.now());
   const longTaskCountRef = useRef(0);
 
@@ -41,25 +44,26 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
     const timeSinceLastChange = now - lastChangeTimeRef.current;
 
     // Cooldowns to prevent rapid oscillation
-    const DOWNGRADE_COOLDOWN = 2000; // 2s before allowing another drop
-    const UPGRADE_COOLDOWN = 10000;  // 10s stability required before upgrading
+    const DOWNGRADE_COOLDOWN = 2000; 
+    const UPGRADE_COOLDOWN = 8000;
 
     const currentIndex = LEVEL_ORDER.indexOf(effectiveLevel);
 
-    // 1. CRITICAL DOWNGRADE (Immediate)
-    // FPS < 25 or significant main thread blocking
-    if ((currentFPS < 25 || longTasks >= 2) && currentIndex > 0) {
+    // 1. CRITICAL DOWNGRADE (Immediate Lag Detected)
+    // < 30 FPS or Main Thread Blocking
+    if ((currentFPS < 30 || longTasks >= 2) && currentIndex > 0) {
         if (timeSinceLastChange > DOWNGRADE_COOLDOWN) {
             const nextLevel = LEVEL_ORDER[currentIndex - 1];
             setEffectiveLevel(nextLevel);
             lastChangeTimeRef.current = now;
-            stabilityCounterRef.current = 0; // Reset stability on change
+            stabilityCounterRef.current = 0; 
         }
         return;
     }
 
-    // 2. MODERATE DOWNGRADE (Sustained Low FPS)
-    // FPS < 45 for a few intervals
+    // 2. MODERATE DOWNGRADE (Sustained "Bad" FPS)
+    // We set the threshold at 45 FPS. This supports 60Hz screens dropping frames, 
+    // but ignores 120Hz screens dropping to 90Hz (which is still smooth).
     if (currentFPS < 45 && currentIndex > 0) {
         stabilityCounterRef.current--;
         if (stabilityCounterRef.current <= -3) { // ~3 seconds of poor performance
@@ -73,11 +77,12 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
         return;
     }
 
-    // 3. UPGRADE (Sustained High Performance)
-    // FPS Near 60, No Blocking, and ample time passed since last change
+    // 3. UPGRADE (Sustained Smoothness)
+    // We upgrade if FPS is consistently high. 
+    // 58 is safe for 60Hz. For 120Hz+, this will always be true, pushing to Quality.
     if (currentFPS >= 58 && longTasks === 0 && currentIndex < LEVEL_ORDER.length - 1) {
         stabilityCounterRef.current++;
-        if (stabilityCounterRef.current >= 8) { // ~8 seconds of perfect performance
+        if (stabilityCounterRef.current >= 5) { // ~5 seconds of perfect performance
             if (timeSinceLastChange > UPGRADE_COOLDOWN) {
                 const nextLevel = LEVEL_ORDER[currentIndex + 1];
                 setEffectiveLevel(nextLevel);
@@ -88,7 +93,7 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
         return;
     }
 
-    // Decay stability counter if performance is "Okay" (45-58 FPS) to prevent sticking
+    // Decay stability counter to prevent getting stuck
     if (stabilityCounterRef.current > 0) stabilityCounterRef.current--;
     if (stabilityCounterRef.current < 0) stabilityCounterRef.current++;
 
@@ -99,7 +104,6 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
     let requestBy: number;
     let longTaskObserver: PerformanceObserver | undefined;
 
-    // Monitor Long Tasks (Main thread blocking > 50ms)
     try {
         if ('PerformanceObserver' in window) {
             longTaskObserver = new PerformanceObserver((list) => {
@@ -108,7 +112,7 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
             longTaskObserver.observe({ entryTypes: ['longtask'] });
         }
     } catch (e) {
-        // Fallback for environments without PerformanceObserver support
+        // Fallback
     }
 
     const loop = (time: number) => {
@@ -122,7 +126,6 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
         
         adjustQuality(currentFps, longTaskCountRef.current);
 
-        // Reset counters for next interval
         frameCountRef.current = 0;
         lastTimeRef.current = time;
         longTaskCountRef.current = 0;
@@ -142,23 +145,25 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
   // --- APPLY GLOBAL STYLES ---
   useEffect(() => {
       const root = document.documentElement;
-      // Clean up old classes
       root.classList.remove('gfx-performance', 'gfx-balanced', 'gfx-quality');
-      // Apply current level class for CSS consumption
       root.classList.add(`gfx-${effectiveLevel}`);
   }, [effectiveLevel]);
 
-  // Helper for components to adapt rendering (glassmorphism vs solid)
   const getGlassClass = (base: string, opacity = 'bg-white/80') => {
+      // PERFORMANCE: Solid colors
       if (effectiveLevel === 'performance') {
-          // Solid background, no blur, simple border (Fastest)
-          return 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800';
+          if (themeMode === 'crescere') {
+              return 'bg-[#fff0f5] border-rose-200 text-slate-900 shadow-none';
+          }
+          return 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-none';
       }
+      
+      // BALANCED: Transparency, no blur (Cheap)
       if (effectiveLevel === 'balanced') {
-          // Transparency enabled, but NO blur (Medium)
-          return `${opacity} dark:bg-slate-900/90 border-slate-200/50 dark:border-white/5`;
+          return `${opacity} dark:bg-slate-900/90 border-slate-200/50 dark:border-white/5 backdrop-blur-none`;
       }
-      // Full Glassmorphism (Heavy GPU usage)
+      
+      // QUALITY: Full blur (Expensive)
       return `${base} backdrop-blur-xl ${opacity} dark:bg-[#0f172a]/60 border-slate-200/50 dark:border-white/5`;
   };
 

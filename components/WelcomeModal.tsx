@@ -55,7 +55,7 @@ const WelcomeModal: React.FC<WelcomeModalProps> = ({ onClose }) => {
                         
                         <div className="space-y-4 text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
                             <p>
-                                The <strong className="text-pink-500">December Edition</strong> is now online.
+                                The <strong className="text-pink-500">SLE Quest Edition</strong> is now online.
                             </p>
                             <p>
                                 Complete daily Code Blue sims and quizzes to unlock exclusive rank badges:

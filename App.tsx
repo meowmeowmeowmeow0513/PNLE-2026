@@ -91,7 +91,7 @@ const AppContent: React.FC = () => {
         return <ExamTOS />;
       case 'Personal Folder':
         return <PersonalFolder isSidebarExpanded={!sidebarMinimized} />;
-      case 'December Quest':
+      case 'SLE Quest':
         return <DecemberQuest />;
       default:
         return <Dashboard onNavigate={setActiveItem} isSidebarExpanded={!sidebarMinimized} />;
@@ -122,44 +122,10 @@ const AppContent: React.FC = () => {
     return <OnboardingFlow />;
   }
 
-  // --- OPTIMIZED BACKGROUND RENDERER ---
-  const renderBackground = () => {
-      // If we are in performance mode, we skip expensive background layers entirely
-      if (effectiveLevel === 'performance') {
-          return (
-              <div className="absolute inset-0 bg-slate-50 dark:bg-[#020617] z-0"></div>
-          );
-      }
-
-      const showAnimations = effectiveLevel === 'quality';
-
-      return (
-          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-white dark:bg-[#020617]">
-            {/* DARK MODE: DEEP NAVY */}
-            <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${themeMode === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute inset-0 bg-[#020617]" />
-              <div className={`absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-pink-600/10 rounded-full blur-[140px] ${showAnimations ? 'animate-aurora-luxe' : ''}`} />
-              <div className={`absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-600/10 rounded-full blur-[140px] ${showAnimations ? 'animate-aurora-luxe-alt' : ''}`} />
-              <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-overlay" />
-            </div>
-
-            {/* CRESCERE MODE: ROSE WATER */}
-            <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${themeMode === 'crescere' ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute inset-0 bg-[#fffbfc]" />
-              <div className={`absolute -top-[10%] -right-[10%] w-[80%] h-[80%] bg-rose-100/40 rounded-full blur-[100px] ${showAnimations ? 'animate-aurora-luxe' : ''}`} />
-              <div className={`absolute -bottom-[10%] -left-[10%] w-[80%] h-[80%] bg-amber-50/50 rounded-full blur-[100px] ${showAnimations ? 'animate-aurora-luxe-alt' : ''}`} />
-              <div className={`absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5`} />
-            </div>
-
-            {/* LIGHT MODE: CRISP SLATE */}
-            <div className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${themeMode === 'light' ? 'opacity-100' : 'opacity-0'}`}>
-              <div className="absolute inset-0 bg-[#f8fafc]" />
-              <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/60 rounded-full blur-[120px] mix-blend-multiply" />
-              <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-50/60 rounded-full blur-[120px] mix-blend-multiply" />
-            </div>
-          </div>
-      );
-  };
+  // --- INSTANT THEME SWITCHING ENGINE ---
+  // Backgrounds are always mounted, we just toggle opacity.
+  // This prevents React reconciliation lag.
+  const showAnimations = effectiveLevel === 'quality';
 
   return (
     <PomodoroProvider>
@@ -184,29 +150,80 @@ const AppContent: React.FC = () => {
           @keyframes zoom-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
           .animate-zoom-in { animation: zoom-in 0.3s ease-out forwards; }
           
-          /* Performance Overrides */
+          /* --- CRITICAL PERFORMANCE OVERRIDES --- */
           .gfx-performance * {
               backdrop-filter: none !important;
               box-shadow: none !important;
+              text-shadow: none !important;
               animation: none !important;
+              mix-blend-mode: normal !important;
+              background-image: none !important;
               transition-property: opacity, transform, background-color, border-color, color !important;
           }
-          .gfx-performance .animate-spin { animation: spin 1s linear infinite !important; } /* Keep critical spinners */
-          .gfx-performance .backdrop-blur-xl, .gfx-performance .backdrop-blur-md, .gfx-performance .backdrop-blur-sm {
+          
+          .gfx-performance .animate-spin { animation: spin 1s linear infinite !important; }
+          
+          .dark.gfx-performance .backdrop-blur-xl, 
+          .dark.gfx-performance .backdrop-blur-md, 
+          .dark.gfx-performance .backdrop-blur-sm {
               background-color: rgb(15 23 42) !important;
               border: 1px solid rgb(30 41 59) !important;
           }
-          .light.gfx-performance .backdrop-blur-xl, .light.gfx-performance .backdrop-blur-md {
+          
+          .light.gfx-performance .backdrop-blur-xl, 
+          .light.gfx-performance .backdrop-blur-md {
               background-color: white !important;
               border: 1px solid rgb(226 232 240) !important;
+          }
+
+          .theme-crescere.gfx-performance .backdrop-blur-xl,
+          .theme-crescere.gfx-performance .backdrop-blur-md,
+          .theme-crescere.gfx-performance .backdrop-blur-sm {
+              background-color: #fff0f5 !important;
+              border: 1px solid #fecdd3 !important;
+              color: #0f172a !important;
           }
         `}</style>
 
         <div
-          className={`relative h-[100dvh] font-sans selection:bg-pink-500/30 overflow-hidden transition-colors duration-700 text-slate-900 dark:text-slate-100
+          className={`relative h-[100dvh] font-sans selection:bg-pink-500/30 overflow-hidden text-slate-900 dark:text-slate-100
           flex flex-row p-0 md:p-3 lg:p-4 gap-0 md:gap-2 lg:gap-3`}
         >
-          {renderBackground()}
+          {/* BACKGROUND LAYERS (PERSISTENT MOUNT) */}
+          <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
+              
+              {/* DARK MODE LAYER */}
+              <div className={`absolute inset-0 bg-[#020617] transition-opacity duration-500 ease-linear will-change-opacity ${themeMode === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
+                  {showAnimations && (
+                      <>
+                        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-pink-600/10 rounded-full blur-[140px] animate-aurora-luxe" />
+                        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-600/10 rounded-full blur-[140px] animate-aurora-luxe-alt" />
+                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-overlay" />
+                      </>
+                  )}
+              </div>
+
+              {/* CRESCERE MODE LAYER */}
+              <div className={`absolute inset-0 bg-[#fffbfc] transition-opacity duration-500 ease-linear will-change-opacity ${themeMode === 'crescere' ? 'opacity-100' : 'opacity-0'}`}>
+                  {showAnimations && (
+                      <>
+                        <div className="absolute -top-[10%] -right-[10%] w-[80%] h-[80%] bg-rose-100/40 rounded-full blur-[100px] animate-aurora-luxe" />
+                        <div className="absolute -bottom-[10%] -left-[10%] w-[80%] h-[80%] bg-amber-50/50 rounded-full blur-[100px] animate-aurora-luxe-alt" />
+                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5" />
+                      </>
+                  )}
+              </div>
+
+              {/* LIGHT MODE LAYER */}
+              <div className={`absolute inset-0 bg-[#f8fafc] transition-opacity duration-500 ease-linear will-change-opacity ${themeMode === 'light' ? 'opacity-100' : 'opacity-0'}`}>
+                  {showAnimations && (
+                      <>
+                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/60 rounded-full blur-[120px] mix-blend-multiply" />
+                        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-50/60 rounded-full blur-[120px] mix-blend-multiply" />
+                      </>
+                  )}
+              </div>
+          </div>
 
           <Sidebar
             activeItem={activeItem}
@@ -217,7 +234,7 @@ const AppContent: React.FC = () => {
             onToggleMinimize={toggleSidebarMinimize}
           />
 
-          {/* CONTENT ISLAND - Dynamically Optimized Class */}
+          {/* CONTENT ISLAND */}
           <div className={`
             flex-1 flex flex-col h-full min-w-0 relative z-10 
             transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] 
