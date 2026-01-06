@@ -21,13 +21,12 @@ export const usePerformance = () => {
   return context;
 };
 
-// Priority: Quality > Balanced > Performance
+// Quality Hierarchy
 const LEVEL_ORDER: EffectiveLevel[] = ['performance', 'balanced', 'quality'];
 
 export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { themeMode } = useTheme();
+  const { themeMode, performanceMode } = useTheme();
   
-  // Default to balanced. If hardware acceleration is off, this will downgrade in <1 sec.
   const [effectiveLevel, setEffectiveLevel] = useState<EffectiveLevel>('balanced');
   const [fps, setFps] = useState(60); 
   const [isLowPower, setIsLowPower] = useState(false);
@@ -37,116 +36,101 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const lastTimeRef = useRef(performance.now());
   const stabilityCounterRef = useRef(0); 
   const lastChangeTimeRef = useRef(performance.now());
-  const longTaskCountRef = useRef(0);
-  const panicCounterRef = useRef(0); // New: Detects consistent fatal lag
+  const lowFpsCounterRef = useRef(0);
 
   // --- ADAPTIVE LOGIC ---
-  const adjustQuality = useCallback((currentFPS: number, longTasks: number) => {
-    const now = performance.now();
-    const timeSinceLastChange = now - lastChangeTimeRef.current;
-
-    // Cooldowns
-    const DOWNGRADE_COOLDOWN = 1000; // Faster downgrade
-    const UPGRADE_COOLDOWN = 8000;
-
-    const currentIndex = LEVEL_ORDER.indexOf(effectiveLevel);
-
-    // 0. PANIC MODE (Software Rendering Detection)
-    // If FPS is < 24 (Cinematic minimum), the app feels broken.
-    if (currentFPS < 24) {
-        panicCounterRef.current++;
-        // If we hit 2 bad seconds in a row, force bottom tier immediately
-        if (panicCounterRef.current >= 2) {
-            if (effectiveLevel !== 'performance') {
-                setEffectiveLevel('performance');
-                setIsLowPower(true);
-                lastChangeTimeRef.current = now;
-                console.warn("Performance Panic: Forcing Low Power Mode");
-            }
-            return; 
-        }
-    } else {
-        panicCounterRef.current = Math.max(0, panicCounterRef.current - 1);
-    }
-
-    // 1. CRITICAL DOWNGRADE (< 35 FPS or Long Tasks)
-    if ((currentFPS < 35 || longTasks >= 1) && currentIndex > 0) {
-        if (timeSinceLastChange > DOWNGRADE_COOLDOWN) {
-            const nextLevel = LEVEL_ORDER[currentIndex - 1];
-            setEffectiveLevel(nextLevel);
-            // If we hit bottom, flag low power
-            if (nextLevel === 'performance') setIsLowPower(true);
-            lastChangeTimeRef.current = now;
-            stabilityCounterRef.current = 0; 
+  const adjustQuality = useCallback((currentFPS: number) => {
+    if (performanceMode === 'quality') {
+        if (effectiveLevel !== 'quality') {
+            setEffectiveLevel('quality');
+            setIsLowPower(false);
         }
         return;
     }
 
-    // 2. UPGRADE (Consistent Smoothness > 58 FPS)
-    if (currentFPS >= 58 && longTasks === 0 && currentIndex < LEVEL_ORDER.length - 1) {
-        stabilityCounterRef.current++;
-        // Require 4 seconds of perfection to upgrade
-        if (stabilityCounterRef.current >= 4) { 
-            if (timeSinceLastChange > UPGRADE_COOLDOWN) {
-                const nextLevel = LEVEL_ORDER[currentIndex + 1];
-                setEffectiveLevel(nextLevel);
-                if (nextLevel !== 'performance') setIsLowPower(false);
-                lastChangeTimeRef.current = now;
-                stabilityCounterRef.current = 0;
-            }
+    if (performanceMode === 'performance') {
+        if (effectiveLevel !== 'performance') {
+            setEffectiveLevel('performance');
+            setIsLowPower(true);
         }
         return;
     }
 
-    // Decay stability
-    if (stabilityCounterRef.current > 0) stabilityCounterRef.current--;
+    if (performanceMode === 'balanced') {
+        if (effectiveLevel !== 'balanced') {
+            setEffectiveLevel('balanced');
+            setIsLowPower(false);
+        }
+        return;
+    }
 
-  }, [effectiveLevel]);
+    if (performanceMode === 'auto') {
+        const now = performance.now();
+        const timeSinceLastChange = now - lastChangeTimeRef.current;
+        const currentIndex = LEVEL_ORDER.indexOf(effectiveLevel);
 
-  // --- MEASUREMENT LOOP ---
+        if (currentFPS < 24) {
+            lowFpsCounterRef.current++;
+        } else {
+            lowFpsCounterRef.current = Math.max(0, lowFpsCounterRef.current - 1);
+        }
+
+        if (lowFpsCounterRef.current > 3 && currentIndex > 0) {
+             if (timeSinceLastChange > 2000) {
+                 const nextLevel = LEVEL_ORDER[currentIndex - 1];
+                 setEffectiveLevel(nextLevel);
+                 if (nextLevel === 'performance') setIsLowPower(true);
+                 lastChangeTimeRef.current = now;
+                 lowFpsCounterRef.current = 0;
+             }
+        }
+        
+        if (currentFPS >= 58 && currentIndex < LEVEL_ORDER.length - 1) {
+            stabilityCounterRef.current++;
+            if (stabilityCounterRef.current > 10) {
+                if (timeSinceLastChange > 10000) {
+                    const nextLevel = LEVEL_ORDER[currentIndex + 1];
+                    setEffectiveLevel(nextLevel);
+                    setIsLowPower(false);
+                    lastChangeTimeRef.current = now;
+                    stabilityCounterRef.current = 0;
+                }
+            }
+        } else {
+            stabilityCounterRef.current = 0;
+        }
+    }
+
+  }, [effectiveLevel, performanceMode]);
+
   useEffect(() => {
-    let requestBy: number;
-    let longTaskObserver: PerformanceObserver | undefined;
-
-    try {
-        if ('PerformanceObserver' in window) {
-            longTaskObserver = new PerformanceObserver((list) => {
-                longTaskCountRef.current += list.getEntries().length;
-            });
-            longTaskObserver.observe({ entryTypes: ['longtask'] });
+    if (performanceMode !== 'auto') {
+        if (performanceMode === 'quality') setEffectiveLevel('quality');
+        if (performanceMode === 'balanced') setEffectiveLevel('balanced');
+        if (performanceMode === 'performance') {
+            setEffectiveLevel('performance');
+            setIsLowPower(true);
         }
-    } catch (e) {
-        // Fallback
+        return; 
     }
 
+    let requestBy: number;
     const loop = (time: number) => {
       frameCountRef.current++;
       const elapsed = time - lastTimeRef.current;
-
-      // Evaluate every ~1000ms
       if (elapsed >= 1000) {
         const currentFps = Math.round((frameCountRef.current * 1000) / elapsed);
         setFps(currentFps);
-        
-        adjustQuality(currentFps, longTaskCountRef.current);
-
+        adjustQuality(currentFps);
         frameCountRef.current = 0;
         lastTimeRef.current = time;
-        longTaskCountRef.current = 0;
       }
-
       requestBy = requestAnimationFrame(loop);
     };
-
     requestBy = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(requestBy);
+  }, [adjustQuality, performanceMode]);
 
-    return () => {
-        cancelAnimationFrame(requestBy);
-        longTaskObserver?.disconnect();
-    };
-  }, [adjustQuality]);
-
-  // --- APPLY GLOBAL STYLES ---
   useEffect(() => {
       const root = document.documentElement;
       root.classList.remove('gfx-performance', 'gfx-balanced', 'gfx-quality');
@@ -154,22 +138,24 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [effectiveLevel]);
 
   const getGlassClass = (base: string, opacity = 'bg-white/80') => {
-      // PERFORMANCE: Solid colors, NO BLUR. 
-      // If hardware acceleration is off, blur kills the paint thread.
+      // --- PERFORMANCE MODE: NO TRANSPARENCY, NO BLUR ---
       if (effectiveLevel === 'performance') {
           if (themeMode === 'crescere') {
-              return 'bg-[#fff0f5] border-rose-200 text-slate-900 shadow-sm';
+              return 'bg-[#fff0f5] border-rose-300 text-slate-900 border-2';
           }
-          return 'bg-[#f8fafc] dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 shadow-sm';
+          if (themeMode === 'dark') {
+              return 'bg-[#0f172a] border-slate-700 text-white border-2';
+          }
+          return 'bg-white border-slate-300 text-slate-900 border-2';
       }
       
-      // BALANCED: Transparency, no blur (Cheap GPU cost)
+      // --- BALANCED: SOME TRANSPARENCY, NO BLUR ---
       if (effectiveLevel === 'balanced') {
           return `${opacity} dark:bg-slate-900/90 border-slate-200/50 dark:border-white/5 backdrop-blur-none`;
       }
       
-      // QUALITY: Full blur (Expensive)
-      return `${base} backdrop-blur-xl ${opacity} dark:bg-[#0f172a]/60 border-slate-200/50 dark:border-white/5`;
+      // --- QUALITY: FULL LUXURY GLASS ---
+      return `${base} backdrop-blur-[64px] ${opacity} dark:bg-[#0f172a]/60 border-slate-200/50 dark:border-white/5`;
   };
 
   return (

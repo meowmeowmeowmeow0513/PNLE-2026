@@ -7,7 +7,6 @@ import { doc, updateDoc, getDoc } from 'firebase/firestore';
 export type ThemeMode = 'light' | 'dark' | 'crescere';
 export type FontSize = 'small' | 'normal' | 'large' | 'extra-large';
 export type FontFamily = 'sans' | 'serif' | 'mono';
-// Added PerformanceMode type export to fix ProfileSettings.tsx import error
 export type PerformanceMode = 'auto' | 'quality' | 'balanced' | 'performance';
 
 interface ThemeContextType {
@@ -17,7 +16,6 @@ interface ThemeContextType {
   fontSize: FontSize;
   fontFamily: FontFamily;
   reduceMotion: boolean;
-  // Added performanceMode to context interface
   performanceMode: PerformanceMode;
   
   setThemeMode: (mode: ThemeMode) => void;
@@ -26,7 +24,6 @@ interface ThemeContextType {
   setFontSize: (size: FontSize) => void;
   setFontFamily: (family: FontFamily) => void;
   setReduceMotion: (reduce: boolean) => void;
-  // Added setPerformanceMode to context interface
   setPerformanceMode: (mode: PerformanceMode) => void;
   resetTheme: () => void;
 }
@@ -95,14 +92,11 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   });
 
   // STORE: User's selected accent color (Persisted)
-  // This preserves the choice (e.g., Blue) even if Crescere mode forces Pink visually.
   const [userAccentColor, setUserAccentColor] = useState(() => {
       return localStorage.getItem('pnle_accent_color') || '#EC4899';
   });
 
   // COMPUTED: The actual color applied to CSS
-  // If Crescere mode is active, FORCE Rose Red (#be123c).
-  // Otherwise, use the user's selected color.
   const activeAccentColor = themeMode === 'crescere' ? '#be123c' : userAccentColor;
 
   // --- ACCESSIBILITY STATE ---
@@ -118,7 +112,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
       return localStorage.getItem('pnle_reduce_motion') === 'true';
   });
 
-  // Added performanceMode state to match components/ThemeContext.tsx version
+  // --- PERFORMANCE MODE STATE ---
   const [performanceMode, setPerformanceModeState] = useState<PerformanceMode>(() => {
       return (localStorage.getItem('pnle_performance_mode') as PerformanceMode) || 'auto';
   });
@@ -135,10 +129,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
                   if (snap.exists()) {
                       const data = snap.data();
                       if (data.themeMode) setThemeModeState(data.themeMode as ThemeMode);
-                      
-                      // Important: Load the USER'S preference, not the potentially overridden active color
                       if (data.accentColor) setUserAccentColor(data.accentColor);
-                      
                       if (data.fontSize) setFontSizeState(data.fontSize);
                       if (data.fontFamily) setFontFamilyState(data.fontFamily);
                       if (data.reduceMotion !== undefined) setReduceMotionState(data.reduceMotion);
@@ -174,10 +165,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
 
   // 2. CSS Variables & Color Persistence
   useEffect(() => {
-      // Apply the ACTIVE color to CSS variables (UI update)
       updateCssVariables(activeAccentColor);
-      
-      // Persist the USER'S preference to storage/DB
       localStorage.setItem('pnle_accent_color', userAccentColor);
       if (currentUser) {
           const ref = doc(db, 'users', currentUser.uid);
@@ -220,8 +208,6 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const toggleTheme = () => setThemeMode(themeMode === 'light' ? 'dark' : 'light');
   
   const setAccentColor = (hex: string) => {
-      // Updates the user's preference. 
-      // If in Crescere mode, this won't visually change immediately, but will be saved for when they exit Crescere.
       setUserAccentColor(hex);
   };
 
@@ -231,7 +217,7 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   const setPerformanceMode = (mode: PerformanceMode) => setPerformanceModeState(mode);
 
   const resetTheme = () => {
-      setUserAccentColor('#EC4899'); // Reset to default Pink
+      setUserAccentColor('#EC4899');
       setThemeMode('dark');
       setFontSizeState('normal');
       setFontFamilyState('sans');
@@ -242,10 +228,10 @@ export const ThemeProvider: React.FC<{ children: ReactNode }> = ({ children }) =
   return (
     <ThemeContext.Provider value={{ 
         themeMode, isDark, 
-        accentColor: activeAccentColor, // Consumers see the *active* color (Rose if Crescere, User's if not)
+        accentColor: activeAccentColor, 
         fontSize, fontFamily, reduceMotion, performanceMode,
         setThemeMode, toggleTheme, 
-        setAccentColor, // Updates the *user's* preference
+        setAccentColor, 
         setFontSize, setFontFamily, setReduceMotion, setPerformanceMode,
         resetTheme 
     }}>

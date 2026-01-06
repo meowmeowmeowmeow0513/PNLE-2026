@@ -23,12 +23,12 @@ import { PomodoroProvider } from './components/PomodoroContext';
 import { TaskProvider } from './TaskContext';
 import { ThemeProvider, useTheme } from './ThemeContext';
 import { PerformanceProvider, usePerformance } from './components/PerformanceContext';
-import { Loader, LogOut } from 'lucide-react';
+import { Loader } from 'lucide-react';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { db } from './firebase';
 
 const AppContent: React.FC = () => {
-  const { currentUser, loading, onboardingStatus, logout } = useAuth();
+  const { currentUser, loading, onboardingStatus } = useAuth();
   const { themeMode } = useTheme();
   const { getGlassClass, effectiveLevel } = usePerformance();
   const [activeItem, setActiveItem] = useState<NavigationItem>('Dashboard');
@@ -63,14 +63,12 @@ const AppContent: React.FC = () => {
     setSidebarMinimized(prev => {
       const next = !prev;
       localStorage.setItem('pnle_sidebar_minimized', String(next));
-
       if (currentUser) {
         const docRef = doc(db, 'users', currentUser.uid);
         updateDoc(docRef, { sidebarMinimized: next }).catch(err =>
           console.error('Failed to save sidebar pref', err)
         );
       }
-
       return next;
     });
   };
@@ -122,10 +120,7 @@ const AppContent: React.FC = () => {
     return <OnboardingFlow />;
   }
 
-  // --- INSTANT THEME SWITCHING ENGINE ---
-  // Backgrounds are always mounted, we just toggle opacity.
-  // This prevents React reconciliation lag.
-  const showAnimations = effectiveLevel === 'quality';
+  const isQuality = effectiveLevel === 'quality';
 
   return (
     <PomodoroProvider>
@@ -141,94 +136,61 @@ const AppContent: React.FC = () => {
             50% { transform: translate(-10%, -10%) scale(1); opacity: 0.4; }
             100% { transform: translate(20%, 20%) scale(1.1); opacity: 0.2; }
           }
-
           .animate-aurora-luxe { animation: aurora-luxe 20s infinite ease-in-out; }
           .animate-aurora-luxe-alt { animation: aurora-luxe-alt 25s infinite ease-in-out; }
-
           @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
           .animate-fade-in { animation: fade-in 0.3s ease-out forwards; }
           @keyframes zoom-in { from { opacity: 0; transform: scale(0.98); } to { opacity: 1; transform: scale(1); } }
           .animate-zoom-in { animation: zoom-in 0.3s ease-out forwards; }
           
-          /* --- CRITICAL PERFORMANCE OVERRIDES --- */
-          /* When in 'performance' mode (FPS < 30 or no HW accel), we strip ALL costly effects */
+          /* --- ULTIMATE PERFORMANCE OVERRIDE --- */
           .gfx-performance * {
               backdrop-filter: none !important;
-              box-shadow: none !important;
-              text-shadow: none !important;
               animation: none !important;
-              background-image: none !important;
-              transition-property: opacity, background-color, border-color, color !important;
-              /* IMPORTANT: Disable will-change to prevent layer explosion on CPU rendering */
-              will-change: auto !important; 
-              transform-style: flat !important;
+              transition-duration: 0.1s !important; /* Fast, non-blurry transitions */
+              box-shadow: none !important; /* Flat design to save paint time */
           }
           
-          .gfx-performance .animate-spin { animation: spin 1s linear infinite !important; }
-          
-          /* Force solid backgrounds instead of glass */
-          .dark.gfx-performance .backdrop-blur-xl, 
-          .dark.gfx-performance .backdrop-blur-md, 
-          .dark.gfx-performance .backdrop-blur-sm {
-              background-color: #0f172a !important; /* Slate-900 */
+          .dark.gfx-performance .bg-white\/50, 
+          .dark.gfx-performance .bg-white\/80 { 
+              background-color: #0f172a !important; 
+              opacity: 1 !important;
               border: 1px solid #1e293b !important;
-              opacity: 1 !important;
-          }
-          
-          .light.gfx-performance .backdrop-blur-xl, 
-          .light.gfx-performance .backdrop-blur-md {
-              background-color: #ffffff !important;
-              border: 1px solid #e2e8f0 !important;
-              opacity: 1 !important;
           }
 
-          .theme-crescere.gfx-performance .backdrop-blur-xl,
-          .theme-crescere.gfx-performance .backdrop-blur-md,
-          .theme-crescere.gfx-performance .backdrop-blur-sm {
-              background-color: #fff0f5 !important;
-              border: 1px solid #fecdd3 !important;
-              color: #0f172a !important;
+          .light.gfx-performance .bg-white\/50, 
+          .light.gfx-performance .bg-white\/80 { 
+              background-color: #ffffff !important; 
               opacity: 1 !important;
+              border: 1px solid #e2e8f0 !important;
+          }
+
+          .theme-crescere.gfx-performance .bg-white\/40 {
+              background-color: #fff0f5 !important;
+              opacity: 1 !important;
+              border: 1px solid #fbcfe8 !important;
           }
         `}</style>
 
         <div
           className={`relative h-[100dvh] font-sans selection:bg-pink-500/30 overflow-hidden text-slate-900 dark:text-slate-100
-          flex flex-row p-0 md:p-3 lg:p-4 gap-0 md:gap-2 lg:gap-3`}
+          flex flex-row p-0 md:p-3 lg:p-4 gap-0 md:gap-2 lg:gap-3 transition-colors duration-1000`}
         >
-          {/* BACKGROUND LAYERS (PERSISTENT MOUNT) */}
+          {/* BACKGROUND LAYERS */}
           <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden">
-              
-              {/* DARK MODE LAYER */}
-              <div className={`absolute inset-0 bg-[#020617] transition-opacity duration-500 ease-linear will-change-opacity ${themeMode === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
-                  {showAnimations && (
-                      <>
-                        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-pink-600/10 rounded-full blur-[140px] animate-aurora-luxe" />
-                        <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-600/10 rounded-full blur-[140px] animate-aurora-luxe-alt" />
-                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-overlay" />
-                      </>
-                  )}
+              <div className={`absolute inset-0 bg-[#020617] transition-opacity duration-1000 ${themeMode === 'dark' ? 'opacity-100' : 'opacity-0'}`}>
+                  {isQuality && <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-pink-600/10 rounded-full blur-[140px] animate-aurora-luxe" />}
+                  {isQuality && <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-600/10 rounded-full blur-[140px] animate-aurora-luxe-alt" />}
+                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.15] mix-blend-overlay" />
               </div>
-
-              {/* CRESCERE MODE LAYER */}
-              <div className={`absolute inset-0 bg-[#fffbfc] transition-opacity duration-500 ease-linear will-change-opacity ${themeMode === 'crescere' ? 'opacity-100' : 'opacity-0'}`}>
-                  {showAnimations && (
-                      <>
-                        <div className="absolute -top-[10%] -right-[10%] w-[80%] h-[80%] bg-rose-100/40 rounded-full blur-[100px] animate-aurora-luxe" />
-                        <div className="absolute -bottom-[10%] -left-[10%] w-[80%] h-[80%] bg-amber-50/50 rounded-full blur-[100px] animate-aurora-luxe-alt" />
-                        <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5" />
-                      </>
-                  )}
+              <div className={`absolute inset-0 bg-[#fffbfc] transition-opacity duration-1000 ${themeMode === 'crescere' ? 'opacity-100' : 'opacity-0'}`}>
+                  {isQuality && <div className="absolute -top-[10%] -right-[10%] w-[80%] h-[80%] bg-rose-100/40 rounded-full blur-[100px] animate-aurora-luxe" />}
+                  {isQuality && <div className="absolute -bottom-[10%] -left-[10%] w-[80%] h-[80%] bg-amber-50/50 rounded-full blur-[100px] animate-aurora-luxe-alt" />}
+                  <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-5" />
               </div>
-
-              {/* LIGHT MODE LAYER */}
-              <div className={`absolute inset-0 bg-[#f8fafc] transition-opacity duration-500 ease-linear will-change-opacity ${themeMode === 'light' ? 'opacity-100' : 'opacity-0'}`}>
-                  {showAnimations && (
-                      <>
-                        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/60 rounded-full blur-[120px] mix-blend-multiply" />
-                        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-50/60 rounded-full blur-[120px] mix-blend-multiply" />
-                      </>
-                  )}
+              <div className={`absolute inset-0 bg-[#f8fafc] transition-opacity duration-1000 ${themeMode === 'light' ? 'opacity-100' : 'opacity-0'}`}>
+                  <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-blue-50/60 rounded-full blur-[120px]" />
+                  <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-pink-50/60 rounded-full blur-[120px]" />
               </div>
           </div>
 
@@ -241,13 +203,12 @@ const AppContent: React.FC = () => {
             onToggleMinimize={toggleSidebarMinimize}
           />
 
-          {/* CONTENT ISLAND */}
           <div className={`
             flex-1 flex flex-col h-full min-w-0 relative z-10 
             transition-all duration-500 ease-[cubic-bezier(0.2,0.8,0.2,1)] 
             overflow-hidden md:rounded-[2.5rem] 
             border transition-colors 
-            ${getGlassClass('shadow-xl', themeMode === 'crescere' ? 'bg-white/40 border-white/60 shadow-[0_20px_50px_-15px_rgba(244,63,94,0.1)]' : 'bg-white/50 border-slate-200/50 shadow-xl')}
+            ${getGlassClass('shadow-xl', themeMode === 'crescere' ? 'bg-white/40 border-white/60' : 'bg-white/50 border-slate-200/50 shadow-xl')}
           `}>
             <TopBar
               title={activeItem}

@@ -5,12 +5,12 @@ import { storage } from '../firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { useAuth } from '../AuthContext';
 import { useGamification } from '../hooks/useGamification';
-import { useTheme } from '../ThemeContext';
+import { useTheme, PerformanceMode } from '../ThemeContext';
 import {
     Camera, X, Loader, Check, User, Mail, Trash2,
     AlertTriangle, Save, Moon, Sun,
     Shield, KeyRound, Palette, ChevronRight,
-    RefreshCw, Crown, Move, Eye, Bell
+    RefreshCw, Crown, Move, Eye, Bell, Zap, Monitor
 } from 'lucide-react';
 
 interface ProfileSettingsProps {
@@ -26,7 +26,8 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
     const { rankData, stats } = useGamification();
     const {
         themeMode, setThemeMode, accentColor, setAccentColor, resetTheme,
-        fontSize, setFontSize, fontFamily, setFontFamily, reduceMotion, setReduceMotion
+        fontSize, setFontSize, fontFamily, setFontFamily, reduceMotion, setReduceMotion,
+        performanceMode, setPerformanceMode
     } = useTheme();
     const { currentRank } = rankData;
 
@@ -345,6 +346,28 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                                                         {themeMode === mode && <div className="absolute top-2 right-2 text-pink-500 bg-white rounded-full p-0.5 shadow-sm"><Check size={12} strokeWidth={4} /></div>}
                                                     </button>
                                                 ))}
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-6 border-t border-slate-100 dark:border-slate-800">
+                                            <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white mb-1 flex items-center gap-2">
+                                                <Monitor size={20} className="text-slate-400" /> Graphics Quality
+                                            </h3>
+                                            <p className="text-sm text-slate-500 mb-6">Optimize for your device capability.</p>
+                                            
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                                <button onClick={() => setPerformanceMode('auto')} className={`p-4 rounded-2xl border text-left transition-all ${performanceMode === 'auto' ? 'bg-indigo-50 dark:bg-indigo-900/20 border-indigo-500 text-indigo-700 dark:text-indigo-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>
+                                                    <div className="font-bold text-sm mb-1">Adaptive (Auto)</div>
+                                                    <div className="text-xs opacity-80">Adjusts effects based on FPS</div>
+                                                </button>
+                                                <button onClick={() => setPerformanceMode('quality')} className={`p-4 rounded-2xl border text-left transition-all ${performanceMode === 'quality' ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-500 text-emerald-700 dark:text-emerald-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>
+                                                    <div className="font-bold text-sm mb-1">High Fidelity</div>
+                                                    <div className="text-xs opacity-80">Full glass & animations</div>
+                                                </button>
+                                                <button onClick={() => setPerformanceMode('performance')} className={`p-4 rounded-2xl border text-left transition-all ${performanceMode === 'performance' ? 'bg-amber-50 dark:bg-amber-900/20 border-amber-500 text-amber-700 dark:text-amber-300' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'}`}>
+                                                    <div className="font-bold text-sm mb-1">Performance</div>
+                                                    <div className="text-xs opacity-80">No blur, solid colors</div>
+                                                </button>
                                             </div>
                                         </div>
 

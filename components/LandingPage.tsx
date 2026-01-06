@@ -14,7 +14,8 @@ interface LandingPageProps {
 }
 
 // --- SPOTLIGHT CARD ---
-const SpotlightCard = ({ children, className = "" }: { children: React.ReactNode, className?: string }) => {
+// Made children optional to fix "Property 'children' is missing" error in some environments/compiler settings
+const SpotlightCard = ({ children, className = "" }: { children?: React.ReactNode, className?: string }) => {
     const divRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [opacity, setOpacity] = useState(0);
@@ -133,7 +134,7 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center text-center px-4 pt-20 pb-10 perspective-1000"
       >
         <div 
-            className={`relative transform-gpu transition-transform duration-100 ease-out ${isLowPower ? '' : 'will-change-transform'}`}
+            className={`relative transform-gpu transition-transform duration-100 ease-out`}
             style={!isLowPower ? { 
                 transform: `rotateX(${mousePos.y * -5}deg) rotateY(${mousePos.x * 5}deg)`,
             } : {}}
