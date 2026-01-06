@@ -7,6 +7,7 @@ import {
   Calculator, ClipboardCheck, TestTube, Zap, Trophy, Crown, Cat, Dog, CheckCircle2,
   Lock, Terminal, PlayCircle, LayoutGrid
 } from 'lucide-react';
+import { usePerformance } from './PerformanceContext'; // Import performance context
 
 interface LandingPageProps {
   onGetStarted: () => void;
@@ -17,9 +18,10 @@ const SpotlightCard = ({ children, className = "" }: { children: React.ReactNode
     const divRef = useRef<HTMLDivElement>(null);
     const [position, setPosition] = useState({ x: 0, y: 0 });
     const [opacity, setOpacity] = useState(0);
+    const { isLowPower } = usePerformance();
 
     const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (!divRef.current) return;
+        if (!divRef.current || isLowPower) return; // Disable hover calculation on low power
         const rect = divRef.current.getBoundingClientRect();
         setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top });
         setOpacity(1);
@@ -34,13 +36,15 @@ const SpotlightCard = ({ children, className = "" }: { children: React.ReactNode
             onMouseLeave={handleMouseLeave}
             className={`relative overflow-hidden rounded-3xl border border-white/10 bg-slate-950/50 ${className}`}
         >
-            <div
-                className="pointer-events-none absolute -inset-px transition-opacity duration-300"
-                style={{
-                    opacity,
-                    background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(236,72,153,0.15), transparent 40%)`,
-                }}
-            />
+            {!isLowPower && (
+                <div
+                    className="pointer-events-none absolute -inset-px transition-opacity duration-300"
+                    style={{
+                        opacity,
+                        background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(236,72,153,0.15), transparent 40%)`,
+                    }}
+                />
+            )}
             <div className="relative h-full">{children}</div>
         </div>
     );
@@ -50,10 +54,11 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
   const [scrolled, setScrolled] = useState(false);
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
+  const { isLowPower } = usePerformance(); // Use context to disable effects
 
-  // Parallax / Tilt Logic
+  // Parallax / Tilt Logic - Disabled in Low Power
   const handleMouseMove = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
+    if (!containerRef.current || isLowPower) return;
     const { width, height } = containerRef.current.getBoundingClientRect();
     // Normalize -1 to 1
     const x = (e.clientX / width) * 2 - 1;
@@ -83,10 +88,14 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
       <div className="fixed inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 bg-[#020617]"></div>
           
-          {/* Animated Orbs */}
-          <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] bg-pink-600/10 rounded-full blur-[120px] animate-pulse"></div>
-          <div className="absolute bottom-[-20%] right-[-10%] w-[70vw] h-[70vw] bg-purple-600/10 rounded-full blur-[120px] animate-pulse delay-1000"></div>
-          <div className="absolute top-[40%] left-[30%] w-[40vw] h-[40vw] bg-blue-600/10 rounded-full blur-[100px] animate-pulse delay-2000"></div>
+          {/* Animated Orbs - Static in Low Power */}
+          {!isLowPower && (
+              <>
+                <div className="absolute top-[-20%] left-[-10%] w-[70vw] h-[70vw] bg-pink-600/10 rounded-full blur-[120px] animate-pulse"></div>
+                <div className="absolute bottom-[-20%] right-[-10%] w-[70vw] h-[70vw] bg-purple-600/10 rounded-full blur-[120px] animate-pulse delay-1000"></div>
+                <div className="absolute top-[40%] left-[30%] w-[40vw] h-[40vw] bg-blue-600/10 rounded-full blur-[100px] animate-pulse delay-2000"></div>
+              </>
+          )}
           
           {/* Grid & Noise */}
           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.12] mix-blend-overlay"></div>
@@ -124,10 +133,10 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
         className="relative z-10 min-h-[100dvh] flex flex-col items-center justify-center text-center px-4 pt-20 pb-10 perspective-1000"
       >
         <div 
-            className="relative transform-gpu transition-transform duration-100 ease-out will-change-transform"
-            style={{ 
+            className={`relative transform-gpu transition-transform duration-100 ease-out ${isLowPower ? '' : 'will-change-transform'}`}
+            style={!isLowPower ? { 
                 transform: `rotateX(${mousePos.y * -5}deg) rotateY(${mousePos.x * 5}deg)`,
-            }}
+            } : {}}
         >
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 mb-8 backdrop-blur-sm hover:bg-white/10 transition-colors cursor-default shadow-lg">
                 <div className="w-2 h-2 rounded-full bg-green-400 animate-pulse shadow-[0_0_10px_#4ade80]"></div>
@@ -166,11 +175,13 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
             </div>
         </div>
 
-        {/* Floating Elements (Orbiting) */}
-        <div className="absolute inset-0 pointer-events-none overflow-hidden">
-             <div className="absolute top-1/4 left-10 animate-float-slow opacity-20"><Brain size={64} className="text-pink-500" /></div>
-             <div className="absolute bottom-1/4 right-10 animate-float-reverse-slow opacity-20"><HeartPulse size={64} className="text-purple-500" /></div>
-        </div>
+        {/* Floating Elements (Orbiting) - Hide in Low Power */}
+        {!isLowPower && (
+            <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                 <div className="absolute top-1/4 left-10 animate-float-slow opacity-20"><Brain size={64} className="text-pink-500" /></div>
+                 <div className="absolute bottom-1/4 right-10 animate-float-reverse-slow opacity-20"><HeartPulse size={64} className="text-purple-500" /></div>
+            </div>
+        )}
 
         <div className="absolute bottom-10 left-1/2 -translate-x-1/2 animate-bounce opacity-50">
             <ChevronDown size={32} />
@@ -209,7 +220,9 @@ const LandingPage: React.FC<LandingPageProps> = ({ onGetStarted }) => {
 
       {/* --- SLE QUEST FEATURE --- */}
       <section className="relative z-10 py-32 px-4 overflow-hidden">
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-red-600/10 rounded-full blur-[150px] pointer-events-none animate-pulse"></div>
+          {!isLowPower && (
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-red-600/10 rounded-full blur-[150px] pointer-events-none animate-pulse"></div>
+          )}
 
           <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
               <div className="order-2 lg:order-1 relative">

@@ -2,13 +2,13 @@
 import React, { createContext, useContext, useState, useEffect, useRef, ReactNode, useCallback } from 'react';
 import { useTheme } from '../ThemeContext';
 
-// Simplified levels. The system decides based on runtime metrics.
 export type EffectiveLevel = 'performance' | 'balanced' | 'quality';
 
 interface PerformanceContextType {
   effectiveLevel: EffectiveLevel;
   fps: number;
   getGlassClass: (base: string, opacity?: string) => string;
+  isLowPower: boolean;
 }
 
 const PerformanceContext = createContext<PerformanceContextType | undefined>(undefined);
@@ -27,9 +27,10 @@ const LEVEL_ORDER: EffectiveLevel[] = ['performance', 'balanced', 'quality'];
 export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { themeMode } = useTheme();
   
-  // Default to balanced to ensure stability on load
+  // Default to balanced. If hardware acceleration is off, this will downgrade in <1 sec.
   const [effectiveLevel, setEffectiveLevel] = useState<EffectiveLevel>('balanced');
-  const [fps, setFps] = useState(0); // Initialize at 0 to indicate calculating
+  const [fps, setFps] = useState(60); 
+  const [isLowPower, setIsLowPower] = useState(false);
 
   // Measurement Refs
   const frameCountRef = useRef(0);
@@ -37,55 +38,59 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
   const stabilityCounterRef = useRef(0); 
   const lastChangeTimeRef = useRef(performance.now());
   const longTaskCountRef = useRef(0);
+  const panicCounterRef = useRef(0); // New: Detects consistent fatal lag
 
   // --- ADAPTIVE LOGIC ---
   const adjustQuality = useCallback((currentFPS: number, longTasks: number) => {
     const now = performance.now();
     const timeSinceLastChange = now - lastChangeTimeRef.current;
 
-    // Cooldowns to prevent rapid oscillation
-    const DOWNGRADE_COOLDOWN = 2000; 
+    // Cooldowns
+    const DOWNGRADE_COOLDOWN = 1000; // Faster downgrade
     const UPGRADE_COOLDOWN = 8000;
 
     const currentIndex = LEVEL_ORDER.indexOf(effectiveLevel);
 
-    // 1. CRITICAL DOWNGRADE (Immediate Lag Detected)
-    // < 30 FPS or Main Thread Blocking
-    if ((currentFPS < 30 || longTasks >= 2) && currentIndex > 0) {
+    // 0. PANIC MODE (Software Rendering Detection)
+    // If FPS is < 24 (Cinematic minimum), the app feels broken.
+    if (currentFPS < 24) {
+        panicCounterRef.current++;
+        // If we hit 2 bad seconds in a row, force bottom tier immediately
+        if (panicCounterRef.current >= 2) {
+            if (effectiveLevel !== 'performance') {
+                setEffectiveLevel('performance');
+                setIsLowPower(true);
+                lastChangeTimeRef.current = now;
+                console.warn("Performance Panic: Forcing Low Power Mode");
+            }
+            return; 
+        }
+    } else {
+        panicCounterRef.current = Math.max(0, panicCounterRef.current - 1);
+    }
+
+    // 1. CRITICAL DOWNGRADE (< 35 FPS or Long Tasks)
+    if ((currentFPS < 35 || longTasks >= 1) && currentIndex > 0) {
         if (timeSinceLastChange > DOWNGRADE_COOLDOWN) {
             const nextLevel = LEVEL_ORDER[currentIndex - 1];
             setEffectiveLevel(nextLevel);
+            // If we hit bottom, flag low power
+            if (nextLevel === 'performance') setIsLowPower(true);
             lastChangeTimeRef.current = now;
             stabilityCounterRef.current = 0; 
         }
         return;
     }
 
-    // 2. MODERATE DOWNGRADE (Sustained "Bad" FPS)
-    // We set the threshold at 45 FPS. This supports 60Hz screens dropping frames, 
-    // but ignores 120Hz screens dropping to 90Hz (which is still smooth).
-    if (currentFPS < 45 && currentIndex > 0) {
-        stabilityCounterRef.current--;
-        if (stabilityCounterRef.current <= -3) { // ~3 seconds of poor performance
-             if (timeSinceLastChange > DOWNGRADE_COOLDOWN) {
-                const nextLevel = LEVEL_ORDER[currentIndex - 1];
-                setEffectiveLevel(nextLevel);
-                lastChangeTimeRef.current = now;
-                stabilityCounterRef.current = 0;
-             }
-        }
-        return;
-    }
-
-    // 3. UPGRADE (Sustained Smoothness)
-    // We upgrade if FPS is consistently high. 
-    // 58 is safe for 60Hz. For 120Hz+, this will always be true, pushing to Quality.
+    // 2. UPGRADE (Consistent Smoothness > 58 FPS)
     if (currentFPS >= 58 && longTasks === 0 && currentIndex < LEVEL_ORDER.length - 1) {
         stabilityCounterRef.current++;
-        if (stabilityCounterRef.current >= 5) { // ~5 seconds of perfect performance
+        // Require 4 seconds of perfection to upgrade
+        if (stabilityCounterRef.current >= 4) { 
             if (timeSinceLastChange > UPGRADE_COOLDOWN) {
                 const nextLevel = LEVEL_ORDER[currentIndex + 1];
                 setEffectiveLevel(nextLevel);
+                if (nextLevel !== 'performance') setIsLowPower(false);
                 lastChangeTimeRef.current = now;
                 stabilityCounterRef.current = 0;
             }
@@ -93,9 +98,8 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
         return;
     }
 
-    // Decay stability counter to prevent getting stuck
+    // Decay stability
     if (stabilityCounterRef.current > 0) stabilityCounterRef.current--;
-    if (stabilityCounterRef.current < 0) stabilityCounterRef.current++;
 
   }, [effectiveLevel]);
 
@@ -150,15 +154,16 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
   }, [effectiveLevel]);
 
   const getGlassClass = (base: string, opacity = 'bg-white/80') => {
-      // PERFORMANCE: Solid colors
+      // PERFORMANCE: Solid colors, NO BLUR. 
+      // If hardware acceleration is off, blur kills the paint thread.
       if (effectiveLevel === 'performance') {
           if (themeMode === 'crescere') {
-              return 'bg-[#fff0f5] border-rose-200 text-slate-900 shadow-none';
+              return 'bg-[#fff0f5] border-rose-200 text-slate-900 shadow-sm';
           }
-          return 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 shadow-none';
+          return 'bg-[#f8fafc] dark:bg-[#0f172a] border-slate-200 dark:border-slate-800 shadow-sm';
       }
       
-      // BALANCED: Transparency, no blur (Cheap)
+      // BALANCED: Transparency, no blur (Cheap GPU cost)
       if (effectiveLevel === 'balanced') {
           return `${opacity} dark:bg-slate-900/90 border-slate-200/50 dark:border-white/5 backdrop-blur-none`;
       }
@@ -171,7 +176,8 @@ export const PerformanceProvider: React.FC<{ children: ReactNode }> = ({ childre
     <PerformanceContext.Provider value={{ 
         effectiveLevel,
         fps, 
-        getGlassClass 
+        getGlassClass,
+        isLowPower
     }}>
       {children}
     </PerformanceContext.Provider>

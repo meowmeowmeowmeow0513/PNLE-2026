@@ -151,29 +151,35 @@ const AppContent: React.FC = () => {
           .animate-zoom-in { animation: zoom-in 0.3s ease-out forwards; }
           
           /* --- CRITICAL PERFORMANCE OVERRIDES --- */
+          /* When in 'performance' mode (FPS < 30 or no HW accel), we strip ALL costly effects */
           .gfx-performance * {
               backdrop-filter: none !important;
               box-shadow: none !important;
               text-shadow: none !important;
               animation: none !important;
-              mix-blend-mode: normal !important;
               background-image: none !important;
-              transition-property: opacity, transform, background-color, border-color, color !important;
+              transition-property: opacity, background-color, border-color, color !important;
+              /* IMPORTANT: Disable will-change to prevent layer explosion on CPU rendering */
+              will-change: auto !important; 
+              transform-style: flat !important;
           }
           
           .gfx-performance .animate-spin { animation: spin 1s linear infinite !important; }
           
+          /* Force solid backgrounds instead of glass */
           .dark.gfx-performance .backdrop-blur-xl, 
           .dark.gfx-performance .backdrop-blur-md, 
           .dark.gfx-performance .backdrop-blur-sm {
-              background-color: rgb(15 23 42) !important;
-              border: 1px solid rgb(30 41 59) !important;
+              background-color: #0f172a !important; /* Slate-900 */
+              border: 1px solid #1e293b !important;
+              opacity: 1 !important;
           }
           
           .light.gfx-performance .backdrop-blur-xl, 
           .light.gfx-performance .backdrop-blur-md {
-              background-color: white !important;
-              border: 1px solid rgb(226 232 240) !important;
+              background-color: #ffffff !important;
+              border: 1px solid #e2e8f0 !important;
+              opacity: 1 !important;
           }
 
           .theme-crescere.gfx-performance .backdrop-blur-xl,
@@ -182,6 +188,7 @@ const AppContent: React.FC = () => {
               background-color: #fff0f5 !important;
               border: 1px solid #fecdd3 !important;
               color: #0f172a !important;
+              opacity: 1 !important;
           }
         `}</style>
 
