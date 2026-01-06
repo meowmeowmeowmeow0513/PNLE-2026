@@ -10,7 +10,7 @@ import {
     Camera, X, Loader, Check, User, Mail, Trash2,
     AlertTriangle, Save, Moon, Sun,
     Shield, KeyRound, Palette, ChevronRight,
-    RefreshCw, Crown, Move, Eye, Bell, PlayCircle
+    RefreshCw, Crown, Move, Eye, Bell
 } from 'lucide-react';
 
 interface ProfileSettingsProps {
@@ -161,12 +161,6 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                 setMessage({ type: 'error', text: 'Permission denied. Check browser settings.' });
             }
         }
-    };
-
-    const handleResetIntro = () => {
-        // Clears the flag for the new v4 intro
-        localStorage.removeItem('has_seen_ascension_v4');
-        setMessage({ type: 'success', text: 'Intro reset. Visit Personal Folder to view.' });
     };
 
     const getRankGradient = (color: string) => {
@@ -332,6 +326,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                                 {/* APPEARANCE TAB */}
                                 {activeTab === 'appearance' && (
                                     <div className="space-y-10">
+                                        
                                         <div>
                                             <div className="flex items-start sm:items-center justify-between gap-3 mb-2 flex-col sm:flex-row">
                                                 <h3 className="text-lg md:text-xl font-black text-slate-900 dark:text-white">Display Mode</h3>
@@ -420,12 +415,7 @@ const ProfileSettings: React.FC<ProfileSettingsProps> = ({ onClose }) => {
                                                                     value={accentColor.replace('#', '')} 
                                                                     onChange={(e) => {
                                                                         const val = e.target.value;
-                                                                        // Allow hex chars only, max 6 chars
                                                                         if (/^[0-9A-Fa-f]*$/.test(val) && val.length <= 6) {
-                                                                            // Only update if empty (allow typing) or valid length if you want realtime, 
-                                                                            // but css vars usually need full hex. 
-                                                                            // We update state immediately to allow typing. 
-                                                                            // ThemeContext should handle invalid hex gracefully or we append #
                                                                             setAccentColor(`#${val}`);
                                                                         }
                                                                     }}
